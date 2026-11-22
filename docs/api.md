@@ -143,3 +143,40 @@ Crear, enviar, aprobar, rechazar y cancelar usan las rutas genéricas de solicit
   - Consultar el saldo de otro colaborador se audita como `VER_VACACIONES`.
 - Una solicitud **aprobada** no se cancela desde la plataforma (decisión pendiente: reversión por el admincontable, M8).
 - **Pendiente M6:** restar de los días laborados las licencias no remuneradas y las suspensiones.
+## M5 – Incapacidades (`incapacidades`)
+
+Dato de salud (Ley 1581 de 2012). Las incapacidades no pasan por el flujo de aprobación: el colaborador las registra y el área contable las revisa.
+
+| Método | Ruta | Quién | Notas |
+|---|---|---|---|
+| GET | `/incapacidades/opciones` | sesión (`?colaborador=ID` solo ADMIN) | Tipos (IGE, IRL), EPS del expediente, `maxDias`, `diasAtras`, `maxMb` y las incapacidades prorrogables |
+| POST | `/incapacidades` | colaborador con expediente ACTIVO; solo ADMIN puede enviar `colaborador_id` (otro rol → 403 auditado) | multipart: `tipo`, `entidad`, `fecha_inicio`, `fecha_fin`, `numero_certificado?`, `diagnostico?` (se cifra), `prorroga_de?` y `soporte` (PDF **obligatorio**, sensible). 201 con el detalle |
+| GET | `/me/incapacidades` | sesión | Las propias, completas (sin diagnóstico en la lista) |
+| GET | `/incapacidades` | DIRECTOR, ADMIN | `?estado&desde&hasta`. **Director:** `{ soloFechas: true, incapacidades: [{ colaborador:{nombre,sede}, fechaInicio, fechaFin, dias }] }`, solo de sus sedes y vigentes. **Admin:** todo menos el diagnóstico. Se audita (`VER_INCAPACIDADES`) |
+| GET | `/incapacidades/:id` | dueño o ADMIN; si no, **404** | Detalle con el diagnóstico descifrado. Cada lectura se audita (`VER_INCAPACIDAD`). Para el admin incluye `crucesSolicitudes` |
+| POST | `/incapacidades/:id/validar` | ADMIN | `{ estadoEsperado }` (409 si cambió) |
+| POST | `/incapacidades/:id/devolver` | ADMIN | `{ motivo (5–500), estadoEsperado }` |
+| POST | `/incapacidades/:id/anular` | dueño (solo si está EN REVISIÓN) o ADMIN | `{ motivo }`, obligatorio cuando el admin anula una ajena. Si estaba vigente, se avisa al director (solo fechas) |
+| GET | `/incapacidades/pendientes` | ADMIN | `{ pendientes }` (conteo para Inicio; no expone datos y no se audita) |
+| GET | `/colaboradores/:id/incapacidades` | dueño, ADMIN, DIRECTOR de la sede (solo fechas) | Pestaña del expediente |
+
+**Estados:**
+- REGISTRADA ("En revisión") pasa a VALIDADA o a DEVUELTA (con motivo).
+- Cualquiera puede pasar a ANULADA.
+
+**Reglas:**
+- Días calendario con ambos extremos incluidos.
+- Máximo `INC_MAX_DIAS` por certificado.
+- El colaborador registra hasta `INC_REGISTRO_MAX_DIAS_ATRAS` días después del inicio; el admin, sin límite.
+- No se cruza con otra incapacidad vigente.
+- Una prórroga empieza el día siguiente a la anterior.
+- Permisos, vacaciones y licencias no pueden cruzarse con una incapacidad vigente (hook `ctx.ausenciasExtra` del motor). Una incapacidad sí puede caer sobre unas vacaciones aprobadas, porque las interrumpe; el admin ve el aviso.
+
+**Privacidad:**
+- El PDF es un documento sensible: solo lo descargan el dueño y el admin, y cada descarga se audita.
+- Los correos, las notificaciones, la auditoría y los logs nunca llevan el diagnóstico.
+- Los **correos** de incapacidades son genéricos ("Tiene una novedad sobre incapacidades…"), sin nombre, fechas ni motivo, porque llegan a buzones externos. El detalle se ve en la campana o en la plataforma.
+- El motivo de una devolución o anulación solo se lee en la plataforma.
+- Al aprobar una solicitud se revalida que no se cruce con una incapacidad registrada mientras estaba en trámite.
+- Una prórroga debe ser del mismo tipo que la anterior.
+- Al director solo se le avisan las fechas.

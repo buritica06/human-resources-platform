@@ -256,6 +256,8 @@ export function crearMotor(ctx) {
     await db.transaction(async (trx) => {
       if (esPg()) await trx('colaboradores').where({ id: s.colaborador_id }).forUpdate().first('id');
       await handler.revalidarAlAprobar?.(ctx, s, trx, previo);
+      // Mientras estaba en trámite pudo registrarse otra ausencia (p. ej. una incapacidad)
+      await validarSinCruce(trx, s);
       const siguiente = s.paso_actual + 1;
       const final = siguiente >= s.flujo.pasos.length;
       const nota = auto ? ['Autoaprobación del área contable', comentario].filter(Boolean).join(': ') : comentario;
@@ -333,6 +335,11 @@ export function crearMotor(ctx) {
         const t = ctx.tiposSolicitud.get(o.tipo)?.etiqueta ?? o.tipo;
         throw invalido(`Se cruza con otra solicitud de ${t.toLowerCase()} (${o.fecha_inicio}${o.fecha_inicio !== o.fecha_fin ? ` a ${o.fecha_fin}` : ''}) que está ${o.estado === 'APROBADA' ? 'aprobada' : 'en trámite'}.`, { fecha_inicio: 'Las fechas se cruzan con otra solicitud.' });
       }
+    }
+    // Otras ausencias que registran otros módulos (p. ej. incapacidades): días completos
+    for (const buscar of ctx.ausenciasExtra ?? []) {
+      const [o] = await buscar(trx, s.colaborador_id, s.fecha_inicio, s.fecha_fin);
+      if (o) throw invalido(`Se cruza con ${o.etiqueta} (${o.fecha_inicio}${o.fecha_inicio !== o.fecha_fin ? ` a ${o.fecha_fin}` : ''}).`, { fecha_inicio: `Las fechas se cruzan con ${o.etiqueta}.` });
     }
   }
 

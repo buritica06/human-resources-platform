@@ -11,7 +11,9 @@ export function crearNotificaciones(ctx) {
   const emisor = new EventEmitter();
   emisor.setMaxListeners(0);
 
-  async function notificar(usuarioIds, { titulo, mensaje, enlace, correo = true }) {
+  // correoGenerico: { asunto, texto } para avisos con datos sensibles (p. ej. salud): el correo
+  // sale a un buzón externo, así que solo dice que hay una novedad; el detalle queda en la plataforma.
+  async function notificar(usuarioIds, { titulo, mensaje, enlace, correo = true, correoGenerico = null }) {
     const ids = [...new Set(usuarioIds.filter(Boolean))];
     if (!ids.length) return;
     const t = ahora();
@@ -25,8 +27,8 @@ export function crearNotificaciones(ctx) {
       // En segundo plano: un fallo del correo no afecta la operación (queda en el log)
       mailer.enviar({
         para,
-        asunto: `${titulo} – Talento Humano`,
-        texto: `${mensaje ?? titulo}\n\n${enlace ? `Ver en la plataforma: ${cfg.appUrl}${enlace}` : ''}\n\nEste es un mensaje automático; no lo responda.`,
+        asunto: `${correoGenerico?.asunto ?? titulo} – Talento Humano`,
+        texto: `${correoGenerico?.texto ?? mensaje ?? titulo}\n\n${enlace ? `Ver en la plataforma: ${cfg.appUrl}${enlace}` : ''}\n\nEste es un mensaje automático; no lo responda.`,
         enlace: enlace ? `${cfg.appUrl}${enlace}` : undefined,
       }).catch((e) => log.error('No se pudo enviar una notificación por correo', { error: e.message }));
     }

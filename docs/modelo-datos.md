@@ -110,3 +110,20 @@ Las solicitudes de vacaciones usan la tabla `solicitudes` (M3):
 
 ### Acciones de auditoría nuevas
 `REGISTRAR_SALDO_VACACIONES` (detalle con el saldo antes y después; `autoregistro: true` si es el propio) y `VER_VACACIONES`.
+## M5 (migración `20261122_007_m5_incapacidades`)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| **incapacidades** | id, colaborador_id, tipo (IGE/IRL), entidad, fecha_inicio, fecha_fin, dias, prorroga_de, numero_certificado, **diagnostico_cifrado** (AES-256-GCM), documento_id (sensible), estado, motivo_estado, registrado_por, revisado_por, revisado_en, creado/actualizado_en | Estados: REGISTRADA, VALIDADA, DEVUELTA, ANULADA |
+
+### Parámetros nuevos
+- `INC_MAX_DIAS` = 180. Es un control de digitación; está marcado VERIFICAR.
+- `INC_REGISTRO_MAX_DIAS_ATRAS` = 60. Está marcado VERIFICAR.
+
+### Acciones de auditoría nuevas
+- `REGISTRAR_INCAPACIDAD`
+- `VER_INCAPACIDAD`
+- `VER_INCAPACIDADES`
+- `INCAPACIDAD_VALIDADA`, `INCAPACIDAD_DEVUELTA` e `INCAPACIDAD_ANULADA`
+
+Ninguna guarda el diagnóstico.

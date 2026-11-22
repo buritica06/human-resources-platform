@@ -1,5 +1,63 @@
 # Cambios
 
+## [0.6.0] – 2026-11-22 · Fase 7 – M5 Incapacidades
+
+### Hecho
+- **Registro de incapacidades** por el colaborador. El admincontable también puede registrarlas a nombre de otro, desde el expediente. Se piden:
+  - Tipo: IGE (enfermedad general) o IRL (accidente o enfermedad laboral).
+  - EPS o ARL.
+  - Fechas. Los días calendario se calculan solos.
+  - Si es prórroga y número de certificado (opcionales).
+  - Diagnóstico (opcional).
+  - Certificado PDF (**obligatorio**).
+- **Datos de salud (Ley 1581):**
+  - Diagnóstico cifrado con AES-256-GCM.
+  - PDF guardado como documento sensible.
+  - El **director recibe solo nombre, sede, fechas y días** de sus sedes. Se verificó en el JSON del servidor.
+  - Cada lectura del detalle (diagnóstico) y del PDF se audita.
+  - Nada de esto va en correos, notificaciones, auditoría ni logs.
+- **Revisión del área contable:**
+  - Pasos posibles: validar, devolver con motivo o anular.
+  - El colaborador puede anular la suya mientras está en revisión.
+  - Se usa `estadoEsperado` (409 si la incapacidad cambió).
+- **Ausencias sin cruces:**
+  - Una incapacidad no se cruza con otra.
+  - Permisos y vacaciones no pueden cruzarse con una incapacidad vigente (hook `ausenciasExtra` del motor). Se revalida al enviar y al aprobar.
+  - Una incapacidad sí puede caer sobre unas vacaciones aprobadas (las interrumpe); el admin ve el aviso.
+- **Pantallas:**
+  - Mis incapacidades y Subir incapacidad.
+  - Detalle.
+  - Incapacidades del equipo: para el director solo fechas; para el admin, con filtro por estado.
+  - Pestaña del expediente.
+  - Tarjeta en Inicio con "Subir incapacidad" y, para el admin, cuántas hay por revisar.
+- **Parámetros nuevos:** `INC_MAX_DIAS` (180) e `INC_REGISTRO_MAX_DIAS_ATRAS` (60), ambos con VERIFICAR.
+
+### Revisión independiente (corregido)
+- Los correos llevaban el nombre, las fechas y el motivo de la devolución, que puede describir la enfermedad. Ahora son genéricos, y el motivo no va en ninguna notificación.
+- Aprobar una solicitud no revalidaba el cruce con una incapacidad registrada mientras estaba en trámite.
+- El PDF se validaba después del chequeo de fechas, lo que obligaba a dos intentos.
+- La lista del admin se auditaba en cada carga de Inicio. Se añadió un conteo sin datos.
+- Un colaborador que enviaba `colaborador_id` no dejaba rastro. Ahora recibe 403 y queda auditado.
+- Al director le llegaban también el id y el cargo.
+- La prórroga se validaba fuera de la transacción y sin exigir el mismo tipo.
+- El admin anulaba sin motivo, y al director no se le avisaba que la ausencia se retiraba.
+- Un error al borrar un archivo huérfano ocultaba el error original.
+- Accesibilidad: fieldset con `aria-describedby`; el diálogo se cierra ante un 409.
+
+### Pruebas
+- `npm test`: **211/211**. Las nuevas son:
+  - 11 de incapacidades. Cubren: PDF falso renombrado, archivo de más de 5 MB, el JSON del director solo con fechas, auditoría de lecturas, cifrado en la BD y alcance por rol.
+  - 6 de regresión de la revisión.
+- `npm run lint` sin errores.
+- En el navegador:
+  - Registro con confirmación y detalle.
+  - Vista del director a 375 px, solo con fechas y sin desbordamiento.
+  - Validación por el admincontable con el foco en el título.
+  - Tarjeta de Inicio.
+
+### Pendiente / riesgos
+- El tope de carga en memoria es de 25 MB por petición. El límite real lo pone `UPLOAD_MAX_MB`.
+- Anular una incapacidad no anula sus prórrogas: el admin debe revisarlas.
 ## [0.5.0] – 2026-11-22 · Fase 6 – M4 Vacaciones
 
 ### Hecho

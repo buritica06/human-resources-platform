@@ -35,6 +35,7 @@ export function crearContexto(cfg, { db } = {}) {
   ctx.documentos = crearDocumentos(ctx);
   ctx.notificaciones = crearNotificaciones(ctx);
   ctx.tiposSolicitud = new Map(); // los registran los módulos (permisos, vacaciones, licencias)
+  ctx.ausenciasExtra = []; // búsquedas de otras ausencias para evitar cruces (p. ej. incapacidades)
   ctx.modulos = modulosActivos(cfg);
   // Intentos FALLIDOS por IP en la ventana (los exitosos no cuentan).
   ctx.limites = { login: 30, recuperar: 10, ventanaMs: 15 * 60_000 };
