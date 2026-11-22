@@ -1,5 +1,39 @@
 # Cambios
 
+## [0.4.1] – 2026-11-22 · M3 – Correcciones de la revisión independiente
+
+### Corregido
+- **Separación de funciones en el flujo:**
+  - El admincontable ya no aprueba el paso del director.
+  - Nadie aprueba dos pasos de la misma solicitud.
+  - Un flujo tiene 1 o 2 pasos y no repite roles (400).
+- **Paso sin director elegible:** si la sede no tiene director, o quien pide es el director, el paso se omite automáticamente. Queda en el historial como "Paso omitido automáticamente" y la solicitud pasa al área contable.
+  - La solicitud propia del único admincontable no se puede enviar. Se explica que hace falta otro usuario admincontable.
+- **Concurrencia:** aprobar y rechazar exigen el estado que veía el usuario (`estadoEsperado`). Si cambió, se responde 409 y la pantalla se recarga.
+- **Notificaciones que fallan** (correo caído) ya no convierten en error una aprobación que sí quedó hecha. La falla se registra en el log.
+  - Cancelar ahora avisa también a los aprobadores.
+- **Privacidad:**
+  - Los borradores solo los ve su dueño.
+  - El soporte de los permisos por cita médica (`LISTA_TIPOS_PERMISO_SENSIBLES`) es dato de salud y el director no puede descargarlo.
+- **Revisión de PDF más estricta:**
+  - Debe empezar con `%PDF-`.
+  - Se detecta contenido activo escondido con escapes `#xx` (p. ej. `/J#61vaScript`) y más acciones (`/AA`, `/SubmitForm`, `/GoToR`…).
+  - El tamaño máximo sale siempre del parámetro `UPLOAD_MAX_MB`.
+- **Lectura de parámetros fuera de transacciones** (evita bloqueos con SQLite).
+- **Tiempo real (SSE):** máximo 5 conexiones por usuario, cierre al vencer la sesión y errores controlados. Se registran las promesas rechazadas sin manejar.
+- **Pantallas:**
+  - Los pasos muestran hecho, omitido, rechazado o cancelado, con icono y texto.
+  - La confirmación de "Nuevo permiso" dice por qué pasos pasará la solicitud.
+  - La bandeja de aprobaciones no vuelve a pintar el filtro en cada aviso, para no perder el foco.
+  - Los enlaces de notificaciones se validan por origen.
+
+### Pruebas
+- `npm test`: **159/159**. Se añadió `tests/integration/revision-m3.test.js` con 11 pruebas, una por hallazgo, y se ajustaron las de permisos a las nuevas reglas.
+- `npm run lint` sin errores.
+- En el navegador: la aprobación del director envía el estado esperado y el detalle muestra "hecho" y "en curso".
+
+### Decisión a confirmar
+- Con un solo usuario admincontable, sus propias solicitudes no se pueden aprobar. Hace falta un segundo usuario con ese rol, o aceptar otra regla.
 ## [0.4.0] – 2026-11-22 · Fase 5 – M3 Solicitud de permisos y motor de aprobación
 
 ### Hecho

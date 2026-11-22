@@ -5,6 +5,14 @@ import { icono } from '/static/js/iconos.js';
 import { conCarga, escapar, fechaHora, htmlAviso } from '/static/js/ui.js';
 
 await montarShell();
+// Solo enlaces del mismo sitio (evita redirecciones a otros dominios, p. ej. /\\otro.com)
+const enlaceInterno = (e) => {
+  try {
+    return !!e && new URL(e, location.origin).origin === location.origin;
+  } catch {
+    return false;
+  }
+};
 const zona = document.getElementById('zona');
 
 async function cargar() {
@@ -17,7 +25,7 @@ async function cargar() {
       ${notificaciones.length ? `<ul class="lista-volantes">${notificaciones.map((n) => `<li class="item-volante ${n.leida ? '' : 'no-leida'}">
           <div><div class="item-volante__periodo">${n.leida ? '' : `<span class="pildora pildora--primario">${icono('campana')} Nueva</span> `}${escapar(n.titulo)}</div>
             ${n.mensaje ? `<div>${escapar(n.mensaje)}</div>` : ''}<div class="ayuda">${escapar(fechaHora(n.creadaEn))}</div></div>
-          ${n.enlace && n.enlace.startsWith('/') && !n.enlace.startsWith('//') ? `<a class="btn btn--chico btn--secundario" href="${escapar(n.enlace)}" data-id="${n.id}">Ver<span class="sr-only"> ${escapar(n.titulo)}</span></a>` : ''}
+          ${enlaceInterno(n.enlace) ? `<a class="btn btn--chico btn--secundario" href="${escapar(n.enlace)}" data-id="${n.id}">Ver<span class="sr-only"> ${escapar(n.titulo)}</span></a>` : ''}
         </li>`).join('')}</ul>`
         : `<div class="vacio">${icono('campana')}<h3>Sin notificaciones</h3><p>Aquí verá los avisos de sus solicitudes y aprobaciones.</p></div>`}
     </section>`;

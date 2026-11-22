@@ -44,6 +44,7 @@ export const PARAMETROS = [
   ['LISTA_SEXO', ['HOMBRE', 'MUJER'], 'json', '2026-01-01', null, 'Sexo (como en el registro civil)'],
   // M3 – Permisos (supuesto P13: tipos parametrizables)
   ['LISTA_TIPOS_PERMISO', ['CITA MÉDICA', 'DILIGENCIA PERSONAL', 'ESTUDIO', 'ASUNTO FAMILIAR', 'OTRO'], 'json', '2026-01-01', null, 'Tipos de permiso que puede pedir el colaborador'],
+  ['LISTA_TIPOS_PERMISO_SENSIBLES', ['CITA MÉDICA'], 'json', '2026-01-01', null, 'Tipos de permiso cuyo soporte es dato de salud (Ley 1581): el director no lo ve'],
   ['PERMISO_MAX_DIAS', 3, 'numero', '2026-01-01', null, 'Duración máxima de un permiso (días calendario); para más, vacaciones o licencia'],
   // Campos que el colaborador puede editar de su propio expediente (supuesto P11)
   ['CAMPOS_EDITABLES_COLABORADOR', ['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'], 'json', '2026-01-01', null, 'Datos del expediente que el colaborador puede actualizar por sí mismo'],

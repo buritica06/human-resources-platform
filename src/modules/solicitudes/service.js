@@ -17,6 +17,11 @@ export function crearServicioSolicitudes(ctx) {
     const campos = await handler.validar(ctx, { colaborador, body });
     if (handler.soporteObligatorio && !archivo) throw invalido('Adjunte el soporte en PDF.', { soporte: 'Adjunte el soporte en PDF.' });
 
+    // Sensible = dato de salud (Ley 1581): solo lo ven el colaborador y el admincontable.
+    // Se calcula ANTES de la transacción (consulta parámetros con otra conexión).
+    const sensible = typeof handler.documentoSensible === 'function'
+      ? !!(await handler.documentoSensible(ctx, campos)) : !!handler.documentoSensible;
+    const maxMb = Number(await ctx.params.valor('UPLOAD_MAX_MB'));
     let archivoGuardado = null;
     let id;
     let enviada = null;
@@ -26,7 +31,7 @@ export function crearServicioSolicitudes(ctx) {
         if (archivo) {
           const doc = await documentos.guardar(trx, req, {
             buffer: archivo.buffer, nombreOriginal: archivo.originalname, colaboradorId: colaborador.id,
-            categoria: handler.categoriaDocumento, sensible: !!handler.documentoSensible,
+            categoria: handler.categoriaDocumento, sensible, maxMb,
           });
           archivoGuardado = doc.clave;
           documentoId = doc.id;

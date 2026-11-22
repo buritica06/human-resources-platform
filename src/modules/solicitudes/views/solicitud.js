@@ -11,7 +11,8 @@ const zona = document.getElementById('zona');
 const titulo = document.getElementById('titulo');
 const q = new URLSearchParams(location.search);
 const id = Number(q.get('id'));
-const ACCION = { CREAR: 'Creó la solicitud', ENVIAR: 'Envió la solicitud', APROBAR: 'Aprobó', RECHAZAR: 'Rechazó', CANCELAR: 'Canceló' };
+const ACCION = { CREAR: 'Creó la solicitud', ENVIAR: 'Envió la solicitud', APROBAR: 'Aprobó', RECHAZAR: 'Rechazó', CANCELAR: 'Canceló', OMITIR: 'Paso omitido automáticamente' };
+let estadoActual = null; // el estado que ve el usuario: se envía al aprobar/rechazar (409 si cambió)
 let aviso = q.get('nueva') === '1' ? htmlAviso('exito', 'Solicitud registrada. Verá aquí cómo avanza y le avisaremos cada cambio.') : '';
 history.replaceState(null, '', `/solicitudes/ver?id=${id}`);
 
@@ -19,6 +20,7 @@ async function cargar() {
   try {
     if (!(Number.isInteger(id) && id > 0)) throw new Error('No se indicó qué solicitud ver.');
     const s = await api(`/solicitudes/${id}`);
+    estadoActual = s.estado;
     // "Volver": a la página de donde vino (si es de este sitio) o a la lista del tipo
     const ref = document.referrer && new URL(document.referrer).origin === location.origin ? new URL(document.referrer).pathname : null;
     const LISTA = { PERMISO: '/permisos', VACACIONES: '/vacaciones', LICENCIA: '/licencias' };
@@ -29,8 +31,7 @@ async function cargar() {
       <section class="tarjeta" aria-labelledby="t-estado">
         <header class="encabezado-tarjeta"><h2 id="t-estado">Estado</h2>${pildoraEstado(s.estado, s.estadoEtiqueta)}</header>
         ${s.pasos.length ? `<ol class="pasos pasos--flujo" aria-label="Pasos de aprobación">
-          ${s.pasos.map((p, i) => `<li ${p.estado === 'ACTUAL' ? 'aria-current="step"' : ''} data-hecho="${p.estado === 'HECHO'}">
-            <span class="num">${p.estado === 'HECHO' ? icono('ok') : i + 1}</span><span>${escapar(p.etiqueta)}${p.estado === 'HECHO' ? '<span class="sr-only"> (hecho)</span>' : p.estado === 'ACTUAL' ? '<span class="sr-only"> (en curso)</span>' : ''}</span></li>`).join('')}
+          ${s.pasos.map((p, i) => pasoHtml(p, i)).join('')}
           <li data-hecho="${s.estado === 'APROBADA'}"><span class="num">${s.estado === 'APROBADA' ? icono('ok') : s.pasos.length + 1}</span><span>Aprobada</span></li>
         </ol>` : ''}
         <dl class="datos">
@@ -67,10 +68,21 @@ async function cargar() {
   }
 }
 
+// Paso del flujo: hecho, omitido, rechazado/cancelado aquí, en curso o pendiente (icono + texto)
+function pasoHtml(p, i) {
+  const E = {
+    HECHO: ['ok', 'hecho', 'true'], OMITIDO: ['cancelar', 'omitido: la sede no tiene director', 'omitido'],
+    RECHAZADO: ['cerrar', 'rechazado en este paso', 'rechazado'], CANCELADO: ['cancelar', 'cancelado en este paso', 'omitido'],
+    ACTUAL: [null, 'en curso', 'false'], PENDIENTE: [null, 'pendiente', 'false'],
+  }[p.estado];
+  return `<li ${p.estado === 'ACTUAL' ? 'aria-current="step"' : ''} data-hecho="${E[2]}">
+    <span class="num">${E[0] ? icono(E[0]) : i + 1}</span><span>${escapar(p.etiqueta)} <span class="ayuda">(${E[1]})</span></span></li>`;
+}
+
 async function aprobar(e) {
   const boton = e.currentTarget;
   if (!(await confirmar({ titulo: 'Aprobar solicitud', mensaje: '¿Confirma la aprobación? Se le avisará al colaborador.', aceptar: 'Aprobar' }))) return;
-  await conCarga(boton, () => accion('aprobar', {}, 'Solicitud aprobada.'));
+  await conCarga(boton, () => accion('aprobar', { estadoEsperado: estadoActual }, 'Solicitud aprobada.'));
 }
 
 async function enviarBorrador(e) {
@@ -79,9 +91,10 @@ async function enviarBorrador(e) {
   await conCarga(boton, () => accion('enviar', {}, 'Solicitud enviada.'));
 }
 
-async function accion(ruta, datos, ok) {
+async function accion(ruta, datos, ok, antesDeRecargar) {
   try {
     await api(`/solicitudes/${id}/${ruta}`, { metodo: 'POST', datos });
+    antesDeRecargar?.(); // p. ej. cerrar el diálogo, para que el foco pueda ir al título
     toast(ok);
     await cargar();
     titulo.focus();
@@ -114,8 +127,8 @@ function dialogoMotivo({ titulo: t, obligatorio, boton, ruta, campo, ayuda }) {
     if (obligatorio && valor.length < 5) return mostrarErrores(f, { [campo]: 'Explique el motivo (mínimo 5 caracteres). El colaborador lo verá.' });
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
-        await accion(ruta, valor ? { [campo]: valor } : {}, ruta === 'rechazar' ? 'Solicitud rechazada.' : 'Solicitud cancelada.');
-        d.close();
+        const datos = { ...(valor ? { [campo]: valor } : {}), ...(ruta === 'rechazar' ? { estadoEsperado: estadoActual } : {}) };
+        await accion(ruta, datos, ruta === 'rechazar' ? 'Solicitud rechazada.' : 'Solicitud cancelada.', () => d.close());
       } catch (err) {
         if (Object.keys(err.campos ?? {}).length) mostrarErrores(f, Object.fromEntries(Object.entries(err.campos).map(([, m]) => [campo, m])));
       }

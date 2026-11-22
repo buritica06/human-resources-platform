@@ -87,18 +87,21 @@ Validaciones de la carga: fechas en S1/T1; encabezados de la tabla de nómina; c
 | GET | `/solicitudes/tipos` | sesión | Tipos activos (según módulos) para los botones de Inicio |
 | POST | `/solicitudes` | colaborador con expediente ACTIVO | multipart: `tipo`, campos del tipo, `soporte` (PDF opcional, ≤ `UPLOAD_MAX_MB`, se valida el contenido real y se rechaza contenido activo), `enviar` (`false` = borrador). 201 con el detalle |
 | GET | `/me/solicitudes` | sesión | `?tipo&estado` (`EN_CURSO` = no terminadas) |
-| GET | `/solicitudes/:id` | dueño, ADMIN, DIRECTOR de la sede; si no, **404** | Detalle con `pasos` (HECHO/ACTUAL/PENDIENTE), `eventos` (historial) y `acciones` permitidas a quien consulta |
+| GET | `/solicitudes/:id` | dueño, ADMIN, DIRECTOR de la sede (los borradores solo el dueño); si no, **404** | Detalle con `pasos` (HECHO/OMITIDO/RECHAZADO/CANCELADO/ACTUAL/PENDIENTE), `eventos` (historial) y `acciones` permitidas a quien consulta |
 | POST | `/solicitudes/:id/enviar` | dueño | Solo BORRADOR. Revalida que no se cruce con otra ausencia |
 | POST | `/solicitudes/:id/cancelar` | dueño | `{ motivo? }`. Solo si no ha terminado |
-| POST | `/solicitudes/:id/aprobar` | quien pueda actuar en el paso | `{ comentario? }` |
-| POST | `/solicitudes/:id/rechazar` | igual | `{ motivo }` **obligatorio** (5–500) |
+| POST | `/solicitudes/:id/aprobar` | quien pueda actuar en el paso | `{ comentario?, estadoEsperado }`: el estado que veía; si cambió, **409** |
+| POST | `/solicitudes/:id/rechazar` | igual | `{ motivo, estadoEsperado }`; motivo **obligatorio** (5–500) |
 | GET | `/aprobaciones` · `/aprobaciones/resumen` | DIRECTOR, ADMIN | Bandeja: pasos que el usuario puede atender |
 | GET | `/colaboradores/:id/solicitudes` | dueño, ADMIN, DIRECTOR de la sede | `?tipo` (pestañas del expediente) |
-| GET/PUT | `/flujos/:tipo` | ADMIN | `PUT { pasos: [{ rol: 'DIRECTOR'|'ADMIN', etiqueta? }] }` crea una **nueva versión**; las solicitudes en curso siguen con la suya |
+| GET/PUT | `/flujos/:tipo` | ADMIN | `PUT { pasos: [{ rol: 'DIRECTOR'|'ADMIN', etiqueta? }] }` (1–2 pasos, sin roles repetidos) crea una **nueva versión**; las solicitudes en curso siguen con la suya |
 | GET | `/documentos/:id` | dueño, ADMIN; DIRECTOR de la sede solo si **no** es sensible | `?ver=1` para abrir en el navegador. Se audita |
+| GET | `/solicitudes/flujo/:tipo` | sesión | Nombres de los pasos del flujo vigente (para la confirmación antes de enviar) |
 | GET | `/permisos/opciones` | sesión | Tipos de permiso (`LISTA_TIPOS_PERMISO`), máximo de días, tamaño máximo |
 | GET | `/notificaciones` · `/notificaciones/resumen` | sesión | Solo las propias |
 | POST | `/notificaciones/leer` | sesión | `{ ids }` o `{ todas: true }` (solo las propias) |
 | GET | `/eventos` | sesión | **Server-Sent Events**: `event: cambio` con `{ tipo: 'notificacion'|'solicitud', id? }` |
 
-**Reglas del flujo:** puede actuar en un paso quien tenga su rol (el director solo en sus sedes) o el admincontable (superusuario). Si la sede no tiene director, el paso lo atiende el admincontable. Nadie aprueba ni rechaza su propia solicitud. Cada transición es una actualización condicionada (409 si cambió mientras tanto).
+**Reglas del flujo (separación de funciones):** en cada paso actúa solo quien tiene ese rol (el director, solo en sus sedes); el admincontable no atiende el paso del director. Nadie aprueba ni rechaza su propia solicitud, ni aprueba dos pasos de la misma. Si no hay un director elegible (la sede no tiene, o el solicitante es el director), ese paso se **omite** automáticamente (evento `OMITIR`) y pasa al área contable. Si no hay otro admincontable distinto del solicitante, no se puede enviar (400 con mensaje claro). Cada transición es una actualización condicionada (409 si cambió mientras tanto). Las fallas de correo o notificación se registran en el log y no deshacen la acción.
+
+**Documentos sensibles:** el soporte de los permisos de tipos en `LISTA_TIPOS_PERMISO_SENSIBLES` (por defecto, CITA MÉDICA) es dato de salud: el director no lo ve. Un PDF debe empezar con `%PDF-`; se rechaza contenido activo aunque venga escondido con escapes `#xx`.

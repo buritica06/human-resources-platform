@@ -31,6 +31,11 @@ setInterval(async () => {
   }
 }, 30 * 60_000).unref();
 
+// Último recurso: una promesa rechazada sin manejar no debe tumbar el servidor (se registra).
+process.on('unhandledRejection', (motivo) => {
+  log.error('Promesa rechazada sin manejar', { error: motivo instanceof Error ? motivo.message : String(motivo) });
+});
+
 for (const senal of ['SIGINT', 'SIGTERM']) {
   process.on(senal, () => {
     servidor.close(() => ctx.db.destroy().then(() => process.exit(0)));

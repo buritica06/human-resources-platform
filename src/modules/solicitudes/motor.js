@@ -2,21 +2,37 @@
 //
 // Estados: BORRADOR → (pasos del flujo, p. ej. PENDIENTE_DIRECTOR → PENDIENTE_CONTABLE) →
 //          APROBADA | RECHAZADA | CANCELADA
-// - Los pasos vienen de la tabla `flujos` (versión activa del tipo). Cada solicitud queda atada a
-//   la versión con la que se envió.
-// - Puede actuar en un paso: quien tenga el rol del paso (el director, solo en sus sedes) o el
-//   admincontable (superusuario). Nadie aprueba ni rechaza su propia solicitud.
-// - Rechazar exige motivo. Cada transición es una actualización condicionada (sin carreras),
-//   queda en solicitud_eventos y en la auditoría, y notifica (campana, tiempo real y correo).
+// Reglas:
+// - Los pasos vienen de la tabla `flujos` (versión activa del tipo); cada solicitud queda atada a
+//   la versión con la que se envió. Cada rol aparece una sola vez en un flujo.
+// - Solo actúa en un paso quien tenga SU rol (el director, solo en sus sedes). Separación de
+//   funciones: nadie actúa sobre su propia solicitud ni en dos pasos de la misma.
+// - Si un paso de DIRECTOR no tiene director disponible (la sede no tiene, o es el propio
+//   solicitante), el paso se OMITE automáticamente y queda en el historial.
+// - Si un paso de ADMIN no tiene a nadie disponible, la solicitud no se puede enviar (mensaje claro).
+// - Quien aprueba o rechaza indica el estado que estaba viendo: si cambió, 409.
+// - Las notificaciones van DESPUÉS del commit y un fallo en ellas no cambia el resultado.
 import { ErrorApp, conflicto, invalido, noEncontrado, prohibido } from '../../core/errors.js';
 import { ahora } from '../../core/db.js';
+import { log } from '../../core/logger.js';
 
 export const FINALES = ['APROBADA', 'RECHAZADA', 'CANCELADA'];
 export const ETIQUETAS_ESTADO = { BORRADOR: 'Borrador', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
 const ROLES_PASO = ['DIRECTOR', 'ADMIN'];
+const OMITIDO = 'La sede no tiene un director disponible para aprobar; este paso se omite y pasa al siguiente.';
 
 export function crearMotor(ctx) {
   const { db, auditar, notificaciones } = ctx;
+  const esPg = () => db.client.config.client === 'pg';
+
+  // Ejecuta notificaciones sin que un fallo afecte la respuesta (ya se guardó el cambio)
+  async function seguro(descripcion, fn) {
+    try {
+      await fn();
+    } catch (e) {
+      log.error(`Falló ${descripcion}`, { error: e.message });
+    }
+  }
 
   // ---------- flujos ----------
   async function flujoActivo(tipo, trx = db) {
@@ -24,23 +40,29 @@ export function crearMotor(ctx) {
     if (!f) throw new ErrorApp(500, 'SIN_FLUJO', `No hay un flujo de aprobación configurado para ${tipo}.`);
     return { ...f, pasos: JSON.parse(f.pasos) };
   }
-  const flujoPorId = async (id, trx = db) => {
-    const f = await trx('flujos').where({ id }).first();
-    return f && { ...f, pasos: JSON.parse(f.pasos) };
-  };
+  const cacheFlujos = new Map(); // las versiones de flujo son inmutables
+  async function flujoPorId(id, trx = db) {
+    if (!id) return null;
+    if (!cacheFlujos.has(id)) {
+      const f = await trx('flujos').where({ id }).first();
+      if (!f) return null;
+      cacheFlujos.set(id, { ...f, pasos: JSON.parse(f.pasos) });
+    }
+    return cacheFlujos.get(id);
+  }
 
   // Nueva versión del flujo (las solicitudes en curso siguen con la suya)
   async function configurarFlujo(req, tipo, pasos) {
     if (!ctx.tiposSolicitud.has(tipo)) throw noEncontrado('Ese tipo de solicitud no existe.');
-    if (!Array.isArray(pasos) || pasos.length < 1 || pasos.length > 4) throw invalido('El flujo debe tener entre 1 y 4 pasos.');
-    const usados = {};
-    const normalizados = pasos.map((p, i) => {
-      if (!ROLES_PASO.includes(p.rol)) throw invalido(`Paso ${i + 1}: el rol debe ser DIRECTOR o ADMIN.`);
-      usados[p.rol] = (usados[p.rol] ?? 0) + 1;
-      const base = p.rol === 'ADMIN' ? 'PENDIENTE_CONTABLE' : 'PENDIENTE_DIRECTOR';
-      const etiqueta = String(p.etiqueta ?? '').trim().slice(0, 40) || (p.rol === 'ADMIN' ? 'Pendiente contable' : 'Pendiente director');
-      return { rol: p.rol, estado: usados[p.rol] > 1 ? `${base}_${usados[p.rol]}` : base, etiqueta };
-    });
+    if (!Array.isArray(pasos) || pasos.length < 1 || pasos.length > ROLES_PASO.length) throw invalido('El flujo debe tener uno o dos pasos.');
+    const roles = pasos.map((p) => p.rol);
+    if (roles.some((r) => !ROLES_PASO.includes(r))) throw invalido('Cada paso debe ser DIRECTOR o ADMIN.');
+    if (new Set(roles).size !== roles.length) throw invalido('Cada rol puede aparecer una sola vez en el flujo (separación de funciones).');
+    const normalizados = pasos.map((p) => ({
+      rol: p.rol,
+      estado: p.rol === 'ADMIN' ? 'PENDIENTE_CONTABLE' : 'PENDIENTE_DIRECTOR',
+      etiqueta: String(p.etiqueta ?? '').trim().slice(0, 40) || (p.rol === 'ADMIN' ? 'Pendiente contable' : 'Pendiente director'),
+    }));
     const version = await db.transaction(async (trx) => {
       const ultima = await trx('flujos').where({ tipo }).max({ v: 'version' }).first();
       const v = Number(ultima?.v ?? 0) + 1;
@@ -52,35 +74,49 @@ export function crearMotor(ctx) {
     return { tipo, version, pasos: normalizados };
   }
 
-  // ---------- alcance ----------
+  // ---------- personas ----------
   const colaboradorDe = (req) => db('colaboradores').where({ cedula: req.usuario.cedula }).first();
-  const sedesDirector = async (usuarioId) => (await db('director_sedes').where({ usuario_id: usuarioId }).select('sede_id')).map((r) => r.sede_id);
+  const sedesDirector = async (usuarioId, trx = db) => (await trx('director_sedes').where({ usuario_id: usuarioId }).select('sede_id')).map((r) => r.sede_id);
+  const usuarioDe = async (cedula) => (await db('usuarios').where({ cedula }).first('id'))?.id;
+
+  // Quiénes pueden atender un paso de esta solicitud (sin el solicitante)
+  async function aprobadoresDe(s, paso, trx = db) {
+    if (paso.rol === 'ADMIN') {
+      return (await trx('usuarios').where({ rol: 'ADMIN', activo: true }).whereNot({ cedula: s.cedula }).select('id')).map((u) => u.id);
+    }
+    if (!s.sede_id) return [];
+    return (await trx('usuarios as u').join('director_sedes as d', 'd.usuario_id', 'u.id')
+      .where({ 'u.rol': 'DIRECTOR', 'u.activo': true, 'd.sede_id': s.sede_id }).whereNot('u.cedula', s.cedula).select('u.id')).map((u) => u.id);
+  }
 
   async function cargar(id, trx = db) {
     const s = await trx('solicitudes as s').join('colaboradores as c', 'c.id', 's.colaborador_id')
       .where('s.id', id).select('s.*', 'c.cedula', 'c.nombre as colaborador_nombre', 'c.sede_id', 'c.cargo').first();
     if (!s) return null;
-    s.flujo = s.flujo_id ? await flujoPorId(s.flujo_id, trx) : null;
+    s.flujo = await flujoPorId(s.flujo_id, trx);
     s.datos = s.datos ? JSON.parse(s.datos) : {};
     return s;
   }
 
-  // ¿Puede este usuario VER la solicitud? (propia, admin, o director de la sede)
+  // ¿Puede VER la solicitud? La propia siempre; un BORRADOR solo su dueño; el admin todas las
+  // enviadas; el director las enviadas de sus sedes.
   async function puedeVer(req, s) {
-    if (req.usuario.rol === 'ADMIN') return true;
     if (s.cedula === req.usuario.cedula) return true;
+    if (s.estado === 'BORRADOR') return false;
+    if (req.usuario.rol === 'ADMIN') return true;
     if (req.usuario.rol === 'DIRECTOR') return (await sedesDirector(req.usuario.id)).includes(s.sede_id);
     return false;
   }
 
-  // ¿Puede ACTUAR en el paso actual?
-  async function puedeActuar(req, s) {
-    if (!s.flujo || s.paso_actual === null || s.paso_actual === undefined) return false;
-    if (s.cedula === req.usuario.cedula) return false; // nunca sobre la propia
+  // ¿Puede ACTUAR en el paso actual? Su rol, su alcance, no es suya y no actuó en otro paso.
+  async function puedeActuar(req, s, trx = db) {
+    if (!s.flujo || s.paso_actual === null || s.paso_actual === undefined || FINALES.includes(s.estado)) return false;
+    if (s.cedula === req.usuario.cedula) return false;
     const paso = s.flujo.pasos[s.paso_actual];
-    if (req.usuario.rol === 'ADMIN') return true;
-    if (req.usuario.rol === 'DIRECTOR' && paso.rol === 'DIRECTOR') return (await sedesDirector(req.usuario.id)).includes(s.sede_id);
-    return false;
+    if (!paso || req.usuario.rol !== paso.rol) return false;
+    if (paso.rol === 'DIRECTOR' && !(await sedesDirector(req.usuario.id, trx)).includes(s.sede_id)) return false;
+    const yaActuo = await trx('solicitud_eventos').where({ solicitud_id: s.id, actor_id: req.usuario.id, accion: 'APROBAR' }).first('id');
+    return !yaActuo;
   }
 
   async function cargarConAlcance(req, id) {
@@ -91,18 +127,6 @@ export function crearMotor(ctx) {
     }
     return s;
   }
-
-  // ---------- destinatarios ----------
-  async function aprobadoresDe(s, paso) {
-    const admins = (await db('usuarios').where({ rol: 'ADMIN', activo: true }).select('id', 'cedula'));
-    if (paso.rol === 'ADMIN') return admins.filter((u) => u.cedula !== s.cedula).map((u) => u.id);
-    const directores = await db('usuarios as u').join('director_sedes as d', 'd.usuario_id', 'u.id')
-      .where({ 'u.rol': 'DIRECTOR', 'u.activo': true, 'd.sede_id': s.sede_id ?? -1 }).select('u.id', 'u.cedula');
-    const validos = directores.filter((u) => u.cedula !== s.cedula).map((u) => u.id);
-    // Sin director para la sede (o es el propio solicitante): el admincontable puede actuar
-    return validos.length ? validos : admins.filter((u) => u.cedula !== s.cedula).map((u) => u.id);
-  }
-  const usuarioDe = async (cedula) => (await db('usuarios').where({ cedula }).first('id'))?.id;
 
   function etiquetaEstado(s, estado = s.estado) {
     if (ETIQUETAS_ESTADO[estado]) return ETIQUETAS_ESTADO[estado];
@@ -121,21 +145,46 @@ export function crearMotor(ctx) {
         enlace,
       });
     }
-    // Refresco en vivo de listas para todos los involucrados
     const todos = [solicitante, ...(await db('usuarios').where({ rol: 'ADMIN', activo: true }).pluck('id')), ...(aprobadores ?? [])];
     notificaciones.avisar(todos, { tipo: 'solicitud', id: s.id });
   }
 
   // ---------- transiciones ----------
   // Actualización condicionada: solo si sigue en el estado y paso esperados (evita carreras)
-  async function transicion(trx, s, { desde, hacia, paso, accion, actorId, comentario, extra = {} }) {
+  async function transicion(trx, s, { hacia, paso, accion, actorId, comentario, extra = {} }) {
     const t = ahora();
+    const desde = s.estado;
     const q = trx('solicitudes').where({ id: s.id, estado: desde });
     if (s.paso_actual === null || s.paso_actual === undefined) q.whereNull('paso_actual');
     else q.where({ paso_actual: s.paso_actual });
     const n = await q.update({ estado: hacia, paso_actual: paso, actualizado_en: t, ...(FINALES.includes(hacia) ? { resuelto_en: t } : {}), ...extra });
     if (n !== 1) throw conflicto('La solicitud cambió mientras tanto. Recargue la página para ver su estado actual.');
     await trx('solicitud_eventos').insert({ solicitud_id: s.id, actor_id: actorId, accion, estado_desde: desde, estado_hasta: hacia, comentario: comentario?.slice(0, 500) ?? null, creado_en: t });
+    s.estado = hacia;
+    s.paso_actual = paso;
+  }
+
+  // Entra al paso i; omite los pasos de DIRECTOR sin director disponible.
+  async function entrarEnPaso(trx, s, i) {
+    let actual = i;
+    while (actual < s.flujo.pasos.length) {
+      const paso = s.flujo.pasos[actual];
+      if (paso.rol !== 'DIRECTOR' || (await aprobadoresDe(s, paso, trx)).length) break;
+      const siguiente = actual + 1;
+      if (siguiente >= s.flujo.pasos.length) throw invalido('No hay quién apruebe esta solicitud. Comuníquese con el área contable.');
+      await transicion(trx, s, { hacia: s.flujo.pasos[siguiente].estado, paso: siguiente, accion: 'OMITIR', actorId: null, comentario: OMITIDO });
+      actual = siguiente;
+    }
+    return actual;
+  }
+
+  // Antes de enviar: todo paso de ADMIN debe tener a alguien distinto del solicitante
+  async function verificarAprobadores(trx, s) {
+    for (const paso of s.flujo.pasos) {
+      if (paso.rol === 'ADMIN' && !(await aprobadoresDe(s, paso, trx)).length) {
+        throw invalido('No hay otro usuario del área contable que pueda aprobar su solicitud (nadie aprueba la propia). Pida que se cree otro usuario admincontable.');
+      }
+    }
   }
 
   async function enviar(req, id, { trx: trxExterna } = {}) {
@@ -143,65 +192,85 @@ export function crearMotor(ctx) {
       const s = await cargar(id, trx);
       if (!s || s.cedula !== req.usuario.cedula) throw noEncontrado('No encontramos esa solicitud.');
       if (s.estado !== 'BORRADOR') throw conflicto('Solo se puede enviar una solicitud en borrador.');
-      const tipo = ctx.tiposSolicitud.get(s.tipo);
-      await tipo.revalidarAlEnviar?.(ctx, s, trx); // p. ej. que siga sin cruzarse con otras ausencias
+      // En PostgreSQL, bloquea al colaborador: dos envíos simultáneos no pueden saltarse la
+      // validación de cruce (en SQLite las escrituras ya son secuenciales).
+      if (esPg()) await trx('colaboradores').where({ id: s.colaborador_id }).forUpdate().first('id');
+      await ctx.tiposSolicitud.get(s.tipo).revalidarAlEnviar?.(ctx, s, trx);
       await validarSinCruce(trx, s);
-      const flujo = await flujoActivo(s.tipo, trx);
-      s.flujo = flujo;
-      await transicion(trx, s, { desde: 'BORRADOR', hacia: flujo.pasos[0].estado, paso: 0, accion: 'ENVIAR', actorId: req.usuario.id, extra: { flujo_id: flujo.id, enviado_en: ahora() } });
-      s.estado = flujo.pasos[0].estado;
-      s.paso_actual = 0;
+      s.flujo = await flujoActivo(s.tipo, trx);
+      await verificarAprobadores(trx, s);
+      await transicion(trx, s, { hacia: s.flujo.pasos[0].estado, paso: 0, accion: 'ENVIAR', actorId: req.usuario.id, extra: { flujo_id: s.flujo.id, enviado_en: ahora() } });
+      await entrarEnPaso(trx, s, 0);
       return s;
     };
-    const s = trxExterna ? await ejecutar(trxExterna) : await db.transaction(ejecutar);
-    return s;
+    return trxExterna ? ejecutar(trxExterna) : db.transaction(ejecutar);
   }
 
   // Tras el commit: auditoría y notificaciones del envío
   async function despuesDeEnviar(req, s) {
     await auditar(req, { accion: 'ENVIAR', entidad: 'solicitud', entidadId: s.id, detalle: { tipo: s.tipo } });
-    const s2 = await cargar(s.id);
-    await notificarCambio(s2, {
-      titulo: `Su solicitud de ${ctx.tiposSolicitud.get(s2.tipo).etiqueta.toLowerCase()} fue enviada`,
-      mensaje: `Quedó en estado "${etiquetaEstado(s2)}".`,
-      aprobadores: await aprobadoresDe(s2, s2.flujo.pasos[0]),
+    await seguro('la notificación del envío', async () => {
+      const s2 = await cargar(s.id);
+      await notificarCambio(s2, {
+        titulo: `Su solicitud de ${ctx.tiposSolicitud.get(s2.tipo).etiqueta.toLowerCase()} fue enviada`,
+        mensaje: `Quedó en estado "${etiquetaEstado(s2)}".`,
+        aprobadores: await aprobadoresDe(s2, s2.flujo.pasos[s2.paso_actual]),
+      });
     });
   }
 
-  async function aprobar(req, id, comentario) {
-    const s = await cargarConAlcance(req, id);
-    if (!(await puedeActuar(req, s))) {
-      if (s.cedula === req.usuario.cedula) throw prohibido('No puede aprobar su propia solicitud.');
-      throw prohibido(FINALES.includes(s.estado) || s.estado === 'BORRADOR' ? 'Esta solicitud no está pendiente de aprobación.' : 'Este paso le corresponde a otro rol.');
+  function verificarEstadoEsperado(s, estadoEsperado) {
+    if (!estadoEsperado || estadoEsperado !== s.estado) {
+      throw conflicto(`La solicitud ya no está en el estado que usted veía (ahora: "${etiquetaEstado(s)}"). Recargue la página.`);
     }
-    const siguiente = s.paso_actual + 1;
-    const final = siguiente >= s.flujo.pasos.length;
-    const hacia = final ? 'APROBADA' : s.flujo.pasos[siguiente].estado;
-    await db.transaction((trx) => transicion(trx, s, { desde: s.estado, hacia, paso: final ? null : siguiente, accion: 'APROBAR', actorId: req.usuario.id, comentario }));
-    await auditar(req, { accion: 'APROBAR', entidad: 'solicitud', entidadId: id, detalle: { paso: s.paso_actual, hacia } });
-    const s2 = await cargar(id);
-    const etiqueta = ctx.tiposSolicitud.get(s.tipo).etiqueta.toLowerCase();
-    await notificarCambio(s2, {
-      titulo: final ? `Su solicitud de ${etiqueta} fue APROBADA` : `Su solicitud de ${etiqueta} avanzó`,
-      mensaje: final ? 'Quedó registrada en su expediente.' : `Ahora está en "${etiquetaEstado(s2)}".`,
-      aprobadores: final ? null : await aprobadoresDe(s2, s2.flujo.pasos[siguiente]),
+  }
+
+  async function motivoNoPuede(req, s) {
+    if (s.cedula === req.usuario.cedula) return 'No puede aprobar ni rechazar su propia solicitud; si ya no la necesita, cancélela.';
+    if (FINALES.includes(s.estado)) return 'Esta solicitud ya no está pendiente.';
+    const yaActuo = await db('solicitud_eventos').where({ solicitud_id: s.id, actor_id: req.usuario.id, accion: 'APROBAR' }).first('id');
+    if (yaActuo) return 'Usted ya aprobó un paso de esta solicitud; el siguiente lo debe atender otra persona.';
+    return 'Este paso le corresponde a otro rol.';
+  }
+
+  async function aprobar(req, id, { comentario, estadoEsperado }) {
+    const s = await cargarConAlcance(req, id);
+    verificarEstadoEsperado(s, estadoEsperado);
+    if (!(await puedeActuar(req, s))) throw prohibido(await motivoNoPuede(req, s));
+    const pasoAprobado = s.paso_actual;
+    await db.transaction(async (trx) => {
+      const siguiente = s.paso_actual + 1;
+      const final = siguiente >= s.flujo.pasos.length;
+      await transicion(trx, s, { hacia: final ? 'APROBADA' : s.flujo.pasos[siguiente].estado, paso: final ? null : siguiente, accion: 'APROBAR', actorId: req.usuario.id, comentario });
+      if (!final) await entrarEnPaso(trx, s, siguiente);
+      // Efecto del tipo al aprobarse (p. ej. registro en el expediente): en la MISMA transacción
+      if (s.estado === 'APROBADA') await ctx.tiposSolicitud.get(s.tipo).alAprobar?.(ctx, s, trx);
     });
-    if (final) await ctx.tiposSolicitud.get(s.tipo).alAprobar?.(ctx, s2);
+    await auditar(req, { accion: 'APROBAR', entidad: 'solicitud', entidadId: id, detalle: { paso: pasoAprobado, hacia: s.estado } });
+    await seguro('la notificación de la aprobación', async () => {
+      const s2 = await cargar(id);
+      const etiqueta = ctx.tiposSolicitud.get(s2.tipo).etiqueta.toLowerCase();
+      const final = s2.estado === 'APROBADA';
+      await notificarCambio(s2, {
+        titulo: final ? `Su solicitud de ${etiqueta} fue APROBADA` : `Su solicitud de ${etiqueta} avanzó`,
+        mensaje: final ? 'Quedó registrada en su expediente.' : `Ahora está en "${etiquetaEstado(s2)}".`,
+        aprobadores: final ? null : await aprobadoresDe(s2, s2.flujo.pasos[s2.paso_actual]),
+      });
+    });
     return detalle(req, id);
   }
 
-  async function rechazar(req, id, motivo) {
+  async function rechazar(req, id, { motivo, estadoEsperado }) {
     const s = await cargarConAlcance(req, id);
-    if (!(await puedeActuar(req, s))) {
-      if (s.cedula === req.usuario.cedula) throw prohibido('No puede rechazar su propia solicitud; si ya no la necesita, cancélela.');
-      throw prohibido('Esta solicitud no está pendiente de su aprobación.');
-    }
-    await db.transaction((trx) => transicion(trx, s, { desde: s.estado, hacia: 'RECHAZADA', paso: null, accion: 'RECHAZAR', actorId: req.usuario.id, comentario: motivo }));
-    await auditar(req, { accion: 'RECHAZAR', entidad: 'solicitud', entidadId: id, detalle: { paso: s.paso_actual } });
-    await notificarCambio(await cargar(id), {
+    verificarEstadoEsperado(s, estadoEsperado);
+    if (!(await puedeActuar(req, s))) throw prohibido(await motivoNoPuede(req, s));
+    const paso = s.paso_actual;
+    await db.transaction((trx) => transicion(trx, s, { hacia: 'RECHAZADA', paso: null, accion: 'RECHAZAR', actorId: req.usuario.id, comentario: motivo }));
+    await auditar(req, { accion: 'RECHAZAR', entidad: 'solicitud', entidadId: id, detalle: { paso } });
+    await seguro('la notificación del rechazo', async () => notificarCambio(await cargar(id), {
       titulo: `Su solicitud de ${ctx.tiposSolicitud.get(s.tipo).etiqueta.toLowerCase()} fue RECHAZADA`,
       mensaje: `Motivo: ${motivo}`,
-    });
+    }));
     return detalle(req, id);
   }
 
@@ -209,22 +278,26 @@ export function crearMotor(ctx) {
     const s = await cargarConAlcance(req, id);
     if (s.cedula !== req.usuario.cedula) throw prohibido('Solo quien hizo la solicitud puede cancelarla.');
     if (FINALES.includes(s.estado)) throw conflicto('Esta solicitud ya terminó; no se puede cancelar.');
-    await db.transaction((trx) => transicion(trx, s, { desde: s.estado, hacia: 'CANCELADA', paso: null, accion: 'CANCELAR', actorId: req.usuario.id, comentario: motivo }));
+    const estabaEnTramite = s.estado !== 'BORRADOR';
+    const pasoPendiente = estabaEnTramite ? s.flujo.pasos[s.paso_actual] : null;
+    await db.transaction((trx) => transicion(trx, s, { hacia: 'CANCELADA', paso: null, accion: 'CANCELAR', actorId: req.usuario.id, comentario: motivo }));
     await auditar(req, { accion: 'CANCELAR', entidad: 'solicitud', entidadId: id });
-    if (s.estado !== 'BORRADOR') {
-      const s2 = await cargar(id);
-      await notificaciones.notificar(await aprobadoresDe(s2, s.flujo.pasos[s.paso_actual]), {
-        titulo: `${s.colaborador_nombre} canceló su solicitud de ${ctx.tiposSolicitud.get(s.tipo).etiqueta.toLowerCase()}`,
-        enlace: `/solicitudes/ver?id=${id}`,
-        correo: false,
+    if (estabaEnTramite) {
+      await seguro('la notificación de la cancelación', async () => {
+        const s2 = await cargar(id);
+        const etiqueta = ctx.tiposSolicitud.get(s.tipo).etiqueta.toLowerCase();
+        await notificaciones.notificar(await aprobadoresDe(s2, pasoPendiente), {
+          titulo: `${s.colaborador_nombre} canceló su solicitud de ${etiqueta}`, enlace: `/solicitudes/ver?id=${id}`,
+        });
+        await notificarCambio(s2, { titulo: `Su solicitud de ${etiqueta} quedó CANCELADA`, mensaje: motivo ? `Motivo: ${motivo}` : undefined });
       });
-      notificaciones.avisar([await usuarioDe(s.cedula)], { tipo: 'solicitud', id });
     }
     return detalle(req, id);
   }
 
   // ---------- cruce con otras ausencias ----------
-  // Rango [desde, hasta) en minutos desde época; sin hora = día completo
+  // Rango [desde, hasta) en milisegundos; sin hora = día completo. Fechas y horas locales
+  // (Colombia) comparadas entre sí: la zona horaria no influye.
   const rango = (x) => {
     const ini = Date.parse(`${x.fecha_inicio}T${x.hora_inicio ?? '00:00'}:00Z`);
     const fin = x.hora_fin ? Date.parse(`${x.fecha_fin}T${x.hora_fin}:00Z`) : Date.parse(`${x.fecha_fin}T00:00:00Z`) + 86_400_000;
@@ -266,18 +339,23 @@ export function crearMotor(ctx) {
       .where('e.solicitud_id', id).orderBy('e.id').select('e.accion', 'e.estado_desde', 'e.estado_hasta', 'e.comentario', 'e.creado_en', 'u.nombre as actor');
     const pasos = (s.flujo ?? (s.estado === 'BORRADOR' ? await flujoActivo(s.tipo).catch(() => null) : null))?.pasos ?? [];
     const propia = s.cedula === req.usuario.cedula;
+    // Estado de cada paso a partir del historial (también en rechazadas y canceladas)
+    const RESULTADO = { APROBAR: 'HECHO', OMITIR: 'OMITIDO', RECHAZAR: 'RECHAZADO', CANCELAR: 'CANCELADO' };
+    const estadoPaso = (p, i) => {
+      const ev = [...eventos].reverse().find((e) => e.estado_desde === p.estado && RESULTADO[e.accion]);
+      if (ev) return RESULTADO[ev.accion];
+      return s.paso_actual === i ? 'ACTUAL' : 'PENDIENTE';
+    };
+    const actuar = await puedeActuar(req, s);
     return {
       ...presentar(s),
-      pasos: pasos.map((p, i) => ({
-        etiqueta: p.etiqueta, rol: p.rol,
-        estado: s.estado === 'APROBADA' || (s.paso_actual !== null && i < s.paso_actual) ? 'HECHO' : s.paso_actual === i ? 'ACTUAL' : 'PENDIENTE',
-      })),
+      pasos: pasos.map((p, i) => ({ etiqueta: p.etiqueta, rol: p.rol, estado: estadoPaso(p, i) })),
       eventos: eventos.map((e) => ({ ...e, estadoDesdeEtiqueta: e.estado_desde ? etiquetaEstado(s, e.estado_desde) : null, estadoHastaEtiqueta: etiquetaEstado(s, e.estado_hasta) })),
       acciones: {
         enviar: propia && s.estado === 'BORRADOR',
         cancelar: propia && !FINALES.includes(s.estado),
-        aprobar: await puedeActuar(req, s),
-        rechazar: await puedeActuar(req, s),
+        aprobar: actuar,
+        rechazar: actuar,
       },
     };
   }
@@ -286,55 +364,51 @@ export function crearMotor(ctx) {
     const filas = await db('solicitudes as s').join('colaboradores as c', 'c.id', 's.colaborador_id')
       .modify(filtro).orderBy('s.id', 'desc').limit(200)
       .select('s.*', 'c.cedula', 'c.nombre as colaborador_nombre', 'c.sede_id', 'c.cargo');
-    const flujos = new Map();
     for (const f of filas) {
-      if (f.flujo_id && !flujos.has(f.flujo_id)) flujos.set(f.flujo_id, await flujoPorId(f.flujo_id));
-      f.flujo = flujos.get(f.flujo_id) ?? null;
+      f.flujo = await flujoPorId(f.flujo_id);
       f.datos = f.datos ? JSON.parse(f.datos) : {};
     }
-    return filas.map(presentar);
+    return filas;
   }
 
   async function mias(req, { tipo, estado }) {
     const c = await colaboradorDe(req);
     if (!c) return { solicitudes: [], sinExpediente: true };
     return {
-      solicitudes: await lista((q) => {
+      solicitudes: (await lista((q) => {
         q.where('s.colaborador_id', c.id);
         if (tipo) q.where('s.tipo', tipo);
         if (estado === 'EN_CURSO') q.whereNotIn('s.estado', FINALES);
         else if (estado) q.where('s.estado', estado);
-      }),
+      })).map(presentar),
     };
   }
 
-  // Bandeja: solicitudes cuyo paso actual puede atender este usuario
+  // Bandeja: solicitudes cuyo paso actual puede atender este usuario (misma regla que puedeActuar)
   async function bandeja(req, { tipo }) {
-    const pendientes = await lista((q) => {
+    const filas = await lista((q) => {
       q.whereNotNull('s.paso_actual').whereNotIn('s.estado', [...FINALES, 'BORRADOR']).whereNot('c.cedula', req.usuario.cedula);
       if (tipo) q.where('s.tipo', tipo);
     });
-    if (req.usuario.rol === 'ADMIN') return pendientes;
-    const sedes = await sedesDirector(req.usuario.id);
-    const filas = await db('solicitudes as s').join('colaboradores as c', 'c.id', 's.colaborador_id').whereIn('s.id', pendientes.map((p) => p.id)).select('s.id', 'c.sede_id', 's.flujo_id', 's.paso_actual');
-    const permitidos = new Set();
-    for (const f of filas) {
-      const flujo = await flujoPorId(f.flujo_id);
-      if (flujo?.pasos[f.paso_actual]?.rol === 'DIRECTOR' && sedes.includes(f.sede_id)) permitidos.add(f.id);
-    }
-    return pendientes.filter((p) => permitidos.has(p.id));
+    const sedes = req.usuario.rol === 'DIRECTOR' ? await sedesDirector(req.usuario.id) : [];
+    const yaActuo = new Set(await db('solicitud_eventos').where({ actor_id: req.usuario.id, accion: 'APROBAR' }).whereIn('solicitud_id', filas.map((f) => f.id)).pluck('solicitud_id'));
+    return filas.filter((f) => {
+      const paso = f.flujo?.pasos[f.paso_actual];
+      if (!paso || paso.rol !== req.usuario.rol || yaActuo.has(f.id)) return false;
+      return paso.rol !== 'DIRECTOR' || sedes.includes(f.sede_id);
+    }).map(presentar);
   }
 
   async function deColaborador(req, colaboradorId, { tipo }) {
     const c = await db('colaboradores').where({ id: colaboradorId }).first();
     if (!c) throw noEncontrado('No encontramos ese colaborador.');
-    if (req.usuario.rol === 'DIRECTOR' && !(await sedesDirector(req.usuario.id)).includes(c.sede_id)) throw noEncontrado('No encontramos ese colaborador.');
+    if (req.usuario.rol === 'DIRECTOR' && c.cedula !== req.usuario.cedula && !(await sedesDirector(req.usuario.id)).includes(c.sede_id)) throw noEncontrado('No encontramos ese colaborador.');
     if (req.usuario.rol === 'COLABORADOR' && c.cedula !== req.usuario.cedula) throw noEncontrado('No encontramos ese colaborador.');
     await auditar(req, { accion: 'VER_SOLICITUDES', entidad: 'colaborador', entidadId: colaboradorId, detalle: { tipo } });
-    return lista((q) => {
+    return (await lista((q) => {
       q.where('s.colaborador_id', colaboradorId).whereNot('s.estado', 'BORRADOR');
       if (tipo) q.where('s.tipo', tipo);
-    });
+    })).map(presentar);
   }
 
   return {

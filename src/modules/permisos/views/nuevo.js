@@ -9,8 +9,10 @@ const zona = document.getElementById('zona');
 const hoy = new Date(Date.now() - 5 * 3600_000).toISOString().slice(0, 10);
 
 let op;
+let pasos = [];
 try {
   op = await api('/permisos/opciones');
+  pasos = (await api('/solicitudes/flujo/PERMISO')).pasos;
 } catch (err) {
   zona.innerHTML = htmlAviso('error', err.message);
   throw err;
@@ -72,7 +74,7 @@ async function enviarFormulario(enviar, boton) {
     const cuando = f.fecha_inicio.value === f.fecha_fin.value
       ? `el ${fecha(f.fecha_inicio.value)} de ${f.hora_inicio.value} a ${f.hora_fin.value}`
       : `del ${fecha(f.fecha_inicio.value)} ${f.hora_inicio.value} al ${fecha(f.fecha_fin.value)} ${f.hora_fin.value}`;
-    const ok = await confirmar({ titulo: 'Enviar solicitud', mensaje: `Va a pedir un permiso (${f.subtipo.value.toLowerCase()}) ${cuando}. Lo revisará primero su director y luego el área contable. ¿Enviar?`, aceptar: 'Enviar' });
+    const ok = await confirmar({ titulo: 'Enviar solicitud', mensaje: `Va a pedir un permiso (${f.subtipo.value.toLowerCase()}) ${cuando}. Pasará por: ${pasos.join(' → ') || 'aprobación'}. ¿Enviar?`, aceptar: 'Enviar' });
     if (!ok) return;
   }
   const fd = new FormData(f);

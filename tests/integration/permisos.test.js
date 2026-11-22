@@ -98,9 +98,10 @@ describe('flujo completo: colaborador → director → admincontable', () => {
     assert.match(r.body.error.mensaje, /Se cruza/);
   });
 
-  test('el admincontable no aprueba antes que el director si no le toca… salvo como superusuario (puede); el colaborador no puede', async () => {
-    assert.equal((await colab2.post(`/solicitudes/${id}/aprobar`, {})).status, 403, 'rol colaborador');
-    assert.equal((await colab1.post(`/solicitudes/${id}/aprobar`, {})).status, 403);
+  test('el paso del director no lo atiende el admin; el colaborador no aprueba (tampoco lo propio)', async () => {
+    assert.equal((await admin.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' })).status, 403, 'separación de funciones');
+    assert.equal((await colab2.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' })).status, 403, 'rol colaborador');
+    assert.equal((await colab1.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' })).status, 403);
   });
 
   test('bandeja del director: la ve; rechazar sin motivo → 400', async () => {
@@ -112,23 +113,23 @@ describe('flujo completo: colaborador → director → admincontable', () => {
   });
 
   test('director aprueba → "Pendiente contable"; el director ya no puede actuar', async () => {
-    const r = await director.post(`/solicitudes/${id}/aprobar`, { comentario: 'De acuerdo' });
+    const r = await director.post(`/solicitudes/${id}/aprobar`, { comentario: 'De acuerdo', estadoEsperado: 'PENDIENTE_DIRECTOR' });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.estado, 'PENDIENTE_CONTABLE');
-    assert.equal((await director.post(`/solicitudes/${id}/aprobar`, {})).status, 403);
+    assert.equal((await director.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_CONTABLE' })).status, 403);
     assert.match((await ultimaNotif(CED.admin)).titulo, /Por aprobar/);
     assert.match((await ultimaNotif(CED.colab1)).titulo, /avanzó/);
   });
 
   test('admincontable da la aprobación final → APROBADA, con historial completo', async () => {
-    const r = await admin.post(`/solicitudes/${id}/aprobar`, {});
+    const r = await admin.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_CONTABLE' });
     assert.equal(r.body.estado, 'APROBADA');
     assert.deepEqual(r.body.eventos.map((e) => e.accion), ['CREAR', 'ENVIAR', 'APROBAR', 'APROBAR']);
     assert.equal(r.body.eventos[2].comentario, 'De acuerdo');
     assert.deepEqual(r.body.pasos.map((p) => p.estado), ['HECHO', 'HECHO']);
     assert.equal(r.body.acciones.cancelar, false);
     assert.match((await ultimaNotif(CED.colab1)).titulo, /APROBADA/);
-    assert.equal((await admin.post(`/solicitudes/${id}/aprobar`, {})).status, 403, 'ya no está pendiente');
+    assert.equal((await admin.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'APROBADA' })).status, 403, 'ya no está pendiente');
     assert.equal((await colab1.post(`/solicitudes/${id}/cancelar`, {})).status, 409);
   });
 
@@ -147,9 +148,12 @@ describe('alcance, rechazo, cancelación y documentos', () => {
     const r = await pedir(colab2, { subtipo: 'DILIGENCIA PERSONAL', fecha_inicio: dia(3), fecha_fin: dia(3) }, { buffer: PDF, nombre: 'soporte.pdf' });
     idRio = r.body.id;
     assert.equal((await director.get(`/solicitudes/${idRio}`)).status, 404);
-    assert.equal((await director.post(`/solicitudes/${idRio}/aprobar`, {})).status, 404);
+    assert.equal((await director.post(`/solicitudes/${idRio}/aprobar`, { estadoEsperado: 'PENDIENTE_CONTABLE' })).status, 404);
     assert.ok(!(await director.get('/aprobaciones')).body.solicitudes.some((s) => s.id === idRio));
-    assert.ok((await admin.get('/aprobaciones')).body.solicitudes.some((s) => s.id === idRio), 'sin director en la sede: el admin puede actuar');
+    assert.equal(r.body.estado, 'PENDIENTE_CONTABLE', 'la sede no tiene director: el paso se omite');
+    assert.equal(r.body.pasos[0].estado, 'OMITIDO');
+    assert.ok(r.body.eventos.some((e) => e.accion === 'OMITIR'));
+    assert.ok((await admin.get('/aprobaciones')).body.solicitudes.some((s) => s.id === idRio));
     assert.equal((await colab1.get(`/solicitudes/${idRio}`)).status, 404, 'otro colaborador tampoco');
     assert.ok(await env.ctx.db('auditoria').where({ accion: 'ACCESO_DENEGADO', entidad: 'solicitud' }).first());
   });
@@ -171,7 +175,7 @@ describe('alcance, rechazo, cancelación y documentos', () => {
   });
 
   test('el admin rechaza con motivo; el colaborador lo ve', async () => {
-    const r = await admin.post(`/solicitudes/${idRio}/rechazar`, { motivo: 'Coincide con el inventario mensual' });
+    const r = await admin.post(`/solicitudes/${idRio}/rechazar`, { motivo: 'Coincide con el inventario mensual', estadoEsperado: 'PENDIENTE_CONTABLE' });
     assert.equal(r.body.estado, 'RECHAZADA');
     assert.match((await ultimaNotif(CED.colab2)).mensaje, /inventario mensual/);
   });
@@ -181,7 +185,7 @@ describe('alcance, rechazo, cancelación y documentos', () => {
     assert.equal((await admin.post(`/solicitudes/${r.body.id}/cancelar`, {})).status, 403);
     const c = await colab2.post(`/solicitudes/${r.body.id}/cancelar`, { motivo: 'Ya no lo necesito' });
     assert.equal(c.body.estado, 'CANCELADA');
-    assert.equal((await admin.post(`/solicitudes/${r.body.id}/aprobar`, {})).status, 403);
+    assert.equal((await admin.post(`/solicitudes/${r.body.id}/aprobar`, { estadoEsperado: 'CANCELADA' })).status, 403);
   });
 
   test('borrador: se guarda sin enviar y luego se envía', async () => {
@@ -189,7 +193,7 @@ describe('alcance, rechazo, cancelación y documentos', () => {
     assert.equal(r.body.estado, 'BORRADOR');
     assert.ok(!(await admin.get('/aprobaciones')).body.solicitudes.some((s) => s.id === r.body.id), 'un borrador no llega a la bandeja');
     const e = await colab2.post(`/solicitudes/${r.body.id}/enviar`, {});
-    assert.equal(e.body.estado, 'PENDIENTE_DIRECTOR');
+    assert.equal(e.body.estado, 'PENDIENTE_CONTABLE', 'sede sin director');
   });
 
   test('mis solicitudes: filtro en curso', async () => {
@@ -209,11 +213,12 @@ describe('flujo configurable y notificaciones', () => {
     const p = await pedir(colab1, { fecha_inicio: dia(10), fecha_fin: dia(10) });
     assert.equal(p.body.estado, 'PENDIENTE_CONTABLE');
     assert.equal(p.body.estadoEtiqueta, 'Revisión contable');
-    const a = await admin.post(`/solicitudes/${p.body.id}/aprobar`, {});
+    const a = await admin.post(`/solicitudes/${p.body.id}/aprobar`, { estadoEsperado: 'PENDIENTE_CONTABLE' });
     assert.equal(a.body.estado, 'APROBADA', 'un solo paso');
-    // La que ya estaba en curso sigue con su versión (2 pasos)
+    // La que ya estaba en curso sigue con su versión (la 1)
     const enCurso = (await colab2.get('/me/solicitudes?estado=EN_CURSO')).body.solicitudes[0];
-    assert.equal(enCurso.estado, 'PENDIENTE_DIRECTOR');
+    const fila = await env.ctx.db('solicitudes as s').join('flujos as f', 'f.id', 's.flujo_id').where('s.id', enCurso.id).first('f.version');
+    assert.equal(fila.version, 1);
     // Restaurar
     await admin.agente.put('/api/v1/flujos/PERMISO').set('X-CSRF-Token', t).send({ pasos: [{ rol: 'DIRECTOR' }, { rol: 'ADMIN' }] });
   });

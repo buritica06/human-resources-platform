@@ -229,6 +229,8 @@ dialog.modal h2 { font-size: var(--t-l); }
 .pasos .num { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid currentColor; flex: none; }
 .pasos li[aria-current="step"] { color: var(--c-primario); }
 .pasos li[data-hecho="true"] { color: var(--c-exito); }
+.pasos li[data-hecho="omitido"] { color: var(--c-neutro); }
+.pasos li[data-hecho="rechazado"] { color: var(--c-error); }
 
 /* =================== Layout de autenticación =================== */
 .auth { min-height: 100vh; display: grid; place-items: center; padding: var(--e-4); }

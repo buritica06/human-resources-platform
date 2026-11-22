@@ -21,7 +21,12 @@ export const tipoPermiso = {
   rutaNueva: '/permisos/nuevo',
   icono: 'reloj',
   categoriaDocumento: 'SOPORTE_PERMISO',
-  documentoSensible: false,
+  // El soporte es dato de salud (p. ej. una cita médica) según LISTA_TIPOS_PERMISO_SENSIBLES:
+  // el director no lo ve, solo el colaborador y el admincontable.
+  async documentoSensible(ctx, campos) {
+    const sensibles = await ctx.params.valor('LISTA_TIPOS_PERMISO_SENSIBLES');
+    return sensibles.some((t) => t.toUpperCase() === String(campos.subtipo).toUpperCase());
+  },
   soporteObligatorio: false,
 
   async validar(ctx, { body }) {
