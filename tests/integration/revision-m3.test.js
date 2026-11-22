@@ -32,11 +32,27 @@ async function pedir(c, campos = {}, archivo = null) {
 }
 
 describe('separación de funciones', () => {
-  test('el único admincontable no puede enviar una solicitud propia: mensaje claro', async () => {
+  test('el admincontable aprueba su propia solicitud en el paso contable (autoaprobación registrada)', async () => {
     const r = await pedir(admin);
-    assert.equal(r.status, 400, JSON.stringify(r.body));
-    assert.match(r.body.error.mensaje, /nadie aprueba la propia/);
-    assert.equal(Number((await env.ctx.db('solicitudes').whereNot('estado', 'BORRADOR').count({ n: '*' }))[0].n), 0);
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    let s = (await admin.get(`/solicitudes/${r.body.id}`)).body;
+    assert.equal(s.estado, 'PENDIENTE_CONTABLE', 'su sede no tiene director: ese paso se omite');
+    assert.equal(s.acciones.aprobar, true);
+    assert.equal(s.acciones.rechazar, false, 'lo propio se cancela, no se rechaza');
+    assert.ok((await admin.get('/aprobaciones')).body.solicitudes.some((x) => x.id === r.body.id), 'aparece en su bandeja');
+    assert.equal((await admin.post(`/solicitudes/${r.body.id}/rechazar`, { motivo: 'Ya no lo necesito', estadoEsperado: 'PENDIENTE_CONTABLE' })).status, 403);
+    assert.equal((await admin.post(`/solicitudes/${r.body.id}/aprobar`, { estadoEsperado: 'PENDIENTE_CONTABLE' })).status, 200);
+    s = (await admin.get(`/solicitudes/${r.body.id}`)).body;
+    assert.equal(s.estado, 'APROBADA');
+    assert.match(s.eventos.find((e) => e.accion === 'APROBAR').comentario, /Autoaprobación/);
+    const aud = await env.ctx.db('auditoria').where({ accion: 'APROBAR', entidad_id: String(r.body.id) }).first();
+    assert.match(aud.detalle, /autoaprobacion/);
+  });
+
+  test('el director y el colaborador siguen sin poder aprobar lo propio', async () => {
+    const r = await pedir(colab1);
+    assert.equal((await colab1.post(`/solicitudes/${r.body.id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' })).status, 403);
+    await colab1.post(`/solicitudes/${r.body.id}/cancelar`, {});
   });
 
   test('la solicitud propia del director salta su paso y va al área contable', async () => {

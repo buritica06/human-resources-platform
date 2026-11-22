@@ -5,11 +5,13 @@
 // Reglas:
 // - Los pasos vienen de la tabla `flujos` (versión activa del tipo); cada solicitud queda atada a
 //   la versión con la que se envió. Cada rol aparece una sola vez en un flujo.
-// - Solo actúa en un paso quien tenga SU rol (el director, solo en sus sedes). Separación de
-//   funciones: nadie actúa sobre su propia solicitud ni en dos pasos de la misma.
+// - Solo actúa en un paso quien tenga SU rol (el director, solo en sus sedes) y nadie actúa en dos
+//   pasos de la misma solicitud. Nadie aprueba lo propio, EXCEPTO el admincontable en el paso
+//   contable (decisión del negocio, 2026-11-22: el admincontable aprueba sus propias solicitudes;
+//   queda marcado como autoaprobación en el historial y la auditoría).
 // - Si un paso de DIRECTOR no tiene director disponible (la sede no tiene, o es el propio
 //   solicitante), el paso se OMITE automáticamente y queda en el historial.
-// - Si un paso de ADMIN no tiene a nadie disponible, la solicitud no se puede enviar (mensaje claro).
+// - Si un paso de ADMIN no tiene ningún admincontable activo, la solicitud no se puede enviar.
 // - Quien aprueba o rechaza indica el estado que estaba viendo: si cambió, 409.
 // - Las notificaciones van DESPUÉS del commit y un fallo en ellas no cambia el resultado.
 import { ErrorApp, conflicto, invalido, noEncontrado, prohibido } from '../../core/errors.js';
@@ -79,10 +81,11 @@ export function crearMotor(ctx) {
   const sedesDirector = async (usuarioId, trx = db) => (await trx('director_sedes').where({ usuario_id: usuarioId }).select('sede_id')).map((r) => r.sede_id);
   const usuarioDe = async (cedula) => (await db('usuarios').where({ cedula }).first('id'))?.id;
 
-  // Quiénes pueden atender un paso de esta solicitud (sin el solicitante)
+  // Quiénes pueden atender un paso de esta solicitud (el director, sin el solicitante; en el paso
+  // contable, cualquier admincontable activo, incluido el solicitante si lo es)
   async function aprobadoresDe(s, paso, trx = db) {
     if (paso.rol === 'ADMIN') {
-      return (await trx('usuarios').where({ rol: 'ADMIN', activo: true }).whereNot({ cedula: s.cedula }).select('id')).map((u) => u.id);
+      return (await trx('usuarios').where({ rol: 'ADMIN', activo: true }).select('id')).map((u) => u.id);
     }
     if (!s.sede_id) return [];
     return (await trx('usuarios as u').join('director_sedes as d', 'd.usuario_id', 'u.id')
@@ -108,12 +111,14 @@ export function crearMotor(ctx) {
     return false;
   }
 
-  // ¿Puede ACTUAR en el paso actual? Su rol, su alcance, no es suya y no actuó en otro paso.
+  // ¿Puede ACTUAR en el paso actual? Su rol, su alcance, no actuó en otro paso y no es suya
+  // (salvo el admincontable en el paso contable).
+  const esAutoaprobacion = (req, s) => s.cedula === req.usuario.cedula && req.usuario.rol === 'ADMIN' && s.flujo?.pasos[s.paso_actual]?.rol === 'ADMIN';
   async function puedeActuar(req, s, trx = db) {
     if (!s.flujo || s.paso_actual === null || s.paso_actual === undefined || FINALES.includes(s.estado)) return false;
-    if (s.cedula === req.usuario.cedula) return false;
     const paso = s.flujo.pasos[s.paso_actual];
     if (!paso || req.usuario.rol !== paso.rol) return false;
+    if (s.cedula === req.usuario.cedula && !esAutoaprobacion(req, s)) return false;
     if (paso.rol === 'DIRECTOR' && !(await sedesDirector(req.usuario.id, trx)).includes(s.sede_id)) return false;
     const yaActuo = await trx('solicitud_eventos').where({ solicitud_id: s.id, actor_id: req.usuario.id, accion: 'APROBAR' }).first('id');
     return !yaActuo;
@@ -178,11 +183,11 @@ export function crearMotor(ctx) {
     return actual;
   }
 
-  // Antes de enviar: todo paso de ADMIN debe tener a alguien distinto del solicitante
+  // Antes de enviar: todo paso de ADMIN debe tener al menos un admincontable activo
   async function verificarAprobadores(trx, s) {
     for (const paso of s.flujo.pasos) {
       if (paso.rol === 'ADMIN' && !(await aprobadoresDe(s, paso, trx)).length) {
-        throw invalido('No hay otro usuario del área contable que pueda aprobar su solicitud (nadie aprueba la propia). Pida que se cree otro usuario admincontable.');
+        throw invalido('No hay ningún usuario del área contable activo que pueda aprobar la solicitud. Comuníquese con el administrador del sistema.');
       }
     }
   }
@@ -226,8 +231,8 @@ export function crearMotor(ctx) {
   }
 
   async function motivoNoPuede(req, s) {
-    if (s.cedula === req.usuario.cedula) return 'No puede aprobar ni rechazar su propia solicitud; si ya no la necesita, cancélela.';
     if (FINALES.includes(s.estado)) return 'Esta solicitud ya no está pendiente.';
+    if (s.cedula === req.usuario.cedula && req.usuario.rol !== 'ADMIN') return 'No puede aprobar ni rechazar su propia solicitud; si ya no la necesita, cancélela.';
     const yaActuo = await db('solicitud_eventos').where({ solicitud_id: s.id, actor_id: req.usuario.id, accion: 'APROBAR' }).first('id');
     if (yaActuo) return 'Usted ya aprobó un paso de esta solicitud; el siguiente lo debe atender otra persona.';
     return 'Este paso le corresponde a otro rol.';
@@ -238,15 +243,17 @@ export function crearMotor(ctx) {
     verificarEstadoEsperado(s, estadoEsperado);
     if (!(await puedeActuar(req, s))) throw prohibido(await motivoNoPuede(req, s));
     const pasoAprobado = s.paso_actual;
+    const auto = esAutoaprobacion(req, s);
     await db.transaction(async (trx) => {
       const siguiente = s.paso_actual + 1;
       const final = siguiente >= s.flujo.pasos.length;
-      await transicion(trx, s, { hacia: final ? 'APROBADA' : s.flujo.pasos[siguiente].estado, paso: final ? null : siguiente, accion: 'APROBAR', actorId: req.usuario.id, comentario });
+      const nota = auto ? ['Autoaprobación del área contable', comentario].filter(Boolean).join(': ') : comentario;
+      await transicion(trx, s, { hacia: final ? 'APROBADA' : s.flujo.pasos[siguiente].estado, paso: final ? null : siguiente, accion: 'APROBAR', actorId: req.usuario.id, comentario: nota });
       if (!final) await entrarEnPaso(trx, s, siguiente);
       // Efecto del tipo al aprobarse (p. ej. registro en el expediente): en la MISMA transacción
       if (s.estado === 'APROBADA') await ctx.tiposSolicitud.get(s.tipo).alAprobar?.(ctx, s, trx);
     });
-    await auditar(req, { accion: 'APROBAR', entidad: 'solicitud', entidadId: id, detalle: { paso: pasoAprobado, hacia: s.estado } });
+    await auditar(req, { accion: 'APROBAR', entidad: 'solicitud', entidadId: id, detalle: { paso: pasoAprobado, hacia: s.estado, ...(auto ? { autoaprobacion: true } : {}) } });
     await seguro('la notificación de la aprobación', async () => {
       const s2 = await cargar(id);
       const etiqueta = ctx.tiposSolicitud.get(s2.tipo).etiqueta.toLowerCase();
@@ -265,6 +272,7 @@ export function crearMotor(ctx) {
     verificarEstadoEsperado(s, estadoEsperado);
     if (!(await puedeActuar(req, s))) throw prohibido(await motivoNoPuede(req, s));
     const paso = s.paso_actual;
+    if (esAutoaprobacion(req, s)) throw prohibido('Si ya no necesita su solicitud, cancélela en lugar de rechazarla.');
     await db.transaction((trx) => transicion(trx, s, { hacia: 'RECHAZADA', paso: null, accion: 'RECHAZAR', actorId: req.usuario.id, comentario: motivo }));
     await auditar(req, { accion: 'RECHAZAR', entidad: 'solicitud', entidadId: id, detalle: { paso } });
     await seguro('la notificación del rechazo', async () => notificarCambio(await cargar(id), {
@@ -355,7 +363,7 @@ export function crearMotor(ctx) {
         enviar: propia && s.estado === 'BORRADOR',
         cancelar: propia && !FINALES.includes(s.estado),
         aprobar: actuar,
-        rechazar: actuar,
+        rechazar: actuar && !esAutoaprobacion(req, s),
       },
     };
   }
@@ -387,7 +395,8 @@ export function crearMotor(ctx) {
   // Bandeja: solicitudes cuyo paso actual puede atender este usuario (misma regla que puedeActuar)
   async function bandeja(req, { tipo }) {
     const filas = await lista((q) => {
-      q.whereNotNull('s.paso_actual').whereNotIn('s.estado', [...FINALES, 'BORRADOR']).whereNot('c.cedula', req.usuario.cedula);
+      q.whereNotNull('s.paso_actual').whereNotIn('s.estado', [...FINALES, 'BORRADOR']);
+      if (req.usuario.rol !== 'ADMIN') q.whereNot('c.cedula', req.usuario.cedula);
       if (tipo) q.where('s.tipo', tipo);
     });
     const sedes = req.usuario.rol === 'DIRECTOR' ? await sedesDirector(req.usuario.id) : [];

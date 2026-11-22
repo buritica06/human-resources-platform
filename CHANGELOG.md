@@ -8,7 +8,6 @@
   - Nadie aprueba dos pasos de la misma solicitud.
   - Un flujo tiene 1 o 2 pasos y no repite roles (400).
 - **Paso sin director elegible:** si la sede no tiene director, o quien pide es el director, el paso se omite automáticamente. Queda en el historial como "Paso omitido automáticamente" y la solicitud pasa al área contable.
-  - La solicitud propia del único admincontable no se puede enviar. Se explica que hace falta otro usuario admincontable.
 - **Concurrencia:** aprobar y rechazar exigen el estado que veía el usuario (`estadoEsperado`). Si cambió, se responde 409 y la pantalla se recarga.
 - **Notificaciones que fallan** (correo caído) ya no convierten en error una aprobación que sí quedó hecha. La falla se registra en el log.
   - Cancelar ahora avisa también a los aprobadores.
@@ -32,8 +31,8 @@
 - `npm run lint` sin errores.
 - En el navegador: la aprobación del director envía el estado esperado y el detalle muestra "hecho" y "en curso".
 
-### Decisión a confirmar
-- Con un solo usuario admincontable, sus propias solicitudes no se pueden aprobar. Hace falta un segundo usuario con ese rol, o aceptar otra regla.
+### Decisión del negocio (aplicada)
+- **El admincontable aprueba sus propias solicitudes** en el paso contable. Queda marcado como "Autoaprobación del área contable" en el historial y en la auditoría. Lo propio no se rechaza, se cancela. El director y el colaborador siguen sin poder aprobar lo propio.
 ## [0.4.0] – 2026-11-22 · Fase 5 – M3 Solicitud de permisos y motor de aprobación
 
 ### Hecho
