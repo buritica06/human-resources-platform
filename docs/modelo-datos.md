@@ -74,3 +74,25 @@ erDiagram
 | **volante_lineas** | id, volante_id, concepto, tipo (`DEV`/`DED`/`ADICIONAL`), etiqueta, cantidad, unidad, valor, detalle (JSON), orden | Solo conceptos con valor ≠ 0. Deducciones en positivo. `detalle`: horas por tipo de HORAS RESUMEN (informativo) |
 
 El catálogo de conceptos (columna de la hoja, etiqueta, orden) está en `src/modules/nomina/conceptos.js`. **No hay tabla `conceptos`**: los conceptos los fija el formato del archivo, no se configuran.
+
+## M3 (migración `20261122_005_m3_solicitudes`)
+
+```mermaid
+erDiagram
+  FLUJOS ||--o{ SOLICITUDES : rige
+  COLABORADORES ||--o{ SOLICITUDES : crea
+  SOLICITUDES ||--o{ SOLICITUD_EVENTOS : historial
+  DOCUMENTOS |o--o| SOLICITUDES : soporte
+  COLABORADORES ||--o{ DOCUMENTOS : posee
+  USUARIOS ||--o{ NOTIFICACIONES : recibe
+```
+
+| Tabla | Campos | Notas |
+|---|---|---|
+| **flujos** | id, tipo, version, pasos (JSON `[{ rol, estado, etiqueta }]`), activo, creado_por, creado_en | Una versión activa por tipo; por defecto director → admincontable (S1) |
+| **solicitudes** | id, tipo, subtipo, colaborador_id, flujo_id, paso_actual, estado, fecha_inicio, hora_inicio, fecha_fin, hora_fin, dias_habiles, dias_compensar, motivo, documento_id, datos (JSON), creado/actualizado/enviado/resuelto_en | Estados: BORRADOR, PENDIENTE_DIRECTOR, PENDIENTE_CONTABLE, APROBADA, RECHAZADA, CANCELADA |
+| **solicitud_eventos** | id, solicitud_id, actor_id, accion, estado_desde, estado_hasta, comentario, creado_en | CREAR, ENVIAR, APROBAR, RECHAZAR, CANCELAR |
+| **documentos** | id, colaborador_id, categoria, storage_key, nombre_original, mime, tamano, sha256, sensible, subido_por, creado_en | El archivo vive fuera de la carpeta pública con nombre aleatorio (`src/core/storage`); `sensible` = datos de salud |
+| **notificaciones** | id, usuario_id, titulo, mensaje, enlace, leida, creada_en | |
+
+Parámetros nuevos: `LISTA_TIPOS_PERMISO`, `PERMISO_MAX_DIAS`.

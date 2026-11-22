@@ -2,7 +2,7 @@
 // usuarios FICTICIOS de prueba. Nunca usa datos reales.
 import { ahora } from '../src/core/db.js';
 import { hashClave } from '../src/core/security/claves.js';
-import { PARAMETROS, FESTIVOS, EMPLEADORES_FICTICIOS, SEDES_FICTICIAS } from './datos-iniciales.js';
+import { PARAMETROS, FESTIVOS, EMPLEADORES_FICTICIOS, SEDES_FICTICIAS, FLUJO_POR_DEFECTO, TIPOS_CON_FLUJO } from './datos-iniciales.js';
 
 export const USUARIOS_DEMO = [
   { cedula: '1000000001', nombre: 'ADMIN DEMO CONTABLE', rol: 'ADMIN' },
@@ -24,6 +24,13 @@ export async function sembrarBase(db) {
   for (const [fecha, nombre] of FESTIVOS) {
     if (!(await db('festivos').where({ fecha }).first())) {
       await db('festivos').insert({ fecha, anio: Number(fecha.slice(0, 4)), nombre });
+    }
+  }
+  if (await db.schema.hasTable('flujos')) {
+    for (const tipo of TIPOS_CON_FLUJO) {
+      if (!(await db('flujos').where({ tipo }).first())) {
+        await db('flujos').insert({ tipo, version: 1, pasos: JSON.stringify(FLUJO_POR_DEFECTO), activo: true, creado_en: t });
+      }
     }
   }
 }

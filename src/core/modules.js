@@ -10,8 +10,18 @@ import auth from '../modules/auth/index.js';
 import usuarios from '../modules/usuarios/index.js';
 import colaboradores from '../modules/colaboradores/index.js';
 import nomina from '../modules/nomina/index.js';
+import notificaciones from '../modules/notificaciones/index.js';
+import solicitudes from '../modules/solicitudes/index.js';
+import permisos from '../modules/permisos/index.js';
 
-export const DISPONIBLES = [auth, usuarios, colaboradores, nomina];
+export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos];
+
+// Dependencias entre módulos: si falta una, la app no arranca (mensaje claro)
+const REQUIERE = {
+  solicitudes: ['colaboradores', 'notificaciones'],
+  permisos: ['solicitudes'],
+  nomina: ['colaboradores'],
+};
 
 // Tarjetas que cada módulo aporta a la página de Inicio
 export function widgetsPara(modulos, rol) {
@@ -26,6 +36,11 @@ export function modulosActivos(cfg) {
   const activos = DISPONIBLES.filter((m) => cfg.modulos.includes(m.nombre));
   if (!activos.some((m) => m.nombre === 'auth')) {
     throw new Error('El módulo "auth" es obligatorio.');
+  }
+  for (const m of activos) {
+    for (const dep of REQUIERE[m.nombre] ?? []) {
+      if (!cfg.modulos.includes(dep)) throw new Error(`El módulo "${m.nombre}" necesita el módulo "${dep}" en MODULES_ENABLED.`);
+    }
   }
   return activos;
 }

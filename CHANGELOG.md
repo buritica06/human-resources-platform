@@ -1,5 +1,61 @@
 # Cambios
 
+## [0.4.0] – 2026-11-22 · Fase 5 – M3 Solicitud de permisos y motor de aprobación
+
+### Hecho
+- **Motor de solicitudes genérico** (`solicitudes/motor.js`), que reutilizarán vacaciones (M4) y licencias (M6):
+  - Estados: Borrador → pasos del flujo → Aprobada, Rechazada o Cancelada.
+  - **Flujo como configuración:** tabla `flujos` con versiones. Por defecto, director → admincontable (S1). `PUT /flujos/:tipo` crea una versión nueva y las solicitudes en curso siguen con la suya. Probado: cambiar a un solo paso contable cambia el comportamiento sin tocar código.
+  - Puede actuar en un paso quien tenga el rol (el director solo en sus sedes) o el admincontable (superusuario). Si la sede no tiene director, atiende el admincontable. **Nadie aprueba ni rechaza su propia solicitud.**
+  - Rechazar exige motivo.
+  - Cada transición es una actualización condicionada (409 ante carreras), queda en el historial con quién, cuándo y el comentario, y se audita.
+  - Las ausencias aprobadas o en trámite **no se pueden cruzar** (se revalida al enviar).
+- **Permisos** (módulo `permisos`, que registra su tipo en el motor):
+  - Tipos parametrizables (`LISTA_TIPOS_PERMISO`, P13): fecha y hora de inicio y fin, motivo y soporte PDF opcional.
+  - Duración máxima configurable (`PERMISO_MAX_DIAS` = 3). Se pueden registrar hasta 30 días hacia atrás.
+- **Documentos PDF:**
+  - Se valida el contenido real (no la extensión), con un máximo de 5 MB (`UPLOAD_MAX_MB`).
+  - **Se rechazan los PDF con contenido activo** (JavaScript, Launch, archivos incrustados).
+  - El archivo se guarda fuera de la carpeta pública con nombre aleatorio, mediante una capa de almacenamiento intercambiable (`src/core/storage`). Si la transacción falla, el archivo se borra.
+  - Descarga con control de acceso y auditoría. El director solo ve los documentos no sensibles de su sede.
+- **Notificaciones:**
+  - Campana con contador en todas las páginas.
+  - Correo en cada cambio de estado (en local, `.eml` y consola).
+  - **Tiempo real** con Server-Sent Events: el colaborador ve cómo avanza su solicitud sin recargar, y la bandeja del aprobador se actualiza sola.
+- **Pantallas:**
+  - Mis permisos y Nueva solicitud, con confirmación en lenguaje claro antes de enviar.
+  - Detalle con pasos, historial y acciones según el rol.
+  - Bandeja de aprobaciones y Notificaciones.
+  - Pestaña "Permisos" del expediente.
+  - Inicio: botón grande "Solicitar permiso", solicitudes en curso y, para quienes aprueban, cuántas esperan su aprobación.
+- **Núcleo:**
+  - Gancho `inicializar(ctx)` para que los módulos registren tipos de solicitud.
+  - Dependencias entre módulos validadas al arrancar.
+  - Componente común de estado con color, icono y texto.
+
+### Pruebas
+- `npm test`: **148/148**, de las cuales 19 son nuevas de M3:
+  - Validaciones y soporte PDF: falso, con JavaScript, extensión distinta o de más de 5 MB.
+  - Usuario sin expediente.
+  - Flujo completo (colaborador → director → admin) con notificaciones y correo.
+  - Cruce de fechas.
+  - Rechazo con motivo obligatorio, cancelación y borrador.
+  - Alcance: el director no ve otra sede (404) ni sus documentos.
+  - Bandejas por rol.
+  - Flujo configurable con versiones.
+  - Notificaciones solo propias.
+  - Evento SSE entregado en vivo.
+- En el navegador:
+  - Formulario y confirmación.
+  - Detalle con pasos.
+  - **Actualización en vivo** al aprobar el director desde otra sesión, con la campana subiendo a 2.
+  - Bandeja del admin y aprobación final.
+  - Vista a 375 px sin desbordamiento.
+
+### Pendiente / riesgos
+- La pantalla para editar flujos llega con el panel del admincontable (M8); hoy se configuran por API.
+- El tiempo real asume una sola instancia del servidor (ver `docs/despliegue.md`).
+
 ## [0.3.0] – 2026-11-22 · Fase 4 – M2 Nómina y volantes de pago
 
 ### Hecho

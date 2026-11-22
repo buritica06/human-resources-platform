@@ -47,6 +47,7 @@ export async function montarShell({ permitirOnboarding = false } = {}) {
     <button type="button" class="boton-icono menu-movil" id="abrir-menu" aria-label="Abrir menú" aria-controls="lateral" aria-expanded="false">${icono('menu')}</button>
     <div class="superior__saludo"><strong>Hola, ${escapar(u.saludo || u.nombre)}</strong><span>${escapar(hoyLargo())}</span></div>
     <div class="superior__acciones">
+      ${u.cuentaLista ? `<a class="boton-icono campana" href="/notificaciones" id="campana" aria-label="Notificaciones">${icono('campana')}<span class="contador" id="contador" hidden></span><span class="texto" aria-hidden="true">Avisos</span></a>` : ''}
       ${u.cuentaLista ? `<a class="boton-icono" href="/cuenta" aria-label="Mi cuenta">${icono('usuario')}<span class="texto" aria-hidden="true">Mi cuenta</span></a>` : ''}
       <button type="button" class="boton-icono" id="salir" aria-label="Salir">${icono('salir')}<span class="texto" aria-hidden="true">Salir</span></button>
     </div>`;
@@ -69,8 +70,41 @@ export async function montarShell({ permitirOnboarding = false } = {}) {
 
   document.getElementById('salir').addEventListener('click', salir);
   vigilarInactividad(me.inactividadMin);
+  if (u.cuentaLista) tiempoReal();
   pintarIconos();
   return me;
+}
+
+// Contador de la campana y eventos en tiempo real (Server-Sent Events). Cada página puede
+// escuchar el evento "th:cambio" para refrescarse cuando cambia algo que le interesa.
+export async function actualizarCampana() {
+  const c = document.getElementById('contador');
+  if (!c) return;
+  try {
+    const { noLeidas } = await api('/notificaciones/resumen', { sinRenovar: true });
+    c.hidden = !noLeidas;
+    c.textContent = noLeidas > 99 ? '99+' : String(noLeidas);
+    document.getElementById('campana').setAttribute('aria-label', noLeidas ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones');
+  } catch {
+    /* sin contador */
+  }
+}
+
+function tiempoReal() {
+  actualizarCampana();
+  if (!('EventSource' in window)) return;
+  const fuente = new EventSource('/api/v1/eventos');
+  fuente.addEventListener('cambio', (e) => {
+    let datos = {};
+    try {
+      datos = JSON.parse(e.data);
+    } catch {
+      /* evento sin datos */
+    }
+    actualizarCampana();
+    dispatchEvent(new CustomEvent('th:cambio', { detail: datos }));
+  });
+  addEventListener('pagehide', () => fuente.close());
 }
 
 export async function salir(motivo) {

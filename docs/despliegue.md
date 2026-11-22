@@ -27,3 +27,7 @@ npm start
 - PostgreSQL: `pg_dump --format=custom` (debe estar instalado). Restaurar: `pg_restore --clean --dbname=<url> <archivo.dump>`.
 
 Programe la tarea a diario (Programador de tareas de Windows o `cron`) y copie la carpeta `backups/` **fuera del servidor**: las copias contienen datos personales y deben guardarse cifradas y con acceso restringido.
+
+## Tiempo real y archivos subidos
+- Las notificaciones en tiempo real usan **Server-Sent Events** con un emisor en memoria: funcionan con **una sola instancia** del servidor. Con varias instancias, cambie el emisor de `src/core/notificaciones.js` por un canal compartido (p. ej. `LISTEN/NOTIFY` de PostgreSQL). Si hay un proxy (Nginx), desactive el *buffering* para `/api/v1/eventos` (la app ya envía `X-Accel-Buffering: no`).
+- Los PDF subidos se guardan en `STORAGE_DIR` (por defecto `./uploads`), **fuera** de la carpeta pública y con nombre aleatorio. Inclúyala en las copias de seguridad, cífrela en reposo y restrinja permisos: contiene incapacidades (datos de salud). Para pasar a almacenamiento en la nube, agregue un adaptador en `src/core/storage/` con la misma interfaz.

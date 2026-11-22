@@ -42,6 +42,9 @@ export const PARAMETROS = [
   ['LISTA_ESQUEMAS', ['SEMANA COMPLETA', 'PRORRATEO'], 'json', '2026-01-01', null, 'Esquemas de liquidación de horas'],
   ['LISTA_ESTADO_CIVIL', ['SOLTERO(A)', 'CASADO(A)', 'UNIÓN LIBRE', 'SEPARADO(A)', 'DIVORCIADO(A)', 'VIUDO(A)'], 'json', '2026-01-01', null, 'Estado civil'],
   ['LISTA_SEXO', ['HOMBRE', 'MUJER'], 'json', '2026-01-01', null, 'Sexo (como en el registro civil)'],
+  // M3 – Permisos (supuesto P13: tipos parametrizables)
+  ['LISTA_TIPOS_PERMISO', ['CITA MÉDICA', 'DILIGENCIA PERSONAL', 'ESTUDIO', 'ASUNTO FAMILIAR', 'OTRO'], 'json', '2026-01-01', null, 'Tipos de permiso que puede pedir el colaborador'],
+  ['PERMISO_MAX_DIAS', 3, 'numero', '2026-01-01', null, 'Duración máxima de un permiso (días calendario); para más, vacaciones o licencia'],
   // Campos que el colaborador puede editar de su propio expediente (supuesto P11)
   ['CAMPOS_EDITABLES_COLABORADOR', ['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'], 'json', '2026-01-01', null, 'Datos del expediente que el colaborador puede actualizar por sí mismo'],
 ];
@@ -60,6 +63,14 @@ export const FESTIVOS = [
   ['2027-08-16', 'Asunción de la Virgen'], ['2027-10-18', 'Día de la Raza'], ['2027-11-01', 'Todos los Santos'],
   ['2027-11-15', 'Independencia de Cartagena'], ['2027-12-08', 'Inmaculada Concepción'], ['2027-12-25', 'Navidad'],
 ];
+
+// Flujo de aprobación por defecto (supuesto S1): director → admincontable. Se puede cambiar
+// por configuración (tabla flujos) sin tocar código.
+export const FLUJO_POR_DEFECTO = [
+  { rol: 'DIRECTOR', estado: 'PENDIENTE_DIRECTOR', etiqueta: 'Pendiente director' },
+  { rol: 'ADMIN', estado: 'PENDIENTE_CONTABLE', etiqueta: 'Pendiente contable' },
+];
+export const TIPOS_CON_FLUJO = ['PERMISO', 'VACACIONES', 'LICENCIA'];
 
 // Organización FICTICIA para desarrollo (misma forma que la real: 3 empleadores, 9 sedes).
 export const EMPLEADORES_FICTICIOS = [

@@ -111,7 +111,7 @@ async function pintarPestanaModulo(p) {
   if (p.activa && p.script) {
     try {
       const mod = await import(p.script);
-      await mod.montar(panel, { propio, id, rol: me.usuario.rol });
+      await mod.montar(panel, { propio, id, rol: me.usuario.rol, clave: p.clave });
       return;
     } catch {
       panel.innerHTML = htmlAviso('error', 'No se pudo cargar esta sección. Intente de nuevo más tarde.');

@@ -11,6 +11,9 @@ import { crearCifrador } from './security/cripto.js';
 import { crearSesiones } from './security/sesion.js';
 import { crearTokens } from './security/tokens.js';
 import { modulosActivos } from './modules.js';
+import { crearAlmacenamiento } from './storage/index.js';
+import { crearDocumentos } from './documentos.js';
+import { crearNotificaciones } from './notificaciones.js';
 import { ErrorApp } from './errors.js';
 import { log } from './logger.js';
 
@@ -28,9 +31,15 @@ export function crearContexto(cfg, { db } = {}) {
   ctx.cifrador = crearCifrador(cfg.claveCifrado);
   ctx.tokens = crearTokens(ctx.db);
   ctx.sesiones = crearSesiones(ctx);
+  ctx.almacenamiento = crearAlmacenamiento(cfg);
+  ctx.documentos = crearDocumentos(ctx);
+  ctx.notificaciones = crearNotificaciones(ctx);
+  ctx.tiposSolicitud = new Map(); // los registran los módulos (permisos, vacaciones, licencias)
   ctx.modulos = modulosActivos(cfg);
   // Intentos FALLIDOS por IP en la ventana (los exitosos no cuentan).
   ctx.limites = { login: 30, recuperar: 10, ventanaMs: 15 * 60_000 };
+  // Gancho de inicio de cada módulo (antes de montar rutas): p. ej. registrar un tipo de solicitud
+  for (const m of ctx.modulos) m.inicializar?.(ctx);
   return ctx;
 }
 

@@ -16,7 +16,6 @@ zona.innerHTML = `
       ${tiene('/volantes') ? `<a class="accion-grande" href="/volantes">${icono('recibo')} Mis volantes de pago</a>` : ''}
       <a class="accion-grande" href="/expediente">${icono('documento')} Ver mi expediente</a>
     </div>
-    <p class="aviso aviso--info">${icono('info')}<span>Las solicitudes de permisos, vacaciones e incapacidades se habilitarán pronto.</span></p>
   </section>
   <section class="tarjeta" aria-labelledby="t-cuenta">
     <h2 id="t-cuenta">Mi cuenta</h2>
