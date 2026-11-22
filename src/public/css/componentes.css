@@ -156,6 +156,29 @@ dl.datos { display: grid; grid-template-columns: 1fr; gap: var(--e-3) var(--e-6)
 .sin-dato { color: var(--c-texto-2); font-weight: 400; }
 .secreto-inline { font-family: ui-monospace, Consolas, monospace; letter-spacing: 0.05em; }
 
+/* ---------- Volantes ---------- */
+.tabla--volante tfoot th, .tabla--volante tfoot td { border-top: 2px solid var(--c-borde); border-bottom: 0; }
+.tabla--volante tfoot th { text-align: left; }
+.desglose { margin: var(--e-1) 0 0; padding-left: var(--e-4); font-size: var(--t-xs); color: var(--c-texto-2); }
+.neto {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--e-3); flex-wrap: wrap;
+  margin: var(--e-6) 0; padding: var(--e-4); border-radius: var(--r-campo);
+  background: var(--c-primario-suave); color: var(--c-primario); font-weight: 800; font-size: var(--t-m);
+}
+.neto strong { font-size: var(--t-xl); }
+.lista-volantes { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--e-3); }
+.item-volante {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e-3);
+  padding: var(--e-4); border: 1px solid var(--c-borde-suave); border-radius: var(--r-campo);
+}
+.item-volante__periodo { font-weight: 700; }
+.item-volante__neto { font-size: var(--t-m); font-weight: 800; color: var(--c-primario); }
+.cifra-grande { font-size: var(--t-xl); font-weight: 800; color: var(--c-primario); margin: 0; }
+@media (max-width: 639px) { .tabla--volante tfoot tr { display: flex; justify-content: space-between; } .tabla--volante tfoot th[colspan] { padding: var(--e-1) 0; } }
+.opciones-hojas { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--e-2); }
+.opciones-hojas label { display: flex; gap: var(--e-3); align-items: center; flex-wrap: wrap; padding: var(--e-3); border: 1px solid var(--c-borde-suave); border-radius: var(--r-campo); cursor: pointer; min-height: var(--alto-toque); }
+.opciones-hojas input:checked + span { font-weight: 700; color: var(--c-primario); }
+
 /* ---------- Filtros ---------- */
 .filtros { display: grid; gap: var(--e-3); grid-template-columns: 1fr; align-items: end; margin-bottom: var(--e-4); }
 .filtros .campo { margin: 0; }

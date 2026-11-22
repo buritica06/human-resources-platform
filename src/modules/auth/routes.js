@@ -2,7 +2,7 @@
 import { rateLimit } from 'express-rate-limit';
 import { validar } from '../../core/errors.js';
 import { autenticado } from '../../core/security/sesion.js';
-import { menuPara } from '../../core/modules.js';
+import { menuPara, widgetsPara } from '../../core/modules.js';
 import { crearServicioAuth, primerNombre } from './service.js';
 import * as v from './validators.js';
 
@@ -55,6 +55,7 @@ export function montarRutasAuth(router, ctx) {
       // Segundos que le quedan a la sesión según el servidor (actividad de cualquier pestaña).
       restanteSeg: Math.max(0, Math.round(req.sesion.minInactividad * 60 - (Date.now() - Date.parse(req.sesion.ultimo_uso)) / 1000)),
       menu: u.cuentaLista ? menuPara(ctx.modulos, u.rol) : [],
+      widgets: u.cuentaLista ? widgetsPara(ctx.modulos, u.rol) : [],
     });
   });
 

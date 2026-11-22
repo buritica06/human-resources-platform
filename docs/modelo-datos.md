@@ -57,3 +57,20 @@ El catálogo de campos (etiqueta, grupo, tipo, lista de valores, visibilidad par
 
 ### Parámetros nuevos
 `LISTA_CONTRATOS`, `LISTA_EPS`, `LISTA_AFP`, `LISTA_BANCOS`, `LISTA_TIPO_CUENTA`, `LISTA_ARL`, `LISTA_MOTIVOS_RETIRO`, `LISTA_DIAS`, `LISTA_ESQUEMAS` (del archivo base), `LISTA_ESTADO_CIVIL`, `LISTA_SEXO` y `CAMPOS_EDITABLES_COLABORADOR` (supuesto P11).
+
+## M2 (migración `20261122_003_m2_nomina`)
+
+```mermaid
+erDiagram
+  PERIODOS_NOMINA ||--o{ VOLANTES : contiene
+  COLABORADORES ||--o{ VOLANTES : recibe
+  VOLANTES ||--o{ VOLANTE_LINEAS : detalla
+```
+
+| Tabla | Campos | Notas |
+|---|---|---|
+| **periodos_nomina** | id, nombre_hoja, fecha_inicio, fecha_fin, estado (`BORRADOR`/`PUBLICADO`/`ANULADO`), colaboradores, total_devengado, total_deducido, total_neto, total_adicional, archivo_nombre, archivo_sha256, advertencias (JSON), cargado_por/en, publicado_por/en, anulado_por/en, motivo_anulacion | Índice único parcial `(fecha_inicio, fecha_fin) WHERE estado <> 'ANULADO'`: un solo periodo vigente por rango |
+| **volantes** | id, periodo_id, colaborador_id, cedula, nombre, empleador, empleador_documento, sede, cargo, rango, dias, salario_base, total_devengado, total_deducido, neto, total_adicional, eps, afp, observacion, fila_origen | Copia de lo que dice la hoja: el volante no cambia si luego se edita el expediente. Único `(periodo_id, colaborador_id)` |
+| **volante_lineas** | id, volante_id, concepto, tipo (`DEV`/`DED`/`ADICIONAL`), etiqueta, cantidad, unidad, valor, detalle (JSON), orden | Solo conceptos con valor ≠ 0. Deducciones en positivo. `detalle`: horas por tipo de HORAS RESUMEN (informativo) |
+
+El catálogo de conceptos (columna de la hoja, etiqueta, orden) está en `src/modules/nomina/conceptos.js`. **No hay tabla `conceptos`**: los conceptos los fija el formato del archivo, no se configuran.

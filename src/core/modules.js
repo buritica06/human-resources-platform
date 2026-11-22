@@ -9,8 +9,18 @@
 import auth from '../modules/auth/index.js';
 import usuarios from '../modules/usuarios/index.js';
 import colaboradores from '../modules/colaboradores/index.js';
+import nomina from '../modules/nomina/index.js';
 
-export const DISPONIBLES = [auth, usuarios, colaboradores];
+export const DISPONIBLES = [auth, usuarios, colaboradores, nomina];
+
+// Tarjetas que cada módulo aporta a la página de Inicio
+export function widgetsPara(modulos, rol) {
+  return modulos
+    .flatMap((m) => m.widgetsInicio ?? [])
+    .filter((w) => !w.roles || w.roles.includes(rol))
+    .sort((a, b) => (a.orden ?? 50) - (b.orden ?? 50))
+    .map(({ script }) => script);
+}
 
 export function modulosActivos(cfg) {
   const activos = DISPONIBLES.filter((m) => cfg.modulos.includes(m.nombre));

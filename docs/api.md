@@ -62,3 +62,21 @@ Reglas: un admin no puede desactivarse ni cambiar su propio rol; debe quedar al 
 | POST | `/colaboradores/importar` | ADMIN | multipart `archivo` + `confirmar`. Vista previa: `{ nuevos, actualizar, sinCambios, empleadoresNuevos, sedesNuevas, errores, advertencias }`; al confirmar, todo en una transacción |
 
 Formato de los valores: fechas `AAAA-MM-DD`, dinero en número (pesos), sí/no en booleano, sede y empleador por id.
+
+## M2 – Nómina y volantes (`nomina`)
+| Método | Ruta | Acceso | Notas |
+|---|---|---|---|
+| POST | `/nomina/hojas` | ADMIN | multipart `archivo`. Devuelve `{ huella, hojas: [{ nombre, inicio, fin, estadoEnPlataforma }] }` |
+| POST | `/nomina/cargas` | ADMIN | multipart `archivo`, `hoja`, `huella` (la de `/nomina/hojas`), `crearExpedientes` (`true` crea expedientes básicos RETIRADO para cédulas sin expediente). Respuesta `{ ok, errores, advertencias, faltantes, periodoId?, totales }`. Si `ok=false` **no se guarda nada**; si `ok=true` el periodo queda en BORRADOR (reemplaza un borrador previo del mismo periodo) |
+| GET | `/nomina/periodos` | ADMIN | `?anio` |
+| GET | `/nomina/periodos/:id` | ADMIN | Resumen, advertencias y volantes (vista previa) |
+| POST | `/nomina/periodos/:id/publicar` | ADMIN | Solo desde BORRADOR (si no, 409) |
+| POST | `/nomina/periodos/:id/anular` | ADMIN | `{ motivo }` (5–300 caracteres). Solo PUBLICADO. Oculta los volantes y libera el periodo para recargarlo |
+| DELETE | `/nomina/periodos/:id` | ADMIN | Solo BORRADOR |
+| GET | `/nomina/colaboradores/:id/volantes` | ADMIN | Pestaña Nómina del expediente (incluye borradores) |
+| GET | `/me/volantes` | sesión | `?anio`. Solo periodos PUBLICADOS. `{ anios, anio, volantes }` |
+| GET | `/me/volantes/ultimo` | sesión | Tarjeta de Inicio |
+| GET | `/volantes/:id` | propio publicado o ADMIN; si no, **404** | Volante detallado: devengados, deducciones, adicionales (solo conceptos ≠ 0), neto |
+| GET | `/volantes/:id/pdf` | igual | `?descargar=1` para descargar. Se audita `DESCARGAR` |
+
+Validaciones de la carga: fechas en S1/T1; encabezados de la tabla de nómina; cada cédula con expediente; periodo no duplicado ni cruzado con otro vigente; por colaborador, devengado − deducciones = neto (±1 peso); en la liquidación de extras, suma = neto.

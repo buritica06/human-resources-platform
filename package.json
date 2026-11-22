@@ -14,7 +14,7 @@
     "seed": "node scripts/seed.js",
     "setup": "node scripts/migrate.js && node scripts/seed.js",
     "crear-admin": "node scripts/crear-admin.js",
-    "fixtures":"node scripts/generar-excel-ficticio.js",
+    "fixtures": "node scripts/generar-excel-ficticio.js && node scripts/generar-nomina-ficticia.js",
     "backup": "node scripts/backup-db.js",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
     "lint": "eslint src scripts tests seeds"
@@ -29,6 +29,7 @@
     "knex": "^3.3.0",
     "multer": "^2.5.0",
     "nodemailer": "^10.6.1",
+    "pdfkit": "^0.21.0",
     "pg": "^8.23.1",
     "zod": "^4.6.7"
   },

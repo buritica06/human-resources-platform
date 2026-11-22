@@ -1,5 +1,68 @@
 # Cambios
 
+## [0.3.0] – 2026-11-22 · Fase 4 – M2 Nómina y volantes de pago
+
+### Hecho
+- **Lector de la hoja "NOMINA …"** (`lector.js`, sin BD):
+  - Reconoce cada tabla por su encabezado de dos filas, no por posición: nómina por sede y empleador, y liquidación de extras. Las demás tablas con cédulas (p. ej. vacaciones liquidadas) no se cargan y se avisan.
+  - Toma el empleador del título "… C.C …" y la sede de "COMPRAVENTA/MASINERO …".
+  - Lee las cédulas guardadas como texto con puntos o comas.
+  - Toma el periodo de las celdas S1/T1.
+  - Si la hoja HORAS RESUMEN es de la misma quincena, añade el desglose de horas por tipo (solo informativo).
+- **La app no recalcula.** Valida:
+  - fechas;
+  - encabezados (con las variantes reales: "INCAPACIDAD - LCT", "INCAPACIDAD/LIC REM"…);
+  - que cada cédula tenga expediente;
+  - que el periodo no esté duplicado ni se cruce con otro;
+  - por colaborador, que devengado − deducciones = neto (±1 peso);
+  - en extras, que la suma = neto.
+- **Flujo de carga:** subir el libro → elegir una o varias quincenas → validar. Si algo falla, se muestra el reporte y **no se guarda nada**; si todo está bien, el periodo queda en **BORRADOR**. Luego vista previa → **Publicar**.
+- **Estados del periodo:**
+  - Un borrador se elimina; un periodo publicado se **anula** con motivo, lo que oculta sus volantes y libera el periodo para recargarlo.
+  - El índice único parcial impide que haya dos periodos vigentes con las mismas fechas.
+- **Retirados que no están en EMPLEADOS:** con la confirmación explícita del admin, se crea un expediente básico (RETIRADO) para conservar su historial.
+- **Volante detallado:** devengados, deducciones y pagos adicionales (liquidación de extras) con cantidad y valor, solo con los conceptos que tiene el colaborador, más el neto y las observaciones. Es una copia fiel de la hoja.
+- **PDF del volante** generado en el servidor con PDFKit. La plantilla corporativa (`src/core/pdf.js`) la reutilizará M7.
+- **Páginas:**
+  - Mis volantes (por año) y detalle.
+  - Nómina del admin: carga y lista de periodos.
+  - Vista previa del periodo con publicar, eliminar y anular.
+  - Pestaña "Nómina" del expediente.
+  - Tarjeta "Último volante" en Inicio, aportada por el módulo (nuevo `widgetsInicio`).
+- **Permisos:**
+  - El colaborador solo ve sus volantes publicados; ver un borrador o el volante de otro da 404 y se audita.
+  - El director no ve volantes (plan §4); su pestaña Nómina dice "información reservada".
+  - Todo `/nomina/*` es solo para el admin.
+  - Se auditan ver, descargar, cargar, publicar, anular y eliminar.
+
+### Decisiones sobre el formato real (verificadas con el libro, solo con conteos)
+- Fila con nombre pero sin cédula: se avisa y no se carga. Las filas solo con números (totales sin rótulo) se ignoran.
+- "RESUMEN DE DESCUENTOS" cierra la tabla de nómina.
+- Liquidación de extras:
+  - Si una columna de valores trae texto (una nota) y el neto cuadra sin ella, se toma como vacía y se avisa.
+  - Si el total está vacío pero hay cantidad y neto en un **único** concepto, el neto se atribuye a ese concepto y se avisa. No se calcula nada.
+  - Cualquier otro descuadre es un error.
+
+### Cambios frente al plan
+- **No hay tabla `conceptos`:** el catálogo está en código (`conceptos.js`), porque los conceptos los fija el formato del archivo.
+- **La carga queda directamente en BORRADOR,** en vez de un paso de "vista previa" sin guardar. Un borrador no es visible para nadie más que el admin y se reemplaza al recargar.
+- **Volantes sin "valor unitario":** la hoja solo trae totales por concepto; calcularlo sería recalcular (supuesto P3).
+- **Sin notificación por correo al publicar:** las notificaciones llegan con el motor de flujo de M3.
+
+### Pruebas
+- `npm test`: **115/115**, de las cuales 18 son nuevas de M2 sobre un libro de nómina **ficticio** con la estructura real (`npm run fixtures`):
+  - Validación: descuadre, encabezado, fechas, cédula faltante, periodo cruzado y huella del archivo.
+  - Borrador invisible para el colaborador; publicar dos veces → 409.
+  - Volante con solo los conceptos que tiene y con el desglose de horas.
+  - Permisos (colaborador, director y anónimo).
+  - PDF válido y auditado.
+  - Anular y recargar.
+- Con el libro real, en una base temporal ya borrada: **21 de 21 quincenas** cargadas y publicadas, 444 volantes, 0 descuadres, 4 expedientes básicos de retirados y el PDF generado. Solo se imprimieron conteos.
+- En el navegador:
+  - Admin: lista de periodos, vista previa y publicar. Aquí se encontró y corrigió un error: el botón quedaba `null` después de la confirmación.
+  - Colaborador: tarjeta de Inicio, Mis volantes, detalle a 375 px sin desbordamiento, PDF y pestaña Nómina.
+- Se corrigió además un ciclo infinito en el pie de página del PDF.
+
 ## [0.2.0] – 2026-11-22 · Fase 3 – M1 Expediente del colaborador
 
 ### Hecho

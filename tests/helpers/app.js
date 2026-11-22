@@ -20,7 +20,7 @@ export async function crearEntorno({ limites, config = {} } = {}) {
     appUrl: 'http://localhost:3000',
     claveCifrado: 'a'.repeat(64),
     db: { client: 'sqlite', filename: path.join(dir, 'prueba.sqlite') },
-    modulos: ['auth', 'usuarios', 'colaboradores'],
+    modulos: ['auth', 'usuarios', 'colaboradores', 'nomina'],
     ...config,
   });
   const ctx = crearContexto(cfg);

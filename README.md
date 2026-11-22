@@ -2,7 +2,7 @@
 
 Aplicación web (primero móvil) para que los colaboradores consulten su información laboral y hagan solicitudes, y para que el área contable administre usuarios, nómina y aprobaciones.
 
-> Estado: **M0 – Autenticación y cuentas** y **M1 – Expediente del colaborador** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
+> Estado: **M0 – Autenticación**, **M1 – Expediente** y **M2 – Nómina y volantes** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
 
 ## Requisitos
 - Node.js 20.12 o superior (probado con Node 24)
@@ -38,7 +38,7 @@ No se envían: cada correo se guarda como `.eml` en `data/correos/` y el enlace 
 | `npm run migrate` | Solo migraciones |
 | `npm test` | Pruebas unitarias e integración (`node:test`) |
 | `npm run lint` | ESLint |
-| `npm run fixtures` | Regenera los Excel **ficticios** de `tests/fixtures/` |
+| `npm run fixtures` | Regenera los Excel **ficticios** de `tests/fixtures/` (empleados y nómina) |
 | `npm run backup` | Copia de seguridad de la base de datos con rotación |
 | `npm run crear-admin -- <cedula> "<NOMBRE>"` | Crea el primer admincontable (producción) |
 

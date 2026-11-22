@@ -4,6 +4,13 @@ import { icono } from './iconos.js';
 
 const fmtCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 export const cop = (n) => fmtCOP.format(Math.round(Number(n) || 0));
+// Valor exacto de la nómina (con centavos solo si los tiene, p. ej. medios pesos del auxilio)
+export function copExacto(n) {
+  const v = Number(n) || 0;
+  const entero = Number.isInteger(Math.round(v * 100) / 100);
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: entero ? 0 : 2, maximumFractionDigits: 2 }).format(v);
+}
+export const periodoTexto = (inicio, fin) => `${fecha(inicio)} al ${fecha(fin)}`;
 
 // DD/MM/AAAA. Acepta 'AAAA-MM-DD' (fecha pura, sin zona) o ISO con hora.
 export function fecha(valor) {

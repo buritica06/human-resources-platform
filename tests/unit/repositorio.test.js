@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const RAIZ = path.resolve(import.meta.dirname, '..', '..');
 const IGNORAR = new Set(['node_modules', '.git', 'data', 'uploads', 'backups']);
-const PERMITIDOS = new Set(['empleados-ficticio.xlsx', 'empleados-con-errores.xlsx', 'sin-hoja-empleados.xlsx', 'parametros-malos.xlsx', 'empleados-variantes.xlsx']);
+const PERMITIDOS = new Set(['empleados-ficticio.xlsx', 'empleados-con-errores.xlsx', 'sin-hoja-empleados.xlsx', 'parametros-malos.xlsx', 'empleados-variantes.xlsx', 'nomina-ficticia.xlsx']);
 
 function recorrer(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
