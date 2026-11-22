@@ -41,11 +41,13 @@ async function cargar() {
           ${s.datos?.horas ? `<div class="dato"><dt>Duración</dt><dd>${escapar(String(s.datos.horas).replace('.', ','))} h</dd></div>` : ''}
           ${s.diasHabiles !== null ? `<div class="dato"><dt>Días hábiles</dt><dd>${escapar(String(s.diasHabiles).replace('.', ','))}</dd></div>` : ''}
           ${s.diasCompensar ? `<div class="dato"><dt>Días compensados en dinero</dt><dd>${escapar(String(s.diasCompensar).replace('.', ','))}</dd></div>` : ''}
+          ${s.datos?.unidad ? `<div class="dato"><dt>Duración</dt><dd>${escapar(String(s.datos.dias))} día(s) ${s.datos.unidad === 'habiles' ? 'hábiles' : 'calendario'}</dd></div>
+            <div class="dato"><dt>Remunerada</dt><dd>${s.datos.remunerada ? 'Sí' : 'No'}</dd></div>` : ''}
           ${s.datos?.regreso ? `<div class="dato"><dt>Regresa a trabajar</dt><dd>${escapar(fecha(s.datos.regreso))}</dd></div>` : ''}
           ${s.datos?.festivos?.length ? `<div class="dato"><dt>Festivos en el periodo</dt><dd>${s.datos.festivos.map((x) => `${escapar(x.nombre)} (${escapar(fecha(x.fecha))})`).join(', ')}</dd></div>` : ''}
           ${typeof s.datos?.saldoAlEnviar === 'number' ? `<div class="dato"><dt>Saldo disponible al enviar</dt><dd>${escapar(String(s.datos.saldoAlEnviar).replace('.', ','))} día(s)</dd></div>` : ''}
           <div class="dato"><dt>${s.tipo === 'VACACIONES' ? 'Observaciones' : 'Motivo'}</dt><dd>${escapar(s.motivo ?? '—')}</dd></div>
-          <div class="dato"><dt>Soporte</dt><dd>${s.documentoId ? `<a href="/api/v1/documentos/${s.documentoId}?ver=1" target="_blank" rel="noopener">${icono('pdf')} Ver PDF</a> · <a href="/api/v1/documentos/${s.documentoId}">Descargar</a>` : 'Sin soporte'}</dd></div>
+          <div class="dato"><dt>Soporte</dt><dd>${s.documentoId && !s.documentoVisible ? 'Adjunto (reservado: dato de salud, solo lo ve el área contable)' : s.documentoId ? `<a href="/api/v1/documentos/${s.documentoId}?ver=1" target="_blank" rel="noopener">${icono('pdf')} Ver PDF</a> · <a href="/api/v1/documentos/${s.documentoId}">Descargar</a>` : 'Sin soporte'}</dd></div>
         </dl>
         <div class="formulario-acciones" id="acciones">
           ${s.acciones.aprobar ? `<button type="button" class="btn" id="aprobar">${icono('ok')} Aprobar</button>` : ''}

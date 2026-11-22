@@ -15,7 +15,7 @@ export function htmlSaldo(s, { propio = true } = {}) {
     <details><summary>¿Cómo se calcula?</summary>
       <dl class="datos datos--compacto">
         <div class="dato"><dt>Saldo al ${escapar(fecha(s.fechaCorte))}</dt><dd>${dias(s.diasAlCorte)}</dd></div>
-        <div class="dato"><dt>Causados desde esa fecha (${s.diasLaborados} días laborados × ${s.diasPorAnio} / 360)</dt><dd>+ ${dias(s.causadosDesdeCorte)}</dd></div>
+        <div class="dato"><dt>Causados desde esa fecha (${s.diasLaborados} días laborados${s.diasNoLaborados ? `, sin ${s.diasNoLaborados} de licencia no remunerada` : ''} × ${s.diasPorAnio} / 360)</dt><dd>+ ${dias(s.causadosDesdeCorte)}</dd></div>
         <div class="dato"><dt>Disfrutados (aprobados)</dt><dd>− ${dias(s.disfrutados)}</dd></div>
         <div class="dato"><dt>Compensados en dinero (aprobados)</dt><dd>− ${dias(s.compensados)}</dd></div>
         <div class="dato"><dt>Disponibles al ${escapar(fecha(s.calculadoAl))}</dt><dd><strong>${dias(s.disponibles)}</strong></dd></div>

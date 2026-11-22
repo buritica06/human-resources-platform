@@ -373,8 +373,17 @@ export function crearMotor(ctx) {
       return s.paso_actual === i ? 'ACTUAL' : 'PENDIENTE';
     };
     const actuar = await puedeActuar(req, s);
+    // Soporte sensible (dato de salud): el director no lo puede abrir, así que no se le ofrece el
+    // enlace; y si la solicitud es de un tipo sensible (p. ej. licencia de maternidad), tampoco ve el
+    // motivo (texto libre que puede describir la salud).
+    const esDirectorAjeno = req.usuario.rol === 'DIRECTOR' && !propia;
+    let documentoVisible = !!s.documento_id;
+    if (documentoVisible && esDirectorAjeno) documentoVisible = !(await db('documentos').where({ id: s.documento_id }).first('sensible'))?.sensible;
+    const base = presentar(s);
+    if (esDirectorAjeno && s.datos?.sensible) base.motivo = '(Reservado: dato de salud)';
     return {
-      ...presentar(s),
+      ...base,
+      documentoVisible,
       pasos: pasos.map((p, i) => ({ etiqueta: p.etiqueta, rol: p.rol, estado: estadoPaso(p, i) })),
       eventos: eventos.map((e) => ({ ...e, estadoDesdeEtiqueta: e.estado_desde ? etiquetaEstado(s, e.estado_desde) : null, estadoHastaEtiqueta: etiquetaEstado(s, e.estado_hasta) })),
       acciones: {

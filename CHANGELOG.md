@@ -1,5 +1,48 @@
 # Cambios
 
+## [0.7.0] – 2026-11-22 · Fase 8 – M6 Licencias
+
+### Hecho
+- **Licencias sobre el mismo motor de solicitudes**, sin duplicar código. Tienen el mismo flujo (director → admincontable), estados, notificaciones, cruces de fechas y documentos. Aparecen en el Inicio ("Solicitar licencia"), en "Mis licencias" y en la pestaña Licencias del expediente.
+- **Tipos parametrizables** (`LISTA_TIPOS_LICENCIA`, con vigencia, VERIFICAR):
+
+  | Tipo | Días |
+  |---|---|
+  | Maternidad | 126 calendario |
+  | Paternidad | 14 calendario |
+  | Luto | 5 hábiles |
+  | Calamidad doméstica | sin máximo |
+  | No remunerada | sin máximo |
+
+  Cada tipo define su unidad (calendario u hábiles, con festivos y `SABADO_HABIL`), si exige soporte, si el soporte es sensible y si descuenta vacaciones.
+- **Cálculo en vivo** de los días en el formulario, con las mismas reglas del servidor.
+- **Vacaciones (pendiente de M4, resuelto):** las licencias no remuneradas aprobadas restan días laborados para causar vacaciones. El desglose de "¿Cómo se calcula?" lo muestra.
+- **Motor:** `soporteObligatorio` puede depender del tipo, y el detalle indica `documentoVisible`.
+
+### Revisión independiente (corregido)
+- Un borrador enviado tarde saltaba las validaciones. Ahora se revalida todo al enviar: días atrás, tipo, días, soporte y expediente activo.
+- El parámetro se leía con la vigencia de hoy y no con la de la fecha de inicio.
+- Los booleanos del parámetro no se validaban (por ejemplo, `"false"` contaba como verdadero), ni los nombres repetidos ni el código.
+- El descuento en vacaciones mezclaba días calendario con DAYS360.
+- Al director se le mostraba un enlace al soporte sensible de maternidad que devolvía 404. Ya no se muestra, y el motivo de los tipos sensibles le aparece reservado.
+- El aviso de festivos faltantes ahora lista todos los años.
+
+### Pruebas
+- `npm test`: **225/225**. Las nuevas son:
+  - 9 de licencias: luto en días hábiles, maternidad sensible, flujo, alcance, cruces y descuento en vacaciones.
+  - 5 de regresión de la revisión.
+- `npm run lint` sin errores.
+- En el navegador:
+  - Formulario de luto a 375 px: regla visible, cálculo de 5 días hábiles del 23 al 29/12/2026 sin contar Navidad ni el domingo, y soporte obligatorio.
+  - Confirmación y envío.
+  - Paso del director omitido (sede sin director).
+  - Detalle con duración y remuneración.
+
+### Pendiente / riesgos
+- Una licencia aprobada no se puede revertir (M8).
+- Una no remunerada aprobada después de unas vacaciones ya aprobadas puede dejar el saldo negativo.
+- Las suspensiones (SUS) se registrarán desde el panel del admincontable (M8).
+- Una incapacidad puede caer sobre una licencia aprobada; el admin ve el aviso.
 ## [0.6.0] – 2026-11-22 · Fase 7 – M5 Incapacidades
 
 ### Hecho

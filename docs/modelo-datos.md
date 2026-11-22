@@ -127,3 +127,14 @@ Las solicitudes de vacaciones usan la tabla `solicitudes` (M3):
 - `INCAPACIDAD_VALIDADA`, `INCAPACIDAD_DEVUELTA` e `INCAPACIDAD_ANULADA`
 
 Ninguna guarda el diagnóstico.
+## M6 (sin migración)
+
+Las licencias se guardan en `solicitudes` (`tipo = LICENCIA`):
+- `subtipo` = nombre del tipo.
+- `datos` = `{ dias, unidad, codigo, remunerada, descuentaVacaciones, sensible }`, una copia de la regla vigente al pedirla.
+
+### Parámetros nuevos
+- `LISTA_TIPOS_LICENCIA` (JSON por tipo).
+- `LIC_REGISTRO_MAX_DIAS_ATRAS` = 30.
+
+Ambos están marcados VERIFICAR.

@@ -15,8 +15,9 @@ import solicitudes from '../modules/solicitudes/index.js';
 import permisos from '../modules/permisos/index.js';
 import vacaciones from '../modules/vacaciones/index.js';
 import incapacidades from '../modules/incapacidades/index.js';
+import licencias from '../modules/licencias/index.js';
 
-export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos, vacaciones, incapacidades];
+export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos, vacaciones, incapacidades, licencias];
 
 // Dependencias entre módulos: si falta una, la app no arranca (mensaje claro)
 const REQUIERE = {
@@ -24,6 +25,7 @@ const REQUIERE = {
   permisos: ['solicitudes'],
   vacaciones: ['solicitudes'],
   incapacidades: ['solicitudes', 'colaboradores'],
+  licencias: ['solicitudes'],
   nomina: ['colaboradores'],
 };
 

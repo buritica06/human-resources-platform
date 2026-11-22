@@ -5,7 +5,8 @@
 // - Para solicitar = disponibles − lo que está en trámite (pendiente de aprobación).
 // - Días hábiles: excluye domingos, festivos y (si SABADO_HABIL es falso) sábados.
 // - Compensación en dinero: máximo VAC_COMPENSACION_MAX_PCT % de los días de la solicitud.
-// Pendiente para M6: restar de los días laborados las licencias no remuneradas y suspensiones.
+// - Días laborados: se restan las licencias APROBADAS cuyo tipo descuenta vacaciones (no
+//   remuneradas, M6). Las suspensiones (SUS) se registrarán desde el panel del admincontable (M8).
 //
 // OJO (SQLite, una sola conexión): los parámetros se leen con `parametros()` ANTES de abrir una
 // transacción; dentro de ella solo se consulta con `trx`.
@@ -61,7 +62,21 @@ export function crearServicioVacaciones(ctx) {
     if (!corte) return { registrado: false };
     // Hasta hoy, o hasta el retiro si ya se retiró
     const hasta = colaborador.fecha_retiro && colaborador.fecha_retiro < hoy ? colaborador.fecha_retiro : hoy;
-    const diasLaborados = hasta >= corte.fecha_corte ? Math.max(0, dias360(corte.fecha_corte, hasta) + 1) : 0;
+    // Licencias aprobadas que no cuentan como tiempo laborado (p. ej. no remuneradas, M6): se
+    // restan sus días dentro del periodo [corte, hasta], contados con el MISMO método del total
+    // (DAYS360 + 1) para no mezclar bases. La regla viaja en la solicitud (datos).
+    let diasNoLaborados = 0;
+    if (hasta >= corte.fecha_corte) {
+      const licencias = await trx('solicitudes').where({ colaborador_id: colaborador.id, tipo: 'LICENCIA', estado: 'APROBADA' })
+        .where('fecha_inicio', '<=', hasta).where('fecha_fin', '>=', corte.fecha_corte).select('fecha_inicio', 'fecha_fin', 'datos');
+      for (const l of licencias) {
+        if (!JSON.parse(l.datos ?? '{}').descuentaVacaciones) continue;
+        const ini = l.fecha_inicio > corte.fecha_corte ? l.fecha_inicio : corte.fecha_corte;
+        const fin = l.fecha_fin < hasta ? l.fecha_fin : hasta;
+        diasNoLaborados += Math.max(0, dias360(ini, fin) + 1);
+      }
+    }
+    const diasLaborados = hasta >= corte.fecha_corte ? Math.max(0, dias360(corte.fecha_corte, hasta) + 1 - diasNoLaborados) : 0;
     const causadosDesdeCorte = (diasLaborados * p.diasAnio) / 360;
     const filas = await trx('solicitudes').where({ colaborador_id: colaborador.id, tipo: 'VACACIONES' })
       .where('fecha_inicio', '>=', corte.fecha_corte).whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA'])
@@ -83,7 +98,7 @@ export function crearServicioVacaciones(ctx) {
       registrado: true,
       fechaCorte: corte.fecha_corte,
       diasAlCorte: Number(corte.dias_al_corte),
-      diasLaborados,
+      diasLaborados, diasNoLaborados,
       causadosDesdeCorte: r2(causadosDesdeCorte),
       disfrutados, compensados, enTramite,
       disponibles,

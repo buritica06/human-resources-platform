@@ -48,6 +48,19 @@ export const PARAMETROS = [
   ['INC_REGISTRO_MAX_DIAS_ATRAS', 60, 'numero', '2026-01-01', null, 'Hasta cuántos días después de su inicio se puede registrar una incapacidad – VERIFICAR'],
   ['LISTA_TIPOS_PERMISO_SENSIBLES', ['CITA MÉDICA'], 'json', '2026-01-01', null, 'Tipos de permiso cuyo soporte es dato de salud (Ley 1581): el director no lo ve'],
   ['PERMISO_MAX_DIAS', 3, 'numero', '2026-01-01', null, 'Duración máxima de un permiso (días calendario); para más, vacaciones o licencia'],
+  // M6 – Licencias (plan: tipos parametrizables). Días según la ley vigente a la fecha – VERIFICAR:
+  // maternidad 18 semanas (Ley 2114/2021), paternidad 2 semanas (Ley 2114/2021), luto 5 días hábiles
+  // (Ley 1280/2009). Calamidad y no remunerada no tienen máximo legal (diasMax: null).
+  // codigo = novedad del archivo de nómina (LMA, LR, LNR). descuentaVacaciones: los días no se
+  // cuentan como laborados para causar vacaciones (plan §9).
+  ['LISTA_TIPOS_LICENCIA', [
+    { nombre: 'MATERNIDAD', codigo: 'LMA', remunerada: true, unidad: 'calendario', diasMax: 126, soporteObligatorio: true, sensible: true, descuentaVacaciones: false },
+    { nombre: 'PATERNIDAD', codigo: 'LMA', remunerada: true, unidad: 'calendario', diasMax: 14, soporteObligatorio: true, sensible: false, descuentaVacaciones: false },
+    { nombre: 'LUTO', codigo: 'LR', remunerada: true, unidad: 'habiles', diasMax: 5, soporteObligatorio: true, sensible: false, descuentaVacaciones: false },
+    { nombre: 'CALAMIDAD DOMÉSTICA', codigo: 'LR', remunerada: true, unidad: 'habiles', diasMax: null, soporteObligatorio: false, sensible: false, descuentaVacaciones: false },
+    { nombre: 'NO REMUNERADA', codigo: 'LNR', remunerada: false, unidad: 'calendario', diasMax: null, soporteObligatorio: false, sensible: false, descuentaVacaciones: true },
+  ], 'json', '2026-01-01', null, 'Tipos de licencia: días máximos, unidad (calendario/hábiles), soporte y efecto en vacaciones – VERIFICAR'],
+  ['LIC_REGISTRO_MAX_DIAS_ATRAS', 30, 'numero', '2026-01-01', null, 'Hasta cuántos días después de su inicio se puede registrar una licencia – VERIFICAR'],
   // Campos que el colaborador puede editar de su propio expediente (supuesto P11)
   ['CAMPOS_EDITABLES_COLABORADOR', ['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'], 'json', '2026-01-01', null, 'Datos del expediente que el colaborador puede actualizar por sí mismo'],
 ];

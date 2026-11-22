@@ -15,7 +15,9 @@ export function crearServicioSolicitudes(ctx) {
     if (!colaborador) throw new ErrorApp(404, 'SIN_EXPEDIENTE', 'Su cuenta no tiene expediente de colaborador; no puede hacer solicitudes.');
     if (colaborador.estado !== 'ACTIVO') throw invalido('Su expediente está como retirado; no puede hacer solicitudes.');
     const campos = await handler.validar(ctx, { colaborador, body });
-    if (handler.soporteObligatorio && !archivo) throw invalido('Adjunte el soporte en PDF.', { soporte: 'Adjunte el soporte en PDF.' });
+    // Puede depender del subtipo (p. ej. licencias): función o booleano
+    const obligatorio = typeof handler.soporteObligatorio === 'function' ? await handler.soporteObligatorio(ctx, campos) : handler.soporteObligatorio;
+    if (obligatorio && !archivo) throw invalido('Adjunte el soporte en PDF.', { soporte: 'Adjunte el soporte en PDF.' });
 
     // Sensible = dato de salud (Ley 1581): solo lo ven el colaborador y el admincontable.
     // Se calcula ANTES de la transacción (consulta parámetros con otra conexión).

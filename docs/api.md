@@ -180,3 +180,33 @@ Dato de salud (Ley 1581 de 2012). Las incapacidades no pasan por el flujo de apr
 - Al aprobar una solicitud se revalida que no se cruce con una incapacidad registrada mientras estaba en trámite.
 - Una prórroga debe ser del mismo tipo que la anterior.
 - Al director solo se le avisan las fechas.
+## M6 – Licencias (`licencias`)
+
+Las licencias usan el motor de solicitudes con `tipo=LICENCIA`. Tienen el mismo flujo, estados, notificaciones, cruces y documentos que permisos y vacaciones. Los campos son `subtipo` (el nombre del tipo), `fecha_inicio`, `fecha_fin`, `motivo` (5–500) y `soporte` (PDF; obligatorio según el tipo).
+
+| Método | Ruta | Quién | Notas |
+|---|---|---|---|
+| GET | `/licencias/opciones` | sesión | `{ tipos: [{ nombre, unidad, diasMax, remunerada, soporteObligatorio, sensible }], hoy, maxMb, diasAtras }` |
+| POST | `/licencias/calcular` | sesión | `{ subtipo, fecha_inicio, fecha_fin }` → `{ dias, unidad, remunerada }`. Aplica las mismas validaciones que al crear y no guarda nada |
+
+**Reglas (parámetro `LISTA_TIPOS_LICENCIA`, con vigencia; VERIFICAR):**
+
+| Tipo | Días | Soporte | Efecto |
+|---|---|---|---|
+| Maternidad (LMA) | 126 calendario | obligatorio, **sensible** (el director no lo ve) | remunerada |
+| Paternidad (LMA) | 14 calendario | obligatorio | remunerada |
+| Luto (LR) | 5 hábiles | obligatorio | remunerada |
+| Calamidad doméstica (LR) | sin máximo legal (tope de digitación: 366) | opcional | remunerada |
+| No remunerada (LNR) | sin máximo legal (tope de digitación: 366) | opcional | **descuenta los días laborados para vacaciones** |
+
+- Los días hábiles excluyen domingos, festivos y, según `SABADO_HABIL`, sábados.
+- Se pueden registrar hasta `LIC_REGISTRO_MAX_DIAS_ATRAS` (30) días después del inicio.
+- La regla con la que se pidió queda guardada en `datos` (`dias, unidad, codigo, remunerada, descuentaVacaciones`). Si el parámetro cambia después, la solicitud no cambia.
+- El tipo se busca en el parámetro **vigente a la fecha de inicio** de la licencia. Si el parámetro está mal configurado (booleanos como texto, nombres repetidos, código vacío), se responde 500 controlado y no se relaja ninguna regla.
+- **Un borrador se revalida completo al enviarlo** (reglas leídas antes de la transacción): ventana de días atrás, tipo vigente, días, soporte obligatorio y expediente activo.
+- En vacaciones, cada licencia APROBADA con `descuentaVacaciones` resta sus días dentro de [corte, hoy] a los días laborados (`diasNoLaborados` en el saldo). Se cuentan con DAYS360 + 1, la misma base del total.
+- **Tipos sensibles (maternidad):** el director ve el tipo y las fechas para aprobar, pero no el motivo (aparece como "Reservado") ni el enlace al soporte (`documentoVisible: false` en el detalle).
+- **Limitaciones:**
+  - Una licencia aprobada no se puede revertir (pendiente M8).
+  - Si una no remunerada se aprueba después de unas vacaciones ya aprobadas, el saldo puede quedar negativo; se ve en la tarjeta de saldo. Las vacaciones en trámite se revalidan al aprobarse (409).
+  - Cambiar el indicador `sensible` no reclasifica los soportes ya subidos.
