@@ -61,6 +61,10 @@ export const PARAMETROS = [
     { nombre: 'NO REMUNERADA', codigo: 'LNR', remunerada: false, unidad: 'calendario', diasMax: null, soporteObligatorio: false, sensible: false, descuentaVacaciones: true },
   ], 'json', '2026-01-01', null, 'Tipos de licencia: días máximos, unidad (calendario/hábiles), soporte y efecto en vacaciones – VERIFICAR'],
   ['LIC_REGISTRO_MAX_DIAS_ATRAS', 30, 'numero', '2026-01-01', null, 'Hasta cuántos días después de su inicio se puede registrar una licencia – VERIFICAR'],
+  // M7 – Certificados: quién firma y dónde se expide (vacío = no se imprime) – VERIFICAR
+  ['CERT_FIRMANTE_NOMBRE', '', 'texto', '2026-01-01', null, 'Nombre de quien firma los certificados laborales (vacío: solo el cargo)'],
+  ['CERT_FIRMANTE_CARGO', 'Área de Talento Humano', 'texto', '2026-01-01', null, 'Cargo o área que firma los certificados laborales'],
+  ['CERT_CIUDAD', '', 'texto', '2026-01-01', null, 'Ciudad de expedición de los certificados (vacío: no se imprime)'],
   // Campos que el colaborador puede editar de su propio expediente (supuesto P11)
   ['CAMPOS_EDITABLES_COLABORADOR', ['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'], 'json', '2026-01-01', null, 'Datos del expediente que el colaborador puede actualizar por sí mismo'],
 ];

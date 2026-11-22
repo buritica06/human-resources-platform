@@ -210,3 +210,31 @@ Las licencias usan el motor de solicitudes con `tipo=LICENCIA`. Tienen el mismo 
   - Una licencia aprobada no se puede revertir (pendiente M8).
   - Si una no remunerada se aprueba después de unas vacaciones ya aprobadas, el saldo puede quedar negativo; se ve en la tarjeta de saldo. Las vacaciones en trámite se revalidan al aprobarse (409).
   - Cambiar el indicador `sensible` no reclasifica los soportes ya subidos.
+## M7 – Certificados (`certificados`)
+
+| Método | Ruta | Quién | Notas |
+|---|---|---|---|
+| POST | `/me/certificados/laboral` | colaborador con expediente | `{ conSalario: boolean, dirigidoA? }` → 201 `{ id, codigo, conSalario, emitidoEn }`. Si al expediente le falta empleador, fecha de ingreso, cargo o salario (cuando se pide con salario), responde 400 diciendo cuál falta |
+| POST | `/colaboradores/:id/certificados/laboral` | ADMIN | Igual, a nombre de otro, también retirados ("laboró… hasta…") |
+| GET | `/me/certificados` · `/colaboradores/:id/certificados` | dueño, ADMIN (director: **404**) | Lista con código, tipo, destinatario, fecha y si está anulado |
+| GET | `/certificados/:id/pdf` | dueño, ADMIN | PDF con la plantilla corporativa. `?descargar=1` lo baja como archivo. Se audita (`DESCARGAR_CERTIFICADO`) |
+| POST | `/certificados/:id/anular` | ADMIN | `{ motivo (5–300) }` |
+| GET | `/certificados/verificar/:codigo` | **público, sin sesión** (límite de consultas) | `{ valido, tipo, emitidoEn }` o `{ valido:false, motivo, anulado? }`. **No expone** nombre, cédula, empresa ni salario |
+
+**Reglas:**
+- El certificado usa los datos vigentes del expediente al emitirlo; el salario es el salario básico registrado, sin recalcular.
+- El contenido se guarda (JSON más huella sha256), así que volver a descargarlo produce el mismo texto aunque el expediente cambie después.
+- Código de verificación: 12 caracteres aleatorios (60 bits, sin 0/O ni 1/I), en el formato `XXXX-XXXX-XXXX`.
+- Página pública: `/verificar?codigo=…`.
+- **Validaciones del expediente:**
+  - Si un colaborador RETIRADO no tiene fecha de retiro, el certificado no se emite (no puede decir "labora").
+  - Si la fecha de retiro es futura, el certificado aún dice "labora".
+  - Un contrato FIJO exige fecha de fin y no se certifica si está vencido.
+  - El salario se imprime en pesos enteros: el número y las letras salen del mismo valor.
+- **Certificado anulado:**
+  - El colaborador recibe 410 al intentar descargarlo.
+  - El admin lo recibe marcado "ANULADO – SIN VALIDEZ".
+  - La verificación pública responde `anulado: true`. Así quien lo recibe sabe que existió pero ya no vale; es una decisión de negocio.
+- **Integridad:** al descargar se compara la huella sha256 del contenido guardado. Si no coincide, responde 500 y lo registra en el log.
+- **Límites:** 20 emisiones por usuario y 60 verificaciones por IP cada 15 minutos.
+- **Parámetros** (VERIFICAR): `CERT_FIRMANTE_NOMBRE`, `CERT_FIRMANTE_CARGO` y `CERT_CIUDAD`. Si están vacíos, no se imprimen.

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Verificar certificado · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/certificados/verificar.js"></script>
+</head>
+<body>
+  <main class="auth">
+    <div class="auth__marco">
+      <section class="auth__panel" aria-labelledby="titulo">
+        <div class="marca"><span data-icono="marca"></span><span>Talento Humano</span></div>
+        <h1 id="titulo">Verificar un certificado</h1>
+        <p class="ayuda">Escriba el código de verificación que aparece al final del certificado.</p>
+        <form id="f" novalidate>
+          <div class="campo">
+            <label for="codigo">Código de verificación</label>
+            <input class="entrada" id="codigo" name="codigo" required maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="codigo-ayuda codigo-error">
+            <span class="ayuda" id="codigo-ayuda">Por ejemplo: 7KQ2-M9XD-4TRA</span>
+            <span class="error-campo" id="codigo-error"></span>
+          </div>
+          <button class="btn btn--bloque" type="submit">Verificar</button>
+        </form>
+        <div id="resultado" tabindex="-1" aria-live="polite"></div>
+      </section>
+      <section class="auth__info" aria-labelledby="info-titulo">
+        <h2 id="info-titulo">¿Qué confirma esta página?</h2>
+        <ol>
+          <li>Que el certificado fue expedido por la plataforma y no ha sido anulado.</li>
+          <li>Su tipo y fecha de expedición.</li>
+          <li>Por privacidad no muestra nombres, cédulas ni salarios: compárelos con el documento que tiene en la mano.</li>
+        </ol>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

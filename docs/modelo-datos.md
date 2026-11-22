@@ -138,3 +138,11 @@ Las licencias se guardan en `solicitudes` (`tipo = LICENCIA`):
 - `LIC_REGISTRO_MAX_DIAS_ATRAS` = 30.
 
 Ambos están marcados VERIFICAR.
+## M7 (migración `20261122_008_m7_certificados`)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| **certificados** | id, colaborador_id, tipo (LABORAL), con_salario, **codigo** (único), dirigido_a, contenido (JSON impreso), huella (sha256), emitido_por, emitido_en, anulado_en, anulado_por, motivo_anulacion | La verificación pública solo lee `codigo`, `anulado_en` y `emitido_en` |
+
+### Acciones de auditoría nuevas
+`EMITIR_CERTIFICADO`, `DESCARGAR_CERTIFICADO` y `ANULAR_CERTIFICADO`.

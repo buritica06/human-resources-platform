@@ -31,3 +31,15 @@ Programe la tarea a diario (Programador de tareas de Windows o `cron`) y copie l
 ## Tiempo real y archivos subidos
 - Las notificaciones en tiempo real usan **Server-Sent Events** con un emisor en memoria: funcionan con **una sola instancia** del servidor. Con varias instancias, cambie el emisor de `src/core/notificaciones.js` por un canal compartido (p. ej. `LISTEN/NOTIFY` de PostgreSQL). Si hay un proxy (Nginx), desactive el *buffering* para `/api/v1/eventos` (la app ya envía `X-Accel-Buffering: no`).
 - Los PDF subidos se guardan en `STORAGE_DIR` (por defecto `./uploads`), **fuera** de la carpeta pública y con nombre aleatorio. Inclúyala en las copias de seguridad, cífrela en reposo y restrinja permisos: contiene incapacidades (datos de salud). Para pasar a almacenamiento en la nube, agregue un adaptador en `src/core/storage/` con la misma interfaz.
+
+## Certificados (M7)
+
+**Proxy inverso.** El límite de la verificación pública (`/api/v1/certificados/verificar/…`) se cuenta por IP. Detrás de un proxy, `TRUST_PROXY` debe ser exactamente el número de saltos de proxy:
+- Si se deja en 0, todos comparten la IP del proxy, y cualquiera podría agotar el límite de todos.
+- Si es mayor de lo real o `true`, se puede falsificar `X-Forwarded-For`.
+
+El contador vive en memoria: es por proceso y se reinicia al reiniciar el servidor.
+
+**Retención.** Cada certificado guarda una copia de lo que se imprimió: nombre, cédula, cargo y salario. Es el mismo nivel de protección que el expediente. Antes de producción hay que definir con el área jurídica cuánto tiempo se conservan y si se purga el contenido de los anulados (Ley 1581, finalidad y temporalidad).
+
+**Firma.** Por defecto no se imprime el nombre de quien firma (`CERT_FIRMANTE_NOMBRE` está vacío) y la autenticidad se respalda con el código de verificación. Hay que configurar el firmante y la ciudad (`CERT_CIUDAD`) si la empresa lo requiere.

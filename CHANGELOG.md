@@ -1,5 +1,49 @@
 # Cambios
 
+## [0.8.0] – 2026-11-22 · Fase 9 – M7 Certificados
+
+### Hecho
+- **Certificado laboral con o sin salario:**
+  - Se genera al momento con los datos vigentes del expediente. El salario es el salario básico, sin recalcular, en número y en letras.
+  - Usa la plantilla corporativa.
+  - Se puede dirigir a una entidad ("A quien interese" por defecto).
+  - Redacta correctamente los casos "labora" o "laboró… hasta…" (retirados) y contrato indefinido, fijo (con fecha de fin) u obra o labor.
+- **Código de verificación:**
+  - 12 caracteres aleatorios (60 bits, sin caracteres confusos).
+  - Página pública `/verificar`, sin sesión y con límite de consultas, que **solo dice si es válido, el tipo y la fecha**: sin nombre, cédula, empresa ni salario.
+  - El admincontable puede anular un certificado.
+- El contenido emitido se guarda: volver a descargarlo produce el mismo texto aunque el expediente cambie. Se verifica su huella sha256.
+- **Pantallas:**
+  - "Certificados" en el menú: generar y volver a descargar.
+  - Pestaña Documentos del expediente: el admin genera a nombre de otro (también de retirados) y anula. El director no tiene acceso.
+- Números y fechas en letras (es-CO) con apócope correcta ("UN MILLÓN DE PESOS", "VEINTIÚN MIL", "CIENTO UN PESOS").
+
+### Revisión independiente (corregido)
+- Un retirado sin fecha de retiro quedaba certificado como "labora".
+- Un contrato fijo sin fecha de fin o vencido se certificaba igual.
+- Un salario con centavos no coincidía con su valor en letras.
+- Un certificado anulado se podía seguir descargando. Ahora el colaborador recibe 410 y al admin le llega marcado "ANULADO".
+- La huella del contenido no se verificaba.
+- No había límite de emisión por usuario.
+- `dirigidoA` aceptaba alfabetos que la fuente del PDF no puede dibujar.
+- Pantallas: la descarga ya no se hace saliendo de la página; el foco queda en la lista tras emitir o anular; los errores no JSON del proxy se muestran en español.
+- Se documentaron en `docs/despliegue.md` el ajuste de `TRUST_PROXY`, la retención y la firma.
+
+### Pruebas
+- `npm test`: **248/248**. Las nuevas son:
+  - 3 unitarias de letras, con más de 25 casos.
+  - 11 de certificados: formato del código, PDF válido, salario en letras, copia del contenido, alcance, retirados, verificación pública sin datos personales, anulación y límite.
+  - 9 de regresión de la revisión.
+- `npm run lint` sin errores.
+- En el navegador:
+  - Emisión desde "Certificados".
+  - PDF revisado visualmente (texto, firma y bloque de verificación).
+  - Verificación pública a 375 px.
+
+### Pendiente / riesgos
+- El certificado no lleva QR (no se agregó una librería; se escribe la URL).
+- El firmante y la ciudad no están configurados.
+- Falta definir la retención de los certificados.
 ## [0.7.0] – 2026-11-22 · Fase 8 – M6 Licencias
 
 ### Hecho
