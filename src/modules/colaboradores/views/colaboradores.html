@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Colaboradores · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/colaboradores/colaboradores.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="shell">
+    <aside id="lateral" class="lateral"></aside>
+    <div class="velo" hidden></div>
+    <div class="principal">
+      <header class="superior" id="superior"></header>
+      <main id="contenido" tabindex="-1">
+        <h1>Colaboradores</h1>
+        <section class="tarjeta" aria-labelledby="t-lista">
+          <header class="encabezado-tarjeta">
+            <h2 id="t-lista">Expedientes</h2>
+            <div class="formulario-acciones">
+              <button type="button" class="btn" id="btn-importar" hidden><span data-icono="subir"></span> Importar desde nómina</button>
+            </div>
+          </header>
+          <p class="ayuda" id="nota-director" hidden>Ve los colaboradores de las sedes a su cargo. Los datos de pago no se muestran.</p>
+          <form class="filtros" id="filtros" role="search">
+            <div class="campo">
+              <label for="q">Buscar</label>
+              <input class="entrada" id="q" name="q" type="search" placeholder="Cédula o nombre" maxlength="60">
+            </div>
+            <div class="campo">
+              <label for="f-sede">Sede</label>
+              <select class="entrada" id="f-sede" name="sede"><option value="">Todas</option></select>
+            </div>
+            <div class="campo">
+              <label for="f-estado">Estado</label>
+              <select class="entrada" id="f-estado" name="estado">
+                <option value="">Todos</option>
+                <option value="ACTIVO">Activos</option>
+                <option value="RETIRADO">Retirados</option>
+              </select>
+            </div>
+            <button class="btn btn--secundario" type="submit">Filtrar</button>
+          </form>
+          <p id="conteo" class="ayuda" aria-live="polite"></p>
+          <div id="lista"></div>
+          <nav class="paginacion" aria-label="Paginación" id="paginacion"></nav>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

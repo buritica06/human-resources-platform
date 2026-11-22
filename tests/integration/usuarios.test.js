@@ -162,7 +162,7 @@ describe('carga masiva desde la hoja EMPLEADOS', () => {
     const r = await admin.subir('/usuarios/carga-masiva', path.join(FIX, 'empleados-ficticio.xlsx'), { confirmar: 'false' });
     assert.equal(r.status, 200);
     assert.equal(r.body.confirmado, false);
-    assert.equal(r.body.nuevos.length, 6);
+    assert.equal(r.body.nuevos.length, 7);
     assert.equal(r.body.omitidosRetirados, 1);
     assert.equal(r.body.errores.length, 0);
     assert.equal(Number((await env.ctx.db('usuarios').count({ n: '*' }))[0].n), antes);
@@ -179,7 +179,7 @@ describe('carga masiva desde la hoja EMPLEADOS', () => {
   test('confirmar: crea todos en una transacción con clave temporal y primer ingreso obligatorio', async () => {
     const r = await admin.subir('/usuarios/carga-masiva', path.join(FIX, 'empleados-ficticio.xlsx'), { confirmar: 'true' });
     assert.equal(r.status, 200);
-    assert.equal(r.body.creados.length, 6);
+    assert.equal(r.body.creados.length, 7);
     const uno = r.body.creados[0];
     const l = await cliente(env.app).login(uno.cedula, uno.claveTemporal);
     assert.equal(l.body.primerIngreso, true);

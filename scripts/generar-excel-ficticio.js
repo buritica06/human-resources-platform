@@ -23,7 +23,31 @@ export const EMPLEADOS_FICTICIOS = [
   ['2000000005', 'ESPITIA FUENTES LUIS ALBERTO', 'EMP_B', 'SEDE PUERTO', 'ADMINISTRADOR', '2020-09-01', 1900000, 'ACTIVO'],
   ['2000000006', 'FONSECA GARCIA SANDRA MILENA', 'EMP_C', 'SEDE CAMPO', 'AUXILIAR', '2025-05-05', 1750905, 'ACTIVO'],
   ['2000000007', 'GUERRA HERRERA PEDRO PABLO', 'EMP_C', 'SEDE CAMPO', 'AUXILIAR', '2019-04-01', 1750905, 'RETIRADO'],
+  // Empleador y sede que solo existen en la hoja PARAMETROS del libro (se crean al importar)
+  ['2000000008', 'HOYOS IBARRA ROSA ELENA', 'EMP_D', 'SEDE NUEVA', 'AUXILIAR', '2025-10-01', 1750905, 'ACTIVO'],
 ];
+
+function hojaParametros(libro) {
+  const h = libro.addWorksheet('PARAMETROS');
+  h.getCell('A1').value = 'PARÁMETROS DEL SISTEMA DE NÓMINA (FICTICIO)';
+  h.getCell('K4').value = 'CLAVE';
+  h.getCell('L4').value = 'ENCABEZADO EN LA NÓMINA';
+  h.getCell('M4').value = 'NOMBRE COMPLETO (liquidaciones)';
+  h.getCell('N4').value = 'C.C. / NIT';
+  h.getCell('P4').value = 'EMPLEADOR';
+  h.getCell('Q4').value = 'SEDE (título en la nómina, en este orden)';
+  const emp = [['EMP_A', 'EMPLEADOR DEMO A'], ['EMP_B', 'EMPLEADOR DEMO B'], ['EMP_C', 'EMPLEADOR DEMO C'], ['EMP_D', 'EMPLEADOR DEMO D']];
+  emp.forEach(([k, n], i) => {
+    h.getCell(`K${6 + i}`).value = k;
+    h.getCell(`M${6 + i}`).value = n;
+    h.getCell(`N${6 + i}`).value = 900000001 + i;
+  });
+  const sedes = [['EMP_A', 'SEDE NORTE'], ['EMP_A', 'SEDE SUR'], ['EMP_B', 'SEDE RIO'], ['EMP_B', 'SEDE PUERTO'], ['EMP_C', 'SEDE CAMPO'], ['EMP_D', 'SEDE NUEVA']];
+  sedes.forEach(([e, s], i) => {
+    h.getCell(`P${6 + i}`).value = e;
+    h.getCell(`Q${6 + i}`).value = s;
+  });
+}
 
 function hojaEmpleados(libro, filas) {
   const h = libro.addWorksheet('EMPLEADOS');
@@ -44,8 +68,17 @@ function hojaEmpleados(libro, filas) {
     fila.getCell(9).value = salario;
     fila.getCell(10).value = salario <= 2 * 1750905 ? 'SI' : 'NO';
     fila.getCell(11).value = 'EPS DEMO';
-    fila.getCell(12).value = 'AFP DEMO';
+    fila.getCell(12).value = 'Porvenir';
+    fila.getCell(15).value = 'I';
+    fila.getCell(16).value = 'BANCOLOMBIA';
+    fila.getCell(17).value = 'AHORRO';
+    fila.getCell(18).value = Number(`9${String(ced).replace(/\D/g, '').slice(-9)}`) || null; // número de cuenta ficticio
     fila.getCell(19).value = estado;
+    if (estado === 'RETIRADO') {
+      fila.getCell(20).value = new Date('2026-06-30T00:00:00Z');
+      fila.getCell(21).value = 'RENUNCIA VOLUNTARIA';
+    }
+    fila.getCell(22).value = `3${String(ced).replace(/\D/g, '').slice(-9).padStart(9, '0')}`;
     fila.getCell(23).value = { formula: `IF(A${r}="","",A${r}&" - "&B${r})`, result: `${ced} - ${nombre}` };
     fila.getCell(24).value = 'DOMINGO';
     fila.getCell(25).value = 'SEMANA COMPLETA';
@@ -62,6 +95,7 @@ export async function generar() {
 
   const ok = new ExcelJS.Workbook();
   ok.addWorksheet('MENU').getCell('A1').value = 'SISTEMA DE NÓMINA (FICTICIO)';
+  hojaParametros(ok);
   hojaEmpleados(ok, EMPLEADOS_FICTICIOS);
   await ok.xlsx.writeFile(path.join(DIR, 'empleados-ficticio.xlsx'));
 

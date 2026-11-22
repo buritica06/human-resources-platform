@@ -46,3 +46,19 @@ Límites por IP (ventana de 15 min): ingreso, 30 intentos **fallidos** (los exit
 | POST | `/usuarios/carga-masiva` | multipart: `archivo` (.xlsx/.xlsm, máx. 15 MB), `confirmar` (`true`/`false`) | vista previa `{ nuevos, yaExisten, omitidosRetirados, errores }` o, al confirmar, `{ creados: [{ cedula, nombre, claveTemporal }] }` |
 
 Reglas: un admin no puede desactivarse ni cambiar su propio rol; debe quedar al menos un ADMIN activo; solo los DIRECTOR tienen sedes; desactivar o cambiar el rol cierra las sesiones del afectado. La clave temporal vence en 72 h y se muestra una sola vez.
+
+## M1 – Expediente (`colaboradores`)
+| Método | Ruta | Acceso | Notas |
+|---|---|---|---|
+| GET | `/me/expediente` | cualquier rol con expediente | `{ colaborador, grupos, campos (con editable y opciones), pestanas }`. Cuenta bancaria enmascarada. 404 `SIN_EXPEDIENTE` si no tiene |
+| PATCH | `/me/expediente` | propio | Solo los campos de `CAMPOS_EDITABLES_COLABORADOR`; cualquier otro → 403 `CAMPO_NO_EDITABLE` y no se aplica nada |
+| GET | `/me/expediente/historial` | propio | Últimos 200 cambios |
+| GET | `/colaboradores` | ADMIN (todos), DIRECTOR (sus sedes) | `?q&sede&estado&pagina` |
+| GET | `/colaboradores/opciones` | ADMIN, DIRECTOR | Sedes de su alcance y estados |
+| GET | `/colaboradores/:id` | ADMIN; DIRECTOR solo si es de su sede (si no, **404**) | El director no recibe banco, tipo ni número de cuenta. Se audita (`VER`) |
+| PATCH | `/colaboradores/:id` | ADMIN | Cualquier dato menos la cédula; reglas cruzadas (sede del empleador, retiro con fecha, fechas coherentes) |
+| GET | `/colaboradores/:id/historial` | ADMIN; DIRECTOR (sin cambios de datos de pago) | |
+| GET | `/colaboradores/:id/cuenta` | ADMIN | Número de cuenta completo; se audita `VER_CUENTA` |
+| POST | `/colaboradores/importar` | ADMIN | multipart `archivo` + `confirmar`. Vista previa: `{ nuevos, actualizar, sinCambios, empleadoresNuevos, sedesNuevas, errores, advertencias }`; al confirmar, todo en una transacción |
+
+Formato de los valores: fechas `AAAA-MM-DD`, dinero en número (pesos), sí/no en booleano, sede y empleador por id.

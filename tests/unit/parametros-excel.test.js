@@ -35,8 +35,8 @@ test('lector EMPLEADOS: libro ficticio válido', async () => {
   const libro = await leerLibro(fs.readFileSync(path.join(FIX, 'empleados-ficticio.xlsx')));
   const { filas, errores } = leerEmpleados(libro);
   assert.equal(errores.length, 0);
-  assert.equal(filas.length, 7);
-  assert.equal(filas.filter((f) => f.estado === 'ACTIVO').length, 6);
+  assert.equal(filas.length, 8);
+  assert.equal(filas.filter((f) => f.estado === 'ACTIVO').length, 7);
   assert.deepEqual(filas[0], { fila: 5, cedula: '2000000001', nombre: 'ACOSTA BELTRAN CAMILO ANDRES', estado: 'ACTIVO' });
 });
 

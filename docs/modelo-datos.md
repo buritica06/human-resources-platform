@@ -37,3 +37,23 @@ erDiagram
 
 ### Parámetros cargados
 Ver `seeds/datos-iniciales.js`. Los marcados **VERIFICAR** (dominical 100 % desde 01/07/2027, factores dominicales de horas extra 2027 y el tope de compensación de vacaciones del 50 %) deben confirmarse con un asesor laboral.
+
+## M1 (migración `20261122_002_m1_expediente`)
+
+```mermaid
+erDiagram
+  EMPLEADORES ||--o{ COLABORADORES : emplea
+  SEDES ||--o{ COLABORADORES : agrupa
+  COLABORADORES ||--o{ EXPEDIENTE_CAMBIOS : historial
+  USUARIOS ||--o{ EXPEDIENTE_CAMBIOS : actor
+```
+
+| Tabla | Campos | Notas |
+|---|---|---|
+| **colaboradores** | id, cedula (único), nombre, empleador_id, sede_id, cargo, rango, tipo_contrato, fecha_ingreso, fecha_fin_contrato, salario_base, aux_transporte, dia_descanso, esquema_horas, lactancia, fin_lactancia, eps, afp, fondo_cesantias, caja, arl_riesgo, banco, tipo_cuenta, **numero_cuenta_cifrado**, estado, fecha_retiro, motivo_retiro, fecha_nacimiento, sexo, estado_civil, nacionalidad, ciudad_nacimiento, ciudad_residencia, direccion, barrio, celular, contacto_emergencia_nombre, contacto_emergencia_telefono, creado_en, actualizado_en | Se relaciona con `usuarios` por la **cédula** (sin FK) para que los módulos sean independientes. El número de cuenta se guarda con AES-256-GCM |
+| **expediente_cambios** | id, colaborador_id, campo, valor_anterior, valor_nuevo, origen (`COLABORADOR`/`ADMIN`/`IMPORTACION`), actor_id, creado_en | Valores legibles (nombre de la sede, SI/NO); la cuenta se guarda enmascarada (`•••• 1234`). `campo = _alta` marca la creación |
+
+El catálogo de campos (etiqueta, grupo, tipo, lista de valores, visibilidad para el director) está en `src/modules/colaboradores/campos.js` y es la única fuente para validar, decidir permisos y pintar la interfaz.
+
+### Parámetros nuevos
+`LISTA_CONTRATOS`, `LISTA_EPS`, `LISTA_AFP`, `LISTA_BANCOS`, `LISTA_TIPO_CUENTA`, `LISTA_ARL`, `LISTA_MOTIVOS_RETIRO`, `LISTA_DIAS`, `LISTA_ESQUEMAS` (del archivo base), `LISTA_ESTADO_CIVIL`, `LISTA_SEXO` y `CAMPOS_EDITABLES_COLABORADOR` (supuesto P11).

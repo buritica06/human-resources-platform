@@ -8,8 +8,9 @@
 // Un módulo desactivado (MODULES_ENABLED) no monta rutas, páginas ni menú.
 import auth from '../modules/auth/index.js';
 import usuarios from '../modules/usuarios/index.js';
+import colaboradores from '../modules/colaboradores/index.js';
 
-export const DISPONIBLES = [auth, usuarios];
+export const DISPONIBLES = [auth, usuarios, colaboradores];
 
 export function modulosActivos(cfg) {
   const activos = DISPONIBLES.filter((m) => cfg.modulos.includes(m.nombre));

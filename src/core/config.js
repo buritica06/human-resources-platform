@@ -8,6 +8,8 @@ if (fs.existsSync(path.join(RAIZ, '.env')) && process.env.NODE_ENV !== 'test') {
   process.loadEnvFile(path.join(RAIZ, '.env'));
 }
 
+const CLAVE_DESARROLLO = '6465736172726f6c6c6f2d736f6c6f2d6c6f63616c2d6e6f2d75736172000000';
+
 function leer(nombre, porDefecto) {
   const v = process.env[nombre];
   return v === undefined || v === '' ? porDefecto : v;
@@ -26,8 +28,10 @@ export function cargarConfig(overrides = {}) {
       filename: path.resolve(RAIZ, leer('DB_FILENAME', './data/th.sqlite')),
       url: leer('DATABASE_URL', ''),
     },
-    claveCifrado: leer('DATA_ENCRYPTION_KEY', ''),
-    modulos: leer('MODULES_ENABLED', 'auth,usuarios')
+    // En desarrollo, si no hay clave, se usa una fija SOLO para datos ficticios locales.
+    // En producción es obligatoria (ver validación abajo).
+    claveCifrado: leer('DATA_ENCRYPTION_KEY', env === 'production' ? '' : CLAVE_DESARROLLO),
+    modulos: leer('MODULES_ENABLED', 'auth,usuarios,colaboradores')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
@@ -59,7 +63,7 @@ export function cargarConfig(overrides = {}) {
   cfg.esLocal = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(cfg.appUrl);
 
   if (cfg.produccion) {
-    if (!/^[0-9a-f]{64}$/i.test(cfg.claveCifrado)) {
+    if (!/^[0-9a-f]{64}$/i.test(cfg.claveCifrado) || cfg.claveCifrado === CLAVE_DESARROLLO) {
       throw new Error('DATA_ENCRYPTION_KEY debe ser 64 caracteres hex en producción.');
     }
     if (cfg.correo.transporte !== 'smtp') {

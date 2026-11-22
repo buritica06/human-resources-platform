@@ -20,14 +20,14 @@ export async function crearEntorno({ limites, config = {} } = {}) {
     appUrl: 'http://localhost:3000',
     claveCifrado: 'a'.repeat(64),
     db: { client: 'sqlite', filename: path.join(dir, 'prueba.sqlite') },
-    modulos: ['auth', 'usuarios'],
+    modulos: ['auth', 'usuarios', 'colaboradores'],
     ...config,
   });
   const ctx = crearContexto(cfg);
   ctx.limites = { login: 1000, recuperar: 1000, ventanaMs: 60_000, ...limites };
   await migrar(ctx.db);
   await sembrarBase(ctx.db);
-  await sembrarDemo(ctx.db, { clave: CLAVE_DEMO });
+  await sembrarDemo(ctx.db, { clave: CLAVE_DEMO, cifrador: ctx.cifrador });
   const app = crearApp(ctx);
   return {
     ctx,

@@ -3,10 +3,13 @@ import { cargarConfig } from './core/config.js';
 import { crearContexto, crearApp } from './core/app.js';
 import { migrar } from './core/db.js';
 import { log } from './core/logger.js';
+import { sembrarBase } from '../seeds/sembrar.js';
 
 const cfg = cargarConfig();
 const ctx = crearContexto(cfg);
 await migrar(ctx.db);
+// Parámetros y festivos nuevos de cada versión (idempotente; no toca datos de personas).
+await sembrarBase(ctx.db);
 const app = crearApp(ctx);
 
 const servidor = app.listen(cfg.puerto, () => {

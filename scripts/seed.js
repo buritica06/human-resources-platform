@@ -3,6 +3,7 @@
 import { cargarConfig } from '../src/core/config.js';
 import { crearDb, migrar } from '../src/core/db.js';
 import { sembrarBase, sembrarDemo, USUARIOS_DEMO } from '../seeds/sembrar.js';
+import { crearCifrador } from '../src/core/security/cripto.js';
 
 const cfg = cargarConfig();
 const db = crearDb(cfg.db);
@@ -11,7 +12,7 @@ await sembrarBase(db);
 console.log('Parámetros y festivos cargados.');
 // Usuarios demo (clave publicada en README) SOLO en desarrollo local.
 if (!cfg.produccion && cfg.esLocal) {
-  await sembrarDemo(db, { clave: process.env.SEED_PASSWORD || 'Demo2026clave' });
+  await sembrarDemo(db, { clave: process.env.SEED_PASSWORD || 'Demo2026clave', cifrador: crearCifrador(cfg.claveCifrado) });
   console.log('Datos ficticios de desarrollo cargados. Usuarios demo (cédula / rol):');
   for (const u of USUARIOS_DEMO) console.log(`  ${u.cedula}  ${u.rol}`);
   console.log('La contraseña de los usuarios demo está en README.md (o en SEED_PASSWORD).');

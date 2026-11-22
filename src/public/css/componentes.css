@@ -124,6 +124,38 @@ fieldset.campo label { display: inline-flex; gap: var(--e-2); align-items: cente
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--c-primario); }
 details summary { cursor: pointer; color: var(--c-primario); font-weight: 600; min-height: var(--alto-toque); display: flex; align-items: center; }
 
+/* ---------- Expediente ---------- */
+.ficha { display: flex; gap: var(--e-4); align-items: center; }
+.ficha p { margin: 0 0 var(--e-1); }
+.ficha__nombre { font-weight: 800; font-size: var(--t-m); }
+.ficha__detalle { color: var(--c-texto-2); font-size: var(--t-xs); }
+.avatar--grande { width: 64px; height: 64px; font-size: var(--t-l); }
+.pestanas {
+  display: flex; gap: var(--e-1); overflow-x: auto; scrollbar-width: thin;
+  border-bottom: 2px solid var(--c-borde-suave); margin: calc(-1 * var(--e-2)) 0 var(--e-4);
+}
+.pestanas [role="tab"] {
+  flex: none; min-height: var(--alto-toque); padding: var(--e-2) var(--e-4);
+  background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  font: inherit; font-weight: 700; color: var(--c-texto-2); cursor: pointer; white-space: nowrap;
+}
+.pestanas [role="tab"]:hover { color: var(--c-primario); }
+.pestanas [role="tab"][aria-selected="true"] { color: var(--c-primario); border-bottom-color: var(--c-primario); }
+[role="tabpanel"]:focus-visible { outline-offset: 4px; }
+.grupo-datos { margin-top: var(--e-6); }
+.grupo-datos h3 { font-size: var(--t-s); color: var(--c-primario); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--e-3); }
+dl.datos { display: grid; grid-template-columns: 1fr; gap: var(--e-3) var(--e-6); margin: 0; }
+@media (min-width: 640px) { dl.datos { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1200px) { dl.datos { grid-template-columns: 1fr 1fr 1fr; } }
+.dato { min-width: 0; padding-bottom: var(--e-2); border-bottom: 1px solid var(--c-borde-suave); }
+.dato dt { font-size: var(--t-xs); color: var(--c-texto-2); font-weight: 600; }
+.dato dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.dato--editable { border-bottom: 0; }
+.dato--editable dt label { color: var(--c-primario); font-weight: 700; font-size: var(--t-s); }
+.dato--editable dd { font-weight: 400; }
+.sin-dato { color: var(--c-texto-2); font-weight: 400; }
+.secreto-inline { font-family: ui-monospace, Consolas, monospace; letter-spacing: 0.05em; }
+
 /* ---------- Filtros ---------- */
 .filtros { display: grid; gap: var(--e-3); grid-template-columns: 1fr; align-items: end; margin-bottom: var(--e-4); }
 .filtros .campo { margin: 0; }
@@ -136,6 +168,7 @@ dialog.modal {
   border: 0; border-radius: var(--r-tarjeta); padding: var(--e-6); box-shadow: 0 10px 40px rgb(0 0 0 / 0.25);
   color: var(--c-texto);
 }
+dialog.modal.modal--ancho { width: min(760px, calc(100% - 2 * var(--e-4))); }
 dialog.modal::backdrop { background: rgb(20 20 30 / 0.55); }
 dialog.modal h2 { font-size: var(--t-l); }
 

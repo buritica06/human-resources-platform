@@ -12,7 +12,10 @@ zona.innerHTML = `
   <section class="tarjeta" aria-labelledby="t-bienvenida">
     <h2 id="t-bienvenida">Bienvenido a Talento Humano</h2>
     <p>Desde aquí podrá consultar sus volantes de pago, pedir permisos y vacaciones, subir incapacidades y descargar certificados.</p>
-    <p class="aviso aviso--info">${icono('info')}<span>Estas opciones se irán habilitando a medida que el área contable las active.</span></p>
+    <div class="acciones-grandes acciones-grandes--una">
+      <a class="accion-grande" href="/expediente">${icono('documento')} Ver mi expediente</a>
+    </div>
+    <p class="aviso aviso--info">${icono('info')}<span>Las demás opciones se irán habilitando a medida que el área contable las active.</span></p>
   </section>
   <section class="tarjeta" aria-labelledby="t-cuenta">
     <h2 id="t-cuenta">Mi cuenta</h2>

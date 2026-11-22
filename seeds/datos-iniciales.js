@@ -29,6 +29,21 @@ export const PARAMETROS = [
   ['LOGIN_MAX_INTENTOS', 5, 'numero', '2026-01-01', null, 'Intentos fallidos antes de bloquear la cuenta'],
   ['LOGIN_BLOQUEO_MIN', 15, 'numero', '2026-01-01', null, 'Minutos de bloqueo tras superar los intentos'],
   ['UPLOAD_MAX_MB', 5, 'numero', '2026-01-01', null, 'Tamaño máximo de los PDF subidos'],
+
+  // M1 – Expediente. Listas de valores tomadas de PARAMETROS del archivo base (columnas V–AG).
+  ['LISTA_CONTRATOS', ['INDEFINIDO', 'FIJO 1 AÑO', 'FIJO INFERIOR A 1 AÑO', 'OBRA O LABOR', 'APRENDIZAJE'], 'json', '2026-01-01', null, 'Tipos de contrato'],
+  ['LISTA_EPS', ['Salud total', 'Nueva eps', 'Sura', 'Mutualser', 'Cajacopi', 'Sanitas', 'Coosalud', 'Famisanar', 'Compensar'], 'json', '2026-01-01', null, 'EPS'],
+  ['LISTA_AFP', ['Colpensiones', 'Porvenir', 'Proteccion', 'Colfondos', 'Skandia'], 'json', '2026-01-01', null, 'Fondos de pensión'],
+  ['LISTA_BANCOS', ['BANCOLOMBIA', 'DAVIVIENDA', 'BANCO DE BOGOTA', 'BBVA', 'NEQUI', 'DAVIPLATA', 'BANCO AGRARIO', 'CAJA SOCIAL'], 'json', '2026-01-01', null, 'Bancos'],
+  ['LISTA_TIPO_CUENTA', ['AHORRO', 'CORRIENTE'], 'json', '2026-01-01', null, 'Tipos de cuenta'],
+  ['LISTA_ARL', ['I', 'II', 'III', 'IV', 'V'], 'json', '2026-01-01', null, 'Clases de riesgo ARL'],
+  ['LISTA_MOTIVOS_RETIRO', ['RENUNCIA VOLUNTARIA', 'EXPIRACION DE PLAZO FIJO PACTADO', 'TERMINACION POR JUSTA CAUSA', 'DESPIDO SIN JUSTA CAUSA', 'MUTUO ACUERDO', 'TERMINACION DE OBRA O LABOR', 'TERMINACION EN PERIODO DE PRUEBA'], 'json', '2026-01-01', null, 'Motivos de retiro'],
+  ['LISTA_DIAS', ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'], 'json', '2026-01-01', null, 'Días de la semana (día de descanso pactado)'],
+  ['LISTA_ESQUEMAS', ['SEMANA COMPLETA', 'PRORRATEO'], 'json', '2026-01-01', null, 'Esquemas de liquidación de horas'],
+  ['LISTA_ESTADO_CIVIL', ['SOLTERO(A)', 'CASADO(A)', 'UNIÓN LIBRE', 'SEPARADO(A)', 'DIVORCIADO(A)', 'VIUDO(A)'], 'json', '2026-01-01', null, 'Estado civil'],
+  ['LISTA_SEXO', ['HOMBRE', 'MUJER'], 'json', '2026-01-01', null, 'Sexo (como en el registro civil)'],
+  // Campos que el colaborador puede editar de su propio expediente (supuesto P11)
+  ['CAMPOS_EDITABLES_COLABORADOR', ['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'], 'json', '2026-01-01', null, 'Datos del expediente que el colaborador puede actualizar por sí mismo'],
 ];
 
 export const FESTIVOS = [

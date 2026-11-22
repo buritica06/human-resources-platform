@@ -28,7 +28,33 @@ export async function sembrarBase(db) {
   }
 }
 
-export async function sembrarDemo(db, { clave }) {
+// Expedientes FICTICIOS de los usuarios demo. colab1 está en una sede del director demo;
+// colab2 no (sirve para probar el alcance).
+export const EXPEDIENTES_DEMO = [
+  { cedula: '1000000001', sede: 'SEDE CENTRO', cargo: 'CONTADORA', salario_base: 3500000, fecha_ingreso: '2019-02-01' },
+  { cedula: '1000000002', sede: 'SEDE NORTE', cargo: 'DIRECTOR ADMINISTRATIVO', salario_base: 3000000, fecha_ingreso: '2020-06-15' },
+  { cedula: '1000000003', sede: 'SEDE NORTE', cargo: 'AUXILIAR', salario_base: 1750905, fecha_ingreso: '2023-03-01', cuenta: '12345678901' },
+  { cedula: '1000000004', sede: 'SEDE RIO', cargo: 'AUXILIAR', salario_base: 1750905, fecha_ingreso: '2024-08-20' },
+];
+
+export async function sembrarExpedientesDemo(db, { cifrador } = {}) {
+  const t = ahora();
+  for (const e of EXPEDIENTES_DEMO) {
+    if (await db('colaboradores').where({ cedula: e.cedula }).first()) continue;
+    const u = await db('usuarios').where({ cedula: e.cedula }).first();
+    const s = await db('sedes').where({ nombre: e.sede }).first();
+    await db('colaboradores').insert({
+      cedula: e.cedula, nombre: u?.nombre ?? 'DEMO', empleador_id: s.empleador_id, sede_id: s.id, cargo: e.cargo,
+      tipo_contrato: 'INDEFINIDO', fecha_ingreso: e.fecha_ingreso, salario_base: e.salario_base, aux_transporte: e.salario_base <= 3501810,
+      eps: 'Sura', afp: 'Porvenir', arl_riesgo: 'I', banco: 'BANCOLOMBIA', tipo_cuenta: 'AHORRO',
+      numero_cuenta_cifrado: e.cuenta && cifrador ? cifrador.cifrar(e.cuenta) : null,
+      estado: 'ACTIVO', celular: `300${e.cedula.slice(-7)}`, ciudad_residencia: 'CIUDAD DEMO',
+      dia_descanso: 'DOMINGO', esquema_horas: 'SEMANA COMPLETA', creado_en: t, actualizado_en: t,
+    });
+  }
+}
+
+export async function sembrarDemo(db, { clave, cifrador }) {
   if (!clave) throw new Error('Falta la contraseña de los usuarios demo.');
   const t = ahora();
   for (const e of EMPLEADORES_FICTICIOS) {
@@ -58,4 +84,5 @@ export async function sembrarDemo(db, { clave }) {
       }
     }
   }
+  await sembrarExpedientesDemo(db, { cifrador });
 }

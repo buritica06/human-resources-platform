@@ -1,5 +1,46 @@
 # Cambios
 
+## [0.2.0] – 2026-11-22 · Fase 3 – M1 Expediente del colaborador
+
+### Hecho
+- **Expediente** con los datos del archivo de nómina (hoja EMPLEADOS: 26 columnas) más los datos personales y de contacto que no estaban (fecha de nacimiento, sexo, estado civil, ciudades, dirección, barrio, contacto de emergencia).
+- **Catálogo único de campos** (`campos.js`): etiqueta, grupo, tipo, lista de valores y visibilidad para el director. De ahí salen la validación, los permisos y la interfaz.
+- **Páginas:**
+  - "Mi expediente" (`/expediente`).
+  - "Colaboradores" (`/colaboradores`, para admincontable y director).
+  - Detalle (`/colaboradores/ver?id=`) con las pestañas Datos | Nómina | Permisos | Vacaciones | Incapacidades | Licencias | Documentos. Las de módulos aún no activos muestran "próximamente"; cada módulo podrá aportar su pestaña (`pestanasExpediente`).
+- **Permisos validados en el servidor:**
+  - El colaborador solo edita los datos de `CAMPOS_EDITABLES_COLABORADOR` (parámetro); si envía otro, recibe 403 y no se aplica nada.
+  - El director ve solo sus sedes, sin datos de pago y en solo lectura; fuera de su alcance recibe 404, que además se audita.
+  - El admincontable edita todo menos la cédula.
+- **Historial de cambios por dato** (quién, cuándo, antes, después y origen: colaborador, área contable o archivo de nómina), con valores legibles.
+- **Número de cuenta** cifrado (AES-256-GCM), enmascarado en pantalla y en el historial. El admin lo puede ver al pedirlo, y esa consulta queda auditada.
+- **Importación desde el libro de nómina:**
+  - Lee la hoja PARAMETROS (empleadores y sedes) y la hoja EMPLEADOS (columnas ubicadas por su encabezado).
+  - Muestra una vista previa con nuevos, cambios, errores por fila y advertencias, y confirma todo en una sola transacción.
+  - El Excel no pisa los datos que mantiene el propio colaborador, salvo que estén vacíos.
+- Listas de valores del archivo base (contratos, EPS, AFP, bancos, ARL, motivos de retiro, días y esquemas) cargadas como parámetros.
+- El lector de Excel pasó al núcleo (`src/core/excel.js`) y lo comparten los módulos.
+
+### Cambios frente al plan
+- **El colaborador se enlaza con su usuario por la cédula, sin FK.** Así los módulos "usuarios" y "colaboradores" siguen siendo independientes.
+- **La pestaña Documentos queda en "próximamente".** La carga de PDF (almacenamiento y validación de tipo real) llega con M3 y M5, como estaba en el plan.
+- **El servidor carga los parámetros nuevos al arrancar** (`sembrarBase`, idempotente y sin datos de personas).
+- **En desarrollo, sin `DATA_ENCRYPTION_KEY`, se usa una clave fija solo para datos ficticios.** En producción la clave sigue siendo obligatoria y se rechaza la de desarrollo.
+
+### Pruebas
+- `npm test`: **85/85**, de las cuales 20 son nuevas de M1:
+  - Edición propia y rechazo de campos no editables sin aplicar nada parcial.
+  - Campos editables configurables por parámetro.
+  - Alcance del director: 404 fuera de su sede y sin datos de pago en la respuesta ni en el historial.
+  - Reglas cruzadas, cifrado y auditoría de la cuenta.
+  - Importación: vista previa, errores, alta, reimportación sin cambios, y que el Excel no pise el celular actualizado por el colaborador.
+- Libro real: la importación de prueba en una base temporal creó 20 expedientes completos, con 0 errores y 1 advertencia (un tipo de contrato fuera de la lista, que se conserva). Solo se imprimieron conteos.
+- Prueba en el navegador a 1280 y 375 px, sin desbordamiento horizontal:
+  - Colaborador: editar con error por campo, confirmar, guardar y ver el historial.
+  - Director: lista de su sede y detalle sin datos de pago ni edición.
+  - Admin: los 36 campos editables, sedes filtradas por empleador y ver la cuenta.
+
 ## [0.1.0] – 2026-11-21 · Fase 2 – M0 Autenticación y cuentas
 
 ### Hecho
