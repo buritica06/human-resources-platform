@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Usuarios · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/usuarios/usuarios.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="shell">
+    <aside id="lateral" class="lateral"></aside>
+    <div class="velo" hidden></div>
+    <div class="principal">
+      <header class="superior" id="superior"></header>
+      <main id="contenido" tabindex="-1">
+        <h1>Usuarios</h1>
+        <section class="tarjeta" aria-labelledby="t-lista">
+          <header class="encabezado-tarjeta">
+            <h2 id="t-lista">Usuarios de la plataforma</h2>
+            <div class="formulario-acciones">
+              <button type="button" class="btn" id="btn-nuevo"><span data-icono="agregar"></span> Nuevo usuario</button>
+              <button type="button" class="btn btn--secundario" id="btn-masiva"><span data-icono="subir"></span> Carga masiva desde nómina</button>
+            </div>
+          </header>
+          <form class="filtros" id="filtros" role="search">
+            <div class="campo">
+              <label for="q">Buscar</label>
+              <input class="entrada" id="q" name="q" type="search" placeholder="Cédula o nombre" maxlength="60">
+            </div>
+            <div class="campo">
+              <label for="f-rol">Rol</label>
+              <select class="entrada" id="f-rol" name="rol">
+                <option value="">Todos</option>
+                <option value="COLABORADOR">Colaborador</option>
+                <option value="DIRECTOR">Director administrativo</option>
+                <option value="ADMIN">Admincontable</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="f-activo">Estado</label>
+              <select class="entrada" id="f-activo" name="activo">
+                <option value="">Todos</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
+              </select>
+            </div>
+            <button class="btn btn--secundario" type="submit">Filtrar</button>
+          </form>
+          <p id="conteo" class="ayuda" aria-live="polite"></p>
+          <div id="lista"></div>
+          <nav class="paginacion" aria-label="Paginación" id="paginacion"></nav>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

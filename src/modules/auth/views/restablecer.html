@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Nueva contraseña · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/auth/restablecer.js"></script>
+</head>
+<body>
+  <main class="auth">
+    <section class="auth__panel" aria-labelledby="titulo">
+      <div class="marca"><span data-icono="marca"></span><span>Talento Humano</span></div>
+      <h1 id="titulo">Cree una nueva contraseña</h1>
+      <div id="mensaje" tabindex="-1" hidden></div>
+      <form id="form" novalidate>
+        <div class="campo">
+          <label for="nueva">Nueva contraseña</label>
+          <div class="campo-icono">
+            <span class="icono-lado"><span data-icono="llave"></span></span>
+            <input class="entrada" id="nueva" name="nueva" type="password" autocomplete="new-password" required maxlength="128"
+                   aria-describedby="nueva-req nueva-error">
+            <button type="button" class="ver-clave" data-para="nueva"></button>
+          </div>
+          <ul class="lista-requisitos" id="nueva-req" aria-label="Requisitos">
+            <li data-regla="largo">Mínimo 10 caracteres</li>
+            <li data-regla="letras">Al menos una letra</li>
+            <li data-regla="numeros">Al menos un número</li>
+            <li>Que no contenga su cédula</li>
+          </ul>
+          <span class="error-campo" id="nueva-error"></span>
+        </div>
+        <div class="campo">
+          <label for="confirmacion">Confirme la contraseña</label>
+          <div class="campo-icono">
+            <span class="icono-lado"><span data-icono="llave"></span></span>
+            <input class="entrada" id="confirmacion" name="confirmacion" type="password" autocomplete="new-password" required
+                   maxlength="128" aria-describedby="confirmacion-error">
+            <button type="button" class="ver-clave" data-para="confirmacion"></button>
+          </div>
+          <span class="error-campo" id="confirmacion-error"></span>
+        </div>
+        <button class="btn btn--bloque" type="submit">Guardar contraseña</button>
+      </form>
+      <p class="pie"><a href="/login">Volver a ingresar</a></p>
+    </section>
+  </main>
+</body>
+</html>

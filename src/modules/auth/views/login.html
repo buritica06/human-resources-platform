@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingresar · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/auth/login.js"></script>
+</head>
+<body>
+  <main class="auth">
+    <div class="auth__marco">
+      <section class="auth__panel" aria-labelledby="titulo">
+        <div class="marca"><span data-icono="marca"></span><span>Talento Humano</span></div>
+        <h1 id="titulo">Ingresar</h1>
+        <div id="mensaje" tabindex="-1" hidden></div>
+        <form id="form-login" novalidate>
+          <div class="campo">
+            <label for="cedula">Usuario (cédula)</label>
+            <div class="campo-icono">
+              <span class="icono-lado"><span data-icono="usuario"></span></span>
+              <input class="entrada" id="cedula" name="cedula" inputmode="numeric" autocomplete="username"
+                     required aria-describedby="cedula-ayuda cedula-error" maxlength="15">
+            </div>
+            <span class="ayuda" id="cedula-ayuda">Solo números, sin puntos ni espacios.</span>
+            <span class="error-campo" id="cedula-error"></span>
+          </div>
+          <div class="campo">
+            <label for="clave">Contraseña</label>
+            <div class="campo-icono">
+              <span class="icono-lado"><span data-icono="llave"></span></span>
+              <input class="entrada" id="clave" name="clave" type="password" autocomplete="current-password"
+                     required aria-describedby="clave-error" maxlength="128">
+              <button type="button" class="ver-clave" data-para="clave"></button>
+            </div>
+            <span class="error-campo" id="clave-error"></span>
+          </div>
+          <button class="btn btn--bloque" type="submit">Ingresar</button>
+        </form>
+        <p class="pie"><a href="/recuperar">¿Olvidó su contraseña?</a></p>
+      </section>
+      <section class="auth__info" aria-labelledby="info-titulo">
+        <h2 id="info-titulo">¿Cómo ingresar?</h2>
+        <ol>
+          <li>Escriba su número de cédula, sin puntos ni espacios.</li>
+          <li>Escriba su contraseña. La primera vez use la contraseña temporal que le entregó el área contable.</li>
+          <li>En el primer ingreso cree su contraseña y confirme su correo.</li>
+        </ol>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+/* Sistema de diseño – tokens. Cambie la identidad visual aquí (docs/plan.md §7). */
+:root {
+  /* Color */
+  --c-primario: #6a1b9a;        /* texto blanco: 9,0:1 */
+  --c-primario-hover: #4a148c;
+  --c-primario-suave: #f3e8f8;
+  --c-acento: #9c4dcc;           /* solo decorativo */
+  --c-fondo: #eef1f6;
+  --c-superficie: #ffffff;
+  --c-borde: #2b2f3a;
+  --c-borde-suave: #d5d9e2;
+  --c-texto: #1f2330;
+  --c-texto-2: #5a6070;          /* 6,3:1 sobre blanco */
+  --c-exito: #1b7a3d;  --c-exito-fondo: #e6f4ea;
+  --c-alerta: #8a5a00; --c-alerta-fondo: #fff4dc;
+  --c-error: #b3261e;  --c-error-fondo: #fce8e6;
+  --c-info: #1f5fad;   --c-info-fondo: #e7effa;
+  --c-neutro: #4d5461; --c-neutro-fondo: #eceef2;
+  --c-foco: #1f5fad;
+
+  /* Tipografía (pila del sistema: sin descargas) */
+  --f-base: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --t-xs: 0.875rem;  /* 14 */
+  --t-s: 1rem;       /* 16 */
+  --t-m: 1.125rem;   /* 18 */
+  --t-l: 1.375rem;   /* 22 */
+  --t-xl: 1.75rem;   /* 28 */
+  --lh: 1.5;
+
+  /* Espaciado (escala de 4 px) */
+  --e-1: 0.25rem; --e-2: 0.5rem; --e-3: 0.75rem; --e-4: 1rem;
+  --e-6: 1.5rem;  --e-8: 2rem;   --e-12: 3rem;
+
+  /* Forma */
+  --r-tarjeta: 16px;
+  --r-campo: 8px;
+  --r-pildora: 999px;
+  --sombra: 0 1px 2px rgb(31 35 48 / 0.06), 0 2px 8px rgb(31 35 48 / 0.06);
+  --alto-toque: 44px;
+  --ancho-lateral: 272px;
+}

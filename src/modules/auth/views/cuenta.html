@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi cuenta · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/auth/cuenta.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="shell">
+    <aside id="lateral" class="lateral"></aside>
+    <div class="velo" hidden></div>
+    <div class="principal">
+      <header class="superior" id="superior"></header>
+      <main id="contenido" tabindex="-1">
+        <h1>Mi cuenta</h1>
+        <div class="rejilla rejilla--2">
+          <section class="tarjeta" aria-labelledby="t-clave">
+            <h2 id="t-clave">Cambiar contraseña</h2>
+            <div id="zona-clave"></div>
+          </section>
+          <section class="tarjeta" aria-labelledby="t-correo">
+            <h2 id="t-correo">Correo electrónico</h2>
+            <p id="correo-actual"></p>
+            <div id="zona-correo"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

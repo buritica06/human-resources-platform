@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recuperar contraseña · Talento Humano</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/componentes.css">
+  <script type="module" src="/m/auth/recuperar.js"></script>
+</head>
+<body>
+  <main class="auth">
+    <section class="auth__panel" aria-labelledby="titulo">
+      <div class="marca"><span data-icono="marca"></span><span>Talento Humano</span></div>
+      <h1 id="titulo">Recuperar contraseña</h1>
+      <p>Escriba su cédula. Le enviaremos un enlace al correo que confirmó en la plataforma.</p>
+      <div id="mensaje" tabindex="-1" hidden></div>
+      <form id="form" novalidate>
+        <div class="campo">
+          <label for="cedula">Cédula</label>
+          <input class="entrada" id="cedula" name="cedula" inputmode="numeric" autocomplete="username" required
+                 aria-describedby="cedula-error" maxlength="15">
+          <span class="error-campo" id="cedula-error"></span>
+        </div>
+        <button class="btn btn--bloque" type="submit">Enviar enlace</button>
+      </form>
+      <p class="pie">Si nunca confirmó un correo, pida al área contable una nueva contraseña temporal.<br>
+        <a href="/login">Volver a ingresar</a></p>
+    </section>
+  </main>
+</body>
+</html>

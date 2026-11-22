@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Datos locales: base de datos, archivos subidos, correos de prueba, respaldos
+data/
+uploads/
+backups/
+
+# NUNCA versionar archivos de nómina (contienen datos personales reales)
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.csv
+# Excepción: Excel ficticio generado para pruebas
+!tests/fixtures/*.xlsx
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.log
+coverage/
