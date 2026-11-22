@@ -4,6 +4,7 @@ import { ahora } from '../../core/db.js';
 import { ErrorApp, invalido } from '../../core/errors.js';
 import { hashClave, verificarClave, verificarFicticio, revisarPolitica } from '../../core/security/claves.js';
 import { crearRepositorioAuth } from './repository.js';
+import { log } from '../../core/logger.js';
 
 const MSG_LOGIN = 'Cédula o contraseña incorrectas, o la cuenta está bloqueada temporalmente por intentos fallidos.';
 const HORAS_VERIFICACION = 24;
@@ -33,14 +34,14 @@ export function crearServicioAuth(ctx) {
     const ok = await verificarClave(u.password_hash, clave);
     if (!ok) {
       const max = Number(await params.valor('LOGIN_MAX_INTENTOS'));
-      const intentos = (u.intentos_fallidos ?? 0) + 1;
+      // Incremento atómico en la BD: intentos en paralelo no pueden "perderse" y evitar el bloqueo.
+      const intentos = await repo.sumarIntentoFallido(u.id);
       if (intentos >= max) {
         const minutos = Number(await params.valor('LOGIN_BLOQUEO_MIN'));
         await repo.actualizar(u.id, { intentos_fallidos: 0, bloqueado_hasta: new Date(Date.now() + minutos * 60_000).toISOString() });
         await sesiones.cerrarTodas(u.id);
         await auditar(req, { accion: 'BLOQUEO', entidad: 'usuario', entidadId: u.id, detalle: { minutos }, actorId: null });
       } else {
-        await repo.actualizar(u.id, { intentos_fallidos: intentos });
         await auditar(req, { accion: 'LOGIN_FALLIDO', entidad: 'usuario', entidadId: u.id, detalle: { motivo: 'clave', intentos }, actorId: null });
       }
       throw new ErrorApp(401, 'CREDENCIALES', MSG_LOGIN);
@@ -106,13 +107,15 @@ export function crearServicioAuth(ctx) {
     }
     const token = await tokens.emitir(u.id, 'RECUPERAR', { horas: HORAS_RECUPERACION });
     const enlace = `${cfg.appUrl}/restablecer?token=${encodeURIComponent(token)}`;
-    await mailer.enviar({
+    // El envío va en segundo plano: el tiempo de respuesta y un fallo del SMTP no deben
+    // delatar si la cédula existe.
+    mailer.enviar({
       para: u.correo,
       asunto: 'Restablecer contraseña – Talento Humano',
       texto: `Hola ${primerNombre(u.nombre)}:\n\nRecibimos una solicitud para restablecer su contraseña. Abra este enlace (vence en ${HORAS_RECUPERACION} hora):\n${enlace}\n\nSi usted no lo solicitó, ignore este mensaje; su contraseña no cambiará.`,
       html: plantillaHtml(u.nombre, 'Restablecer contraseña', `Recibimos una solicitud para restablecer su contraseña. El enlace vence en ${HORAS_RECUPERACION} hora. Si usted no lo solicitó, ignore este mensaje.`, enlace, 'Crear nueva contraseña'),
       enlace,
-    });
+    }).catch((e) => log.error('No se pudo enviar el correo de recuperación', { usuario: u.id, error: e.message }));
     await auditar(req, { accion: 'RECUPERACION_SOLICITADA', entidad: 'usuario', entidadId: u.id, actorId: null });
   }
 
@@ -122,10 +125,14 @@ export function crearServicioAuth(ctx) {
     const previo = await tokens.consultar(token, 'RECUPERAR');
     if (!previo) throw new ErrorApp(400, 'TOKEN_INVALIDO', MSG);
     const u = await repo.porId(previo.usuario_id);
+    if (!u || !u.activo) throw new ErrorApp(400, 'TOKEN_INVALIDO', MSG);
     const error = revisarPolitica(nueva, { cedula: u.cedula });
     if (error) throw invalido(error, { nueva: error });
-    if (await verificarClave(u.password_hash, nueva)) {
-      throw invalido('La nueva contraseña debe ser distinta de la actual.', { nueva: 'Debe ser distinta de la actual.' });
+    if (
+      (await verificarClave(u.password_hash, nueva)) ||
+      (u.password_hash_anterior && (await verificarClave(u.password_hash_anterior, nueva)))
+    ) {
+      throw invalido('La nueva contraseña debe ser distinta de las anteriores.', { nueva: 'Debe ser distinta de las anteriores.' });
     }
     const t = await tokens.consumir(token, 'RECUPERAR');
     if (!t) throw new ErrorApp(400, 'TOKEN_INVALIDO', MSG);

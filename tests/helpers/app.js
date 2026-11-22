@@ -12,7 +12,7 @@ import { sembrarBase, sembrarDemo } from '../../seeds/sembrar.js';
 export const CLAVE_DEMO = 'Demo2026clave';
 export const CED = { admin: '1000000001', director: '1000000002', colab1: '1000000003', colab2: '1000000004' };
 
-export async function crearEntorno({ limites } = {}) {
+export async function crearEntorno({ limites, config = {} } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'th-test-'));
   const cfg = cargarConfig({
     env: 'test',
@@ -21,6 +21,7 @@ export async function crearEntorno({ limites } = {}) {
     claveCifrado: 'a'.repeat(64),
     db: { client: 'sqlite', filename: path.join(dir, 'prueba.sqlite') },
     modulos: ['auth', 'usuarios'],
+    ...config,
   });
   const ctx = crearContexto(cfg);
   ctx.limites = { login: 1000, recuperar: 1000, ventanaMs: 60_000, ...limites };

@@ -170,7 +170,7 @@ describe('carga masiva desde la hoja EMPLEADOS', () => {
 
   test('archivo con errores: se reportan y no se puede confirmar', async () => {
     const r = await admin.subir('/usuarios/carga-masiva', path.join(FIX, 'empleados-con-errores.xlsx'), { confirmar: 'false' });
-    assert.equal(r.body.errores.length, 2);
+    assert.equal(r.body.errores.length, 4);
     const c = await admin.subir('/usuarios/carga-masiva', path.join(FIX, 'empleados-con-errores.xlsx'), { confirmar: 'true' });
     assert.equal(c.status, 400);
     assert.equal(await env.ctx.db('usuarios').where({ cedula: '2000000001' }).first(), undefined, 'no se crea nada parcial');

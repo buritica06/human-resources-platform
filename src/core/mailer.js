@@ -18,11 +18,12 @@ export function crearMailer(cfg) {
   return {
     enviados,
     async enviar({ para, asunto, texto, html, enlace }) {
-      const info = await transporte.sendMail({ from: cfg.correo.remitente, to: para, subject: asunto, text: texto, html });
       if (cfg.env === 'test') {
+        // Registro sincrónico: las pruebas ven el correo aunque el envío vaya en segundo plano.
         enviados.push({ para, asunto, texto, enlace });
         return;
       }
+      const info = await transporte.sendMail({ from: cfg.correo.remitente, to: para, subject: asunto, text: texto, html });
       if (cfg.correo.transporte !== 'smtp') {
         fs.mkdirSync(cfg.correo.dir, { recursive: true });
         const archivo = path.join(cfg.correo.dir, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.eml`);

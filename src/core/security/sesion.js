@@ -42,7 +42,13 @@ export function crearSesiones(ctx) {
   const { db, cfg, params } = ctx;
   const nombres = nombresCookies(cfg);
 
+  // Para borrar una cookie hay que repetir sus atributos (Secure es obligatorio con __Host-).
+  const borrar = (res, nombre) => res.clearCookie(nombre, { httpOnly: true, secure: cfg.produccion, sameSite: 'lax', path: '/' });
+
   async function crear(req, res, usuario) {
+    // Si el navegador traía otra sesión, se elimina en el servidor (no queda viva en la BD).
+    const anterior = leerCookies(req)[nombres.sesion];
+    if (anterior) await db('sesiones').where({ id_hash: sha256(anterior) }).del();
     const token = tokenAleatorio(32);
     const csrf = tokenAleatorio(24);
     const t = new Date();
@@ -57,14 +63,14 @@ export function crearSesiones(ctx) {
       user_agent: req.get('user-agent')?.slice(0, 255),
     });
     res.cookie(nombres.sesion, token, opcionesCookie(cfg, DURACION_ABSOLUTA_H * 3600_000));
-    res.clearCookie(nombres.csrf, { path: '/' });
+    borrar(res, nombres.csrf);
     return csrf;
   }
 
   async function destruir(req, res) {
     const token = leerCookies(req)[nombres.sesion];
     if (token) await db('sesiones').where({ id_hash: sha256(token) }).del();
-    res.clearCookie(nombres.sesion, { path: '/' });
+    borrar(res, nombres.sesion);
   }
 
   const cerrarTodas = (usuarioId, exceptoHash = null) => {
@@ -80,7 +86,7 @@ export function crearSesiones(ctx) {
     const idHash = sha256(token);
     const s = await db('sesiones').where({ id_hash: idHash }).first();
     if (!s) {
-      res.clearCookie(nombres.sesion, { path: '/' });
+      borrar(res, nombres.sesion);
       return next();
     }
     const now = Date.now();
@@ -90,7 +96,7 @@ export function crearSesiones(ctx) {
     const u = await db('usuarios').where({ id: s.usuario_id }).first();
     if (inactiva || vencida || !u || !u.activo) {
       await db('sesiones').where({ id_hash: idHash }).del();
-      res.clearCookie(nombres.sesion, { path: '/' });
+      borrar(res, nombres.sesion);
       req.sesionExpirada = true;
       return next();
     }

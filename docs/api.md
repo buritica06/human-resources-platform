@@ -23,7 +23,7 @@ Todas las respuestas son JSON con `Cache-Control: no-store`. Errores:
 | GET | `/auth/csrf` | público | – | `{ csrf }` |
 | POST | `/auth/login` | público, límite por IP | `{ cedula, clave }` | `{ csrf, primerIngreso }` + cookie |
 | POST | `/auth/logout` | público | – | 204 |
-| GET | `/auth/me` | sesión *(primer ingreso)* | – | `{ usuario, csrf, inactividadMin, menu }` |
+| GET | `/auth/me` | sesión *(primer ingreso)* | – | `{ usuario, csrf, inactividadMin, restanteSeg, menu }` |
 | POST | `/auth/cambiar-clave` | sesión *(primer ingreso)* | `{ actual, nueva, confirmacion }` | `{ ok }` (cierra las otras sesiones) |
 | POST | `/auth/correo` | sesión *(primer ingreso, después de cambiar la clave)* | `{ correo }` | `{ ok, mensaje }` (envía enlace, 24 h) |
 | POST | `/auth/verificar-correo` | público | `{ token }` | `{ ok }` |
@@ -31,6 +31,8 @@ Todas las respuestas son JSON con `Cache-Control: no-store`. Errores:
 | POST | `/auth/restablecer` | público, límite | `{ token, nueva, confirmacion }` | `{ ok }` (cierra todas las sesiones) |
 
 Cabecera opcional `X-Sin-Renovar: 1`: la consulta no cuenta como actividad para la inactividad.
+
+Límites por IP (ventana de 15 min): ingreso, 30 intentos **fallidos** (los exitosos no cuentan); recuperación y restablecimiento, 10 peticiones. Además, cada cuenta se bloquea 15 min tras 5 fallos (`LOGIN_MAX_INTENTOS`, `LOGIN_BLOQUEO_MIN`). `/auth/verificar-correo` se llama al pulsar el botón de la página, nunca automáticamente.
 
 ## M0 – Usuarios (`usuarios`, solo ADMIN)
 | Método | Ruta | Cuerpo / consulta | Respuesta |

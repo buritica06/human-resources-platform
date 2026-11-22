@@ -8,10 +8,15 @@ import * as v from './validators.js';
 
 export function montarRutasAuth(router, ctx) {
   const svc = crearServicioAuth(ctx);
-  const limitar = (max) =>
+  // Solo cuentan las peticiones fallidas: varios colaboradores de una sede detrás de la
+  // misma IP (NAT) pueden ingresar sin bloquearse entre sí. El bloqueo por cuenta
+  // (LOGIN_MAX_INTENTOS) protege cada cédula individualmente.
+  // La recuperación siempre responde 200, así que ahí se cuentan todas las peticiones.
+  const limitar = (max, { soloFallidos = false } = {}) =>
     rateLimit({
       windowMs: ctx.limites.ventanaMs,
       limit: max,
+      skipSuccessfulRequests: soloFallidos,
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       handler: (_req, res) =>
@@ -20,7 +25,7 @@ export function montarRutasAuth(router, ctx) {
 
   router.get('/auth/csrf', (req, res) => res.json({ csrf: ctx.sesiones.tokenCsrf(req, res) }));
 
-  router.post('/auth/login', limitar(ctx.limites.login), async (req, res) => {
+  router.post('/auth/login', limitar(ctx.limites.login, { soloFallidos: true }), async (req, res) => {
     const datos = validar(v.esquemaLogin, req.body);
     const r = await svc.login(req, res, datos);
     res.json(r);
@@ -47,6 +52,8 @@ export function montarRutasAuth(router, ctx) {
       },
       csrf: req.sesion.csrf,
       inactividadMin: req.sesion.minInactividad,
+      // Segundos que le quedan a la sesión según el servidor (actividad de cualquier pestaña).
+      restanteSeg: Math.max(0, Math.round(req.sesion.minInactividad * 60 - (Date.now() - Date.parse(req.sesion.ultimo_uso)) / 1000)),
       menu: u.cuentaLista ? menuPara(ctx.modulos, u.rol) : [],
     });
   });

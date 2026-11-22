@@ -167,8 +167,9 @@ document.getElementById('btn-nuevo').addEventListener('click', async () => {
         mostrarClaveTemporal(d, r.usuario.nombre, r.claveTemporal, r.venceEnHoras);
         cargar();
       } catch (err) {
-        if (Object.keys(err.campos).length) mostrarErrores(form, err.campos);
-        else mostrarAviso(d.querySelector('#dlg-msg'), 'error', err.message);
+        if (!Object.keys(err.campos).length || !mostrarErrores(form, err.campos)) {
+          mostrarAviso(d.querySelector('#dlg-msg'), 'error', err.message);
+        }
       }
     });
   });
@@ -221,8 +222,9 @@ async function abrirEdicion(id) {
         toast('Usuario actualizado.');
         cargar();
       } catch (err) {
-        if (Object.keys(err.campos).length) mostrarErrores(form, err.campos);
-        else mostrarAviso(d.querySelector('#dlg-msg'), 'error', err.message);
+        if (!Object.keys(err.campos).length || !mostrarErrores(form, err.campos)) {
+          mostrarAviso(d.querySelector('#dlg-msg'), 'error', err.message);
+        }
       }
     });
   });
@@ -316,7 +318,13 @@ function mostrarCreados(d, r) {
     </div>`;
   d.querySelector('#descargar').addEventListener('click', () => {
     const filas = [['cedula', 'nombre', 'clave_temporal'], ...r.creados.map((c) => [c.cedula, c.nombre, c.claveTemporal])];
-    const csv = filas.map((f) => f.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    // Protección contra inyección de fórmulas al abrir el CSV en Excel.
+    const celda = (v) => {
+      let s = String(v);
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const csv = filas.map((f) => f.map(celda).join(';')).join('\r\n');
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;

@@ -65,15 +65,20 @@ export function leerEmpleados(libro) {
     const rawCed = valorCelda(fila.getCell(1));
     const rawNom = valorCelda(fila.getCell(2));
     if (rawCed === '' && rawNom === '') continue;
-    const cedula = String(rawCed).replace(/[.\s]/g, '').replace(/\.0+$/, '');
+    // Número: sin decimales. Texto: primero se quita un ".0" final (p. ej. "12345678.0")
+    // y después los puntos de miles y espacios.
+    const cedula = typeof rawCed === 'number'
+      ? (Number.isInteger(rawCed) ? String(rawCed) : '')
+      : String(rawCed).trim().replace(/\.0+$/, '').replace(/[.\s]/g, '');
     const nombre = String(rawNom).replace(/\s+/g, ' ').trim().toUpperCase();
     const estado = colEstado ? normalizar(valorCelda(fila.getCell(colEstado))) || 'ACTIVO' : 'ACTIVO';
     if (!/^\d{5,12}$/.test(cedula)) {
       errores.push({ fila: r, mensaje: 'Cédula vacía o con caracteres no numéricos.' });
       continue;
     }
-    if (nombre.length < 3) {
-      errores.push({ fila: r, mensaje: 'Nombre vacío.' });
+    // Misma regla que el alta manual (validators.js): letras, espacios, punto, apóstrofo y guion.
+    if (nombre.length < 3 || nombre.length > 150 || !/^[\p{L} .'-]+$/u.test(nombre)) {
+      errores.push({ fila: r, mensaje: 'Nombre vacío, demasiado largo o con caracteres no permitidos.' });
       continue;
     }
     if (vistas.has(cedula)) {

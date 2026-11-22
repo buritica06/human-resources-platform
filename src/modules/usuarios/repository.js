@@ -10,7 +10,9 @@ export function crearRepositorioUsuarios(db) {
       const base = db('usuarios');
       if (q) {
         const t = `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
-        base.where((w) => w.whereRaw("cedula LIKE ? ESCAPE '\\'", [t]).orWhereRaw("UPPER(nombre) LIKE UPPER(?) ESCAPE '\\'", [t]));
+        // Los nombres se guardan siempre en MAYÚSCULAS (toUpperCase de JS sí convierte ñ y tildes);
+        // el UPPER de SQLite no, por eso se compara con el término ya convertido en JS.
+        base.where((w) => w.whereRaw("cedula LIKE ? ESCAPE '\\'", [t]).orWhereRaw("nombre LIKE ? ESCAPE '\\'", [t.toUpperCase()]));
       }
       if (rol) base.where({ rol });
       if (activo) base.where({ activo: activo === 'true' });

@@ -98,13 +98,35 @@ function vigilarInactividad(minutos) {
     addEventListener(ev, registrar, { passive: true });
   }
 
+  // Antes de avisar o cerrar se consulta al servidor (sin renovar): si el usuario siguió
+  // trabajando en otra pestaña, esta se sincroniza en vez de cerrar la sesión de todas.
+  async function restanteServidor() {
+    try {
+      const me = await api('/auth/me', { sinRenovar: true });
+      return me.restanteSeg * 1000;
+    } catch {
+      return 0;
+    }
+  }
+
+  let consultando = false;
   setInterval(async () => {
     const inactivo = Date.now() - ultimaActividad;
-    if (inactivo >= total) {
-      salir('inactividad');
-      return;
+    if (inactivo >= total - avisoAntes && !consultando) {
+      consultando = true;
+      const restante = await restanteServidor();
+      consultando = false;
+      if (restante > avisoAntes + 15_000) {
+        ultimaActividad = Date.now() - (total - restante);
+        dialogo?.close();
+        return;
+      }
+      if (restante <= 0 || inactivo >= total) {
+        salir('inactividad');
+        return;
+      }
+      if (!dialogo) mostrarAviso();
     }
-    if (inactivo >= total - avisoAntes && !dialogo) mostrarAviso();
     // Si el usuario está activo pero sin llamar a la API (p. ej. llenando un formulario),
     // se mantiene viva la sesión del servidor.
     if (inactivo < 60_000 && Date.now() - ultimoPing > Math.min(5 * 60_000, total / 2)) {

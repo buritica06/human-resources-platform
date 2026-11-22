@@ -9,12 +9,13 @@ const db = crearDb(cfg.db);
 await migrar(db);
 await sembrarBase(db);
 console.log('Parámetros y festivos cargados.');
-if (!cfg.produccion) {
+// Usuarios demo (clave publicada en README) SOLO en desarrollo local.
+if (!cfg.produccion && cfg.esLocal) {
   await sembrarDemo(db, { clave: process.env.SEED_PASSWORD || 'Demo2026clave' });
   console.log('Datos ficticios de desarrollo cargados. Usuarios demo (cédula / rol):');
   for (const u of USUARIOS_DEMO) console.log(`  ${u.cedula}  ${u.rol}`);
   console.log('La contraseña de los usuarios demo está en README.md (o en SEED_PASSWORD).');
 } else {
-  console.log('Producción: no se crean usuarios demo. Cree el primer admincontable con: npm run crear-admin');
+  console.log('Entorno no local: no se crean usuarios demo. Cree el primer admincontable con: npm run crear-admin');
 }
 await db.destroy();

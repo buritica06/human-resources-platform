@@ -1,6 +1,7 @@
 // Gestión de usuarios por el admincontable: crear, carga masiva, activar/desactivar,
 // cambiar rol y sedes, y restablecer la contraseña temporal.
 import { conflicto, invalido, noEncontrado } from '../../core/errors.js';
+import { ahora } from '../../core/db.js';
 import { hashClave, generarClaveTemporal } from '../../core/security/claves.js';
 import { crearRepositorioUsuarios, POR_PAGINA } from './repository.js';
 import { leerLibro, leerEmpleados } from './excel.js';
@@ -102,6 +103,8 @@ export function crearServicioUsuarios(ctx) {
       intentos_fallidos: 0,
       bloqueado_hasta: null,
     });
+    // Un enlace de recuperación pendiente permitiría saltarse la clave temporal impuesta.
+    await db('tokens').where({ usuario_id: id, tipo: 'RECUPERAR' }).whereNull('usado_en').update({ usado_en: ahora() });
     await sesiones.cerrarTodas(id);
     await auditar(req, { accion: 'RESTABLECER_CLAVE', entidad: 'usuario', entidadId: id });
     return { claveTemporal, venceEnHoras: HORAS_CLAVE_TEMPORAL };

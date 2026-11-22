@@ -51,6 +51,13 @@ export function cargarConfig(overrides = {}) {
     ...overrides,
   };
 
+  // Salvaguarda: un servidor publicado (https) sin NODE_ENV=production arrancaría con
+  // cookies sin Secure, sin HSTS y con usuarios demo. Se impide.
+  if (!cfg.produccion && cfg.env !== 'test' && cfg.appUrl.startsWith('https://')) {
+    throw new Error('APP_URL usa https pero NODE_ENV no es "production". Configure NODE_ENV=production.');
+  }
+  cfg.esLocal = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(cfg.appUrl);
+
   if (cfg.produccion) {
     if (!/^[0-9a-f]{64}$/i.test(cfg.claveCifrado)) {
       throw new Error('DATA_ENCRYPTION_KEY debe ser 64 caracteres hex en producción.');

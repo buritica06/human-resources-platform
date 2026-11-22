@@ -40,13 +40,17 @@ test('lector EMPLEADOS: libro ficticio válido', async () => {
   assert.deepEqual(filas[0], { fila: 5, cedula: '2000000001', nombre: 'ACOSTA BELTRAN CAMILO ANDRES', estado: 'ACTIVO' });
 });
 
-test('lector EMPLEADOS: detecta cédulas repetidas y no numéricas', async () => {
+test('lector EMPLEADOS: detecta cédulas repetidas/no numéricas y nombres inválidos', async () => {
   const libro = await leerLibro(fs.readFileSync(path.join(FIX, 'empleados-con-errores.xlsx')));
   const { filas, errores } = leerEmpleados(libro);
-  assert.equal(filas.length, 3);
-  assert.equal(errores.length, 2);
+  assert.equal(filas.length, 4);
+  assert.equal(errores.length, 4);
   assert.match(errores[0].mensaje, /repetida/);
   assert.match(errores[1].mensaje, /no numéricos/);
+  assert.match(errores[2].mensaje, /caracteres no permitidos/, 'fórmula en el nombre');
+  assert.match(errores[3].mensaje, /demasiado largo/, 'nombre de más de 150 caracteres');
+  const decimal = filas.find((f) => f.nombre.startsWith('PEÑA'));
+  assert.equal(decimal.cedula, '30000000', '"30000000.0" no debe convertirse en 300000000');
 });
 
 test('lector: rechaza archivos que no son Excel o sin hoja EMPLEADOS', async () => {

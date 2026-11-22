@@ -29,7 +29,8 @@ export function crearContexto(cfg, { db } = {}) {
   ctx.tokens = crearTokens(ctx.db);
   ctx.sesiones = crearSesiones(ctx);
   ctx.modulos = modulosActivos(cfg);
-  ctx.limites = { login: 10, recuperar: 5, ventanaMs: 15 * 60_000 };
+  // Intentos FALLIDOS por IP en la ventana (los exitosos no cuentan).
+  ctx.limites = { login: 30, recuperar: 10, ventanaMs: 15 * 60_000 };
   return ctx;
 }
 

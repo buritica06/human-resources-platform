@@ -85,18 +85,29 @@ export function limpiarErrores(form) {
 }
 
 // Marca los campos con error (campos = { nombre: mensaje }) y enfoca el primero.
+// Devuelve false si algún mensaje no tenía dónde mostrarse (el llamador debe dar un aviso general).
 export function mostrarErrores(form, campos = {}) {
   let primero = null;
+  let todos = true;
   for (const [nombre, mensaje] of Object.entries(campos)) {
     const entrada = form.elements.namedItem(nombre);
-    if (!entrada || !entrada.id) continue;
-    entrada.setAttribute('aria-invalid', 'true');
-    entrada.closest('.campo-icono')?.setAttribute('data-invalido', 'true');
-    const err = document.getElementById(`${entrada.id}-error`);
-    if (err) err.textContent = mensaje;
-    primero ??= entrada;
+    // Grupos (casillas con el mismo name) no tienen id: se usa el contenedor <nombre>-error.
+    const unico = entrada && entrada.id ? entrada : null;
+    const err = unico ? document.getElementById(`${unico.id}-error`) : form.querySelector(`#${CSS.escape(nombre)}-error`);
+    if (!err) {
+      todos = false;
+      continue;
+    }
+    err.textContent = mensaje;
+    const foco = unico ?? (entrada instanceof RadioNodeList ? entrada[0] : entrada);
+    if (foco) {
+      foco.setAttribute('aria-invalid', 'true');
+      foco.closest('.campo-icono')?.setAttribute('data-invalido', 'true');
+      primero ??= foco;
+    }
   }
   primero?.focus();
+  return todos;
 }
 
 export async function conCarga(boton, accion) {

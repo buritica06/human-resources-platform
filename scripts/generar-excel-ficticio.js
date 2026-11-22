@@ -70,6 +70,10 @@ export async function generar() {
     ...EMPLEADOS_FICTICIOS.slice(0, 3),
     ['2000000001', 'DUPLICADO DEMO PRUEBA', 'EMP_A', 'SEDE NORTE', 'AUXILIAR', '2024-01-01', 1750905, 'ACTIVO'],
     ['12A45', 'CEDULA MALA DEMO', 'EMP_A', 'SEDE NORTE', 'AUXILIAR', '2024-01-01', 1750905, 'ACTIVO'],
+    ['2000000020', '=HYPERLINK("http://example.com","x")', 'EMP_A', 'SEDE NORTE', 'AUXILIAR', '2024-01-01', 1750905, 'ACTIVO'],
+    ['2000000021', 'NOMBRE '.repeat(25), 'EMP_A', 'SEDE NORTE', 'AUXILIAR', '2024-01-01', 1750905, 'ACTIVO'],
+    // Cédula guardada como texto con decimal: debe leerse como 30000000 (no 300000000)
+    ['30000000.0', 'PEÑA ÑUSTES MARIA JOSE', 'EMP_A', 'SEDE NORTE', 'AUXILIAR', '2024-01-01', 1750905, 'ACTIVO'],
   ]);
   await malo.xlsx.writeFile(path.join(DIR, 'empleados-con-errores.xlsx'));
 
