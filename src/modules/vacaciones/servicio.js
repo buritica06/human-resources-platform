@@ -6,7 +6,7 @@
 // - Días hábiles: excluye domingos, festivos y (si SABADO_HABIL es falso) sábados.
 // - Compensación en dinero: máximo VAC_COMPENSACION_MAX_PCT % de los días de la solicitud.
 // - Días laborados: se restan las licencias APROBADAS cuyo tipo descuenta vacaciones (no
-//   remuneradas, M6). Las suspensiones (SUS) se registrarán desde el panel del admincontable (M8).
+//   remuneradas, M6) y los periodos de ctx.diasNoLaborados (suspensiones, M8).
 //
 // OJO (SQLite, una sola conexión): los parámetros se leen con `parametros()` ANTES de abrir una
 // transacción; dentro de ella solo se consulta con `trx`.
@@ -16,7 +16,7 @@ import {
   aniosEntre, dias360, fechaValida, finDeDisfrute, hoyBogota, motivoNoHabil, siguienteHabil, primerHabilDesde, sumarDias,
 } from './calendario.js';
 
-const EN_TRAMITE_EXCLUIDOS = ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'APROBADA'];
+const EN_TRAMITE_EXCLUIDOS = ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA', 'APROBADA'];
 const r2 = (x) => Math.round(x * 100) / 100;
 const fechaTexto = (f) => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`;
 
@@ -75,11 +75,19 @@ export function crearServicioVacaciones(ctx) {
         const fin = l.fecha_fin < hasta ? l.fecha_fin : hasta;
         diasNoLaborados += Math.max(0, dias360(ini, fin) + 1);
       }
+      // Otros periodos no laborados que registran otros módulos (p. ej. suspensiones, M8)
+      for (const buscar of ctx.diasNoLaborados ?? []) {
+        for (const p of await buscar(trx, colaborador.id, corte.fecha_corte, hasta)) {
+          const ini = p.desde > corte.fecha_corte ? p.desde : corte.fecha_corte;
+          const fin = p.hasta < hasta ? p.hasta : hasta;
+          if (ini <= fin) diasNoLaborados += Math.max(0, dias360(ini, fin) + 1);
+        }
+      }
     }
     const diasLaborados = hasta >= corte.fecha_corte ? Math.max(0, dias360(corte.fecha_corte, hasta) + 1 - diasNoLaborados) : 0;
     const causadosDesdeCorte = (diasLaborados * p.diasAnio) / 360;
     const filas = await trx('solicitudes').where({ colaborador_id: colaborador.id, tipo: 'VACACIONES' })
-      .where('fecha_inicio', '>=', corte.fecha_corte).whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA'])
+      .where('fecha_inicio', '>=', corte.fecha_corte).whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA'])
       .modify((q) => (excluirId ? q.whereNot('id', excluirId) : q))
       .select('estado', 'dias_habiles', 'dias_compensar');
     let disfrutados = 0;

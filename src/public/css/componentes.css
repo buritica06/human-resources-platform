@@ -73,6 +73,13 @@
 @media (min-width: 768px) { .tarjeta { padding: var(--e-6); } }
 .rejilla { display: grid; gap: var(--e-4); grid-template-columns: 1fr; }
 @media (min-width: 900px) { .rejilla--2 { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 900px) { .rejilla--3 { grid-template-columns: repeat(3, 1fr); } }
+.rejilla + .tarjeta { margin-top: var(--e-4); }
+/* Panel M8: tablas largas con desplazamiento propio, versiones de parámetros y filtros en línea */
+.tabla-desplazable { overflow-x: auto; }
+.version { display: flex; flex-wrap: wrap; gap: var(--e-2); align-items: center; padding: var(--e-1) 0; }
+.valor-param { font-family: ui-monospace, Consolas, monospace; font-size: var(--t-s); word-break: break-word; }
+.filtros-linea { display: grid; gap: var(--e-3); grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
 .rejilla > .tarjeta + .tarjeta { margin-top: 0; }
 
 /* ---------- Avisos y estados ---------- */

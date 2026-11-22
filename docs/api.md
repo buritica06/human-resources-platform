@@ -238,3 +238,42 @@ Las licencias usan el motor de solicitudes con `tipo=LICENCIA`. Tienen el mismo 
 - **Integridad:** al descargar se compara la huella sha256 del contenido guardado. Si no coincide, responde 500 y lo registra en el log.
 - **Límites:** 20 emisiones por usuario y 60 verificaciones por IP cada 15 minutos.
 - **Parámetros** (VERIFICAR): `CERT_FIRMANTE_NOMBRE`, `CERT_FIRMANTE_CARGO` y `CERT_CIUDAD`. Si están vacíos, no se imprimen.
+## M8 – Panel del admincontable (`admin`)
+
+Todas las rutas de esta sección son **solo para ADMIN**, salvo `/me/suspensiones` y `/colaboradores/:id/suspensiones` (dueño o ADMIN).
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/admin/resumen` | `{ porAprobar, incapacidades, ultimaNomina, alertas[] }`. Alertas: sin saldo de vacaciones, contratos fijos que vencen en 30 días, festivos del año siguiente sin cargar, correos sin confirmar y parámetros "VERIFICAR" |
+| GET | `/parametros` | Por clave: `tipo`, `descripcion`, `verificar`, `actual` y `versiones[]` (`VIGENTE`, `PROGRAMADA` o `HISTORICA`) |
+| POST | `/parametros/:clave/versiones` | `{ valor, desde (hoy o futura), motivo }`. **Programa** una versión nueva: la anterior queda hasta el día antes y lo ya vigente no se reescribe. Valida tipo, rangos (p. ej. `UPLOAD_MAX_MB` 1–20) y los validadores de los módulos (p. ej. `LISTA_TIPOS_LICENCIA`). Auditado (`PROGRAMAR_PARAMETRO`, con antes y después) |
+| DELETE | `/parametros/versiones/:id` | Solo si aún no rige; la anterior recupera su vigencia |
+| GET/PUT | `/festivos/:anio` | `PUT { festivos: [{ fecha, nombre }] }` reemplaza el año completo (fechas del año, sin repetir, no vacío). Lo ya aprobado no se recalcula |
+| POST | `/solicitudes/:id/anular` | `{ motivo (5–500) }`. Solo una solicitud **APROBADA** pasa a **ANULADA**: deja de contar como ausencia, devuelve los días de vacaciones y se avisa al colaborador |
+| GET | `/me/suspensiones` · `/colaboradores/:id/suspensiones` | Dueño o ADMIN (el director recibe **404**) |
+| POST | `/colaboradores/:id/suspensiones` | `{ fecha_inicio, fecha_fin, motivo }`. Máximo 60 días (CST art. 112) y no se cruza con otras ausencias. Avisa al colaborador con un correo genérico |
+| POST | `/suspensiones/:id/anular` | `{ motivo }` |
+| GET | `/reportes/ausentismo?desde&hasta&sede[&formato=csv]` | Toma solicitudes APROBADAS, incapacidades vigentes y suspensiones. Los días se recortan al rango (máximo 400 días). Trae totales por sede y tipo. Sin diagnósticos ni motivos. CSV con separador `;`, BOM UTF-8 y celdas que empiezan por `= + - @` neutralizadas. Auditado (`VER_AUSENTISMO`) |
+| GET | `/auditoria?actor&entidad&accion&desde&hasta&pagina` | `actor` es la cédula. Las fechas se toman en hora de Colombia. 50 registros por página. Auditado (`VER_AUDITORIA`) |
+
+**Reglas de los parámetros:**
+- No se dejan huecos: si la versión anterior tiene fecha de fin, la nueva empieza justo al día siguiente.
+- Hay rangos y valores enteros para los parámetros de operación y de nómina (p. ej. `HORAS_MES` ≥ 1, `HORA_NOCHE_INI` 0–23).
+- `CAMPOS_EDITABLES_COLABORADOR` solo admite datos personales y de contacto.
+- `LISTA_TIPOS_PERMISO_SENSIBLES` debe ser un subconjunto de `LISTA_TIPOS_PERMISO`.
+- Programar con la norma quita la marca "VERIFICAR".
+- Una versión que empieza hoy y se creó hoy se puede borrar, para corregir un error.
+- La fecha por defecto para leer parámetros es la de Colombia, no la UTC.
+- El panel alerta los parámetros que vencen en 60 días sin una versión siguiente (hoy: SMMLV y AUX_TRANSP, el 31/12/2026).
+
+**Ausentismo:**
+- Los permisos de un día van en horas (totales aparte) y los de varios días, en días.
+- Las licencias de tipo sensible aparecen como "Reservado".
+- En el CSV, los decimales van con coma.
+
+**Estados de solicitud:** se agregó `ANULADA` (final). No cuenta para cruces, saldo de vacaciones, días no laborados ni ausentismo.
+
+**Suspensiones:**
+- No cuentan como días laborados para causar vacaciones (hook `ctx.diasNoLaborados`).
+- Bloquean solicitudes en esas fechas (hook `ctx.ausenciasExtra`).
+- Se muestran dentro de la pestaña Licencias del expediente, para conservar las 7 pestañas.

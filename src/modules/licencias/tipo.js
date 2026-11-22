@@ -26,6 +26,12 @@ async function valorVigente(ctx, clave, fecha) {
 // Lee y valida el parámetro (un error de configuración no debe desactivar validaciones)
 export async function tiposLicencia(ctx, fecha = hoyBogota()) {
   const lista = await valorVigente(ctx, 'LISTA_TIPOS_LICENCIA', fecha);
+  if (!listaLicenciasValida(lista)) throw new Error('Parámetro mal configurado: LISTA_TIPOS_LICENCIA');
+  return lista;
+}
+
+// Validación pura (también la usa el panel del admincontable antes de guardar una versión nueva)
+export function listaLicenciasValida(lista) {
   const nombres = new Set();
   const ok = Array.isArray(lista) && lista.length && lista.every((t) => {
     if (!t || typeof t.nombre !== 'string' || !t.nombre.trim() || nombres.has(t.nombre.trim().toUpperCase())) return false;
@@ -35,8 +41,7 @@ export async function tiposLicencia(ctx, fecha = hoyBogota()) {
       && typeof t.codigo === 'string' && t.codigo.trim() !== ''
       && BOOLEANOS.every((b) => typeof t[b] === 'boolean');
   });
-  if (!ok) throw new Error('Parámetro mal configurado: LISTA_TIPOS_LICENCIA');
-  return lista;
+  return !!ok;
 }
 
 export async function diasAtrasLicencia(ctx) {

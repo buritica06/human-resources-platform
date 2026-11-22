@@ -25,7 +25,9 @@ export function crearParametros(db) {
     },
     // Valor vigente en la fecha (AAAA-MM-DD). Lanza error si no existe: un parámetro
     // faltante es un error de configuración, no se inventa un valor por defecto.
-    async valor(clave, fecha = new Date().toISOString().slice(0, 10)) {
+    // Por defecto, la fecha de HOY en Colombia (UTC−5): entre las 19:00 y las 24:00 la fecha UTC ya es
+    // mañana y una versión programada regiría antes de tiempo.
+    async valor(clave, fecha = new Date(Date.now() - 5 * 3600_000).toISOString().slice(0, 10)) {
       const filas = (await todos()).filter(
         (p) => p.clave === clave && p.vigente_desde <= fecha && (!p.vigente_hasta || p.vigente_hasta >= fecha),
       );

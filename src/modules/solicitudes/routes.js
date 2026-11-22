@@ -9,13 +9,14 @@ const esquemaId = z.object({ id: z.coerce.number().int().positive() });
 const esquemaTipo = z.object({ tipo: z.enum(['PERMISO', 'VACACIONES', 'LICENCIA']).optional() });
 const esquemaMias = z.object({
   tipo: z.enum(['PERMISO', 'VACACIONES', 'LICENCIA']).optional(),
-  estado: z.enum(['EN_CURSO', 'BORRADOR', 'APROBADA', 'RECHAZADA', 'CANCELADA']).optional(),
+  estado: z.enum(['EN_CURSO', 'BORRADOR', 'APROBADA', 'RECHAZADA', 'CANCELADA', 'ANULADA']).optional(),
 });
 // estadoEsperado: el estado que veía quien aprueba/rechaza; si cambió, 409 (evita aprobar otro paso)
 const estadoEsperado = z.string({ error: 'Falta el estado de la solicitud; recargue la página.' }).max(40);
 const esquemaComentario = z.object({ comentario: z.string().trim().max(500).optional(), estadoEsperado });
 const esquemaRechazo = z.object({ motivo: z.string({ error: 'Escriba el motivo del rechazo.' }).trim().min(5, 'Explique el motivo del rechazo (mínimo 5 caracteres).').max(500), estadoEsperado });
 const esquemaCancelar = z.object({ motivo: z.string().trim().max(500).optional() });
+const esquemaAnularSolicitud = z.object({ motivo: z.string({ error: 'Escriba el motivo de la anulación.' }).trim().min(5, 'Explique el motivo (mínimo 5 caracteres). El colaborador lo verá.').max(500) });
 const esquemaFlujo = z.object({ pasos: z.array(z.object({ rol: z.enum(['DIRECTOR', 'ADMIN']), etiqueta: z.string().max(40).optional() })).min(1).max(2) });
 
 export function montarRutasSolicitudes(router, ctx) {
@@ -59,6 +60,8 @@ export function montarRutasSolicitudes(router, ctx) {
   });
   router.post('/solicitudes/:id/cancelar', sesion, async (req, res) =>
     res.json(await motor.cancelar(req, validar(esquemaId, req.params).id, validar(esquemaCancelar, req.body).motivo)));
+  router.post('/solicitudes/:id/anular', sesion, rol(ROLES.ADMIN), async (req, res) =>
+    res.json(await motor.anular(req, validar(esquemaId, req.params).id, validar(esquemaAnularSolicitud, req.body).motivo)));
   router.post('/solicitudes/:id/aprobar', ...aprobadores, async (req, res) =>
     res.json(await motor.aprobar(req, validar(esquemaId, req.params).id, validar(esquemaComentario, req.body))));
   router.post('/solicitudes/:id/rechazar', ...aprobadores, async (req, res) =>

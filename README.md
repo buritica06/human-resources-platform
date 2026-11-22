@@ -2,7 +2,7 @@
 
 Aplicación web (primero móvil) para que los colaboradores consulten su información laboral y hagan solicitudes, y para que el área contable administre usuarios, nómina y aprobaciones.
 
-> Estado: **M0 – Autenticación**, **M1 – Expediente**, **M2 – Nómina y volantes**, **M3 – Permisos y aprobaciones**, **M4 – Vacaciones**, **M5 – Incapacidades**, **M6 – Licencias** y **M7 – Certificados** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
+> Estado: **M0 – Autenticación**, **M1 – Expediente**, **M2 – Nómina y volantes**, **M3 – Permisos y aprobaciones**, **M4 – Vacaciones**, **M5 – Incapacidades**, **M6 – Licencias**, **M7 – Certificados** y **M8 – Panel del admincontable** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
 
 ## Requisitos
 - Node.js 20.12 o superior (probado con Node 24)

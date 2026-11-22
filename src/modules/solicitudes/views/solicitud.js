@@ -11,7 +11,7 @@ const zona = document.getElementById('zona');
 const titulo = document.getElementById('titulo');
 const q = new URLSearchParams(location.search);
 const id = Number(q.get('id'));
-const ACCION = { CREAR: 'Creó la solicitud', ENVIAR: 'Envió la solicitud', APROBAR: 'Aprobó', RECHAZAR: 'Rechazó', CANCELAR: 'Canceló', OMITIR: 'Paso omitido automáticamente' };
+const ACCION = { CREAR: 'Creó la solicitud', ENVIAR: 'Envió la solicitud', APROBAR: 'Aprobó', RECHAZAR: 'Rechazó', CANCELAR: 'Canceló', OMITIR: 'Paso omitido automáticamente', ANULAR: 'Anuló (área contable)' };
 let estadoActual = null; // el estado que ve el usuario: se envía al aprobar/rechazar (409 si cambió)
 let aviso = q.get('nueva') === '1' ? htmlAviso('exito', 'Solicitud registrada. Verá aquí cómo avanza y le avisaremos cada cambio.') : '';
 history.replaceState(null, '', `/solicitudes/ver?id=${id}`);
@@ -54,6 +54,7 @@ async function cargar() {
           ${s.acciones.rechazar ? `<button type="button" class="btn btn--peligro" id="rechazar">${icono('cerrar')} Rechazar</button>` : ''}
           ${s.acciones.enviar ? `<button type="button" class="btn" id="enviar">${icono('ok')} Enviar</button>` : ''}
           ${s.acciones.cancelar ? `<button type="button" class="btn btn--secundario" id="cancelar">${icono('cancelar')} Cancelar solicitud</button>` : ''}
+          ${s.acciones.anular ? `<button type="button" class="btn btn--peligro" id="anular">${icono('cancelar')} Anular aprobación</button>` : ''}
         </div>
       </section>
       <section class="tarjeta" aria-labelledby="t-hist"><h2 id="t-hist">Historial</h2>
@@ -66,6 +67,7 @@ async function cargar() {
     zona.querySelector('#rechazar')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Rechazar solicitud', obligatorio: true, boton: 'Rechazar', ruta: 'rechazar', campo: 'motivo' }));
     zona.querySelector('#cancelar')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Cancelar solicitud', obligatorio: false, boton: 'Cancelar solicitud', ruta: 'cancelar', campo: 'motivo', ayuda: 'Opcional: cuéntenos por qué.' }));
     zona.querySelector('#enviar')?.addEventListener('click', enviarBorrador);
+    zona.querySelector('#anular')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Anular solicitud aprobada', obligatorio: true, boton: 'Anular', ruta: 'anular', campo: 'motivo', ayuda: 'Deja de contar como ausencia y, si son vacaciones, se devuelven los días. El colaborador verá el motivo.' }));
   } catch (err) {
     zona.innerHTML = htmlAviso('error', err.message);
   } finally {
@@ -119,7 +121,7 @@ function dialogoMotivo({ titulo: t, obligatorio, boton, ruta, campo, ayuda }) {
       <textarea class="entrada" id="dm-${campo}" name="${campo}" rows="3" maxlength="500" ${obligatorio ? 'required' : ''} aria-describedby="${ayuda ? `dm-${campo}-ayuda ` : ''}dm-${campo}-error"></textarea>
       ${ayuda ? `<span class="ayuda" id="dm-${campo}-ayuda">${escapar(ayuda)}</span>` : ''}
       <span class="error-campo" id="dm-${campo}-error"></span></div>
-      <div class="formulario-acciones"><button class="btn ${ruta === 'rechazar' ? 'btn--peligro' : ''}" type="submit">${escapar(boton)}</button>
+      <div class="formulario-acciones"><button class="btn ${['rechazar', 'anular'].includes(ruta) ? 'btn--peligro' : ''}" type="submit">${escapar(boton)}</button>
       <button class="btn btn--secundario" type="button" data-cerrar>Volver</button></div></form>`;
   document.body.append(d);
   d.addEventListener('close', () => d.remove());
@@ -133,7 +135,7 @@ function dialogoMotivo({ titulo: t, obligatorio, boton, ruta, campo, ayuda }) {
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
         const datos = { ...(valor ? { [campo]: valor } : {}), ...(ruta === 'rechazar' ? { estadoEsperado: estadoActual } : {}) };
-        await accion(ruta, datos, ruta === 'rechazar' ? 'Solicitud rechazada.' : 'Solicitud cancelada.', () => d.close());
+        await accion(ruta, datos, { rechazar: 'Solicitud rechazada.', anular: 'Solicitud anulada.' }[ruta] ?? 'Solicitud cancelada.', () => d.close());
       } catch (err) {
         if (Object.keys(err.campos ?? {}).length) mostrarErrores(f, Object.fromEntries(Object.entries(err.campos).map(([, m]) => [campo, m])));
       }

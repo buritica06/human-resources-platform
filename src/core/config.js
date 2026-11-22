@@ -30,7 +30,7 @@ export function cargarConfig(overrides = {}) {
     },
     // Ver abajo: sin clave, solo en desarrollo/pruebas locales se usa una clave fija.
     claveCifrado: leer('DATA_ENCRYPTION_KEY', ''),
-    modulos: leer('MODULES_ENABLED', 'auth,usuarios,colaboradores,nomina,notificaciones,solicitudes,permisos,vacaciones,incapacidades,licencias,certificados')
+    modulos: leer('MODULES_ENABLED', 'auth,usuarios,colaboradores,nomina,notificaciones,solicitudes,permisos,vacaciones,incapacidades,licencias,certificados,admin')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),

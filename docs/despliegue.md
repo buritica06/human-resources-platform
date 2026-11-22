@@ -43,3 +43,9 @@ El contador vive en memoria: es por proceso y se reinicia al reiniciar el servid
 **Retención.** Cada certificado guarda una copia de lo que se imprimió: nombre, cédula, cargo y salario. Es el mismo nivel de protección que el expediente. Antes de producción hay que definir con el área jurídica cuánto tiempo se conservan y si se purga el contenido de los anulados (Ley 1581, finalidad y temporalidad).
 
 **Firma.** Por defecto no se imprime el nombre de quien firma (`CERT_FIRMANTE_NOMBRE` está vacío) y la autenticidad se respalda con el código de verificación. Hay que configurar el firmante y la ciudad (`CERT_CIUDAD`) si la empresa lo requiere.
+## Panel del admincontable (M8)
+
+- **Módulos:** un `.env` de producción ya existente debe agregar `admin` a `MODULES_ENABLED` para ver el panel (el valor por defecto ya lo incluye).
+- **Caché de parámetros:** cada proceso guarda los parámetros 30 segundos. Con varias instancias, un cambio programado para hoy puede tardar hasta 30 segundos en verse en todas.
+- **Anular aprobadas:** no hay límite de tiempo. Anular unas vacaciones ya pagadas en nómina, o días compensados en dinero, devuelve los días al saldo, así que el área contable debe ajustar la nómina por su cuenta.
+- **Pendiente antes de producción:** programar el SMMLV y el auxilio de transporte de 2027; el panel lo alerta.

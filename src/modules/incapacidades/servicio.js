@@ -148,6 +148,9 @@ export function crearServicioIncapacidades(ctx) {
         }
         const [c] = await cruces(trx, colaborador.id, fi, ff);
         if (c) throw invalido('Revise los datos marcados.', { fecha_inicio: `Se cruza con otra incapacidad registrada (${fechaTexto(c.fecha_inicio)} a ${fechaTexto(c.fecha_fin)}).` });
+        // Tampoco sobre una suspensión (M8): el área contable debe anularla o ajustarla primero
+        const [sus] = ctx.servicioSuspensiones ? await ctx.servicioSuspensiones.cruces(trx, colaborador.id, fi, ff) : [];
+        if (sus) throw invalido('Revise los datos marcados.', { fecha_inicio: `Se cruza con una suspensión registrada (${fechaTexto(sus.fecha_inicio)} a ${fechaTexto(sus.fecha_fin)}). Comuníquese con el área contable.` });
         const doc = await documentos.guardar(trx, req, {
           buffer: archivo.buffer, nombreOriginal: archivo.originalname, colaboradorId: colaborador.id,
           categoria: 'INCAPACIDAD', sensible: true, maxMb: p.maxMb,
@@ -204,7 +207,7 @@ export function crearServicioIncapacidades(ctx) {
     // Para el área contable: otras ausencias en esas fechas (la incapacidad interrumpe vacaciones)
     if (req.usuario.rol === 'ADMIN') {
       r.crucesSolicitudes = await db('solicitudes').where({ colaborador_id: f.colaborador_id })
-        .whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA'])
+        .whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA'])
         .where('fecha_inicio', '<=', f.fecha_fin).where('fecha_fin', '>=', f.fecha_inicio)
         .select('id', 'tipo', 'subtipo', 'estado', 'fecha_inicio as fechaInicio', 'fecha_fin as fechaFin');
     }

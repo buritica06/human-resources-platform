@@ -1,5 +1,61 @@
 # Cambios
 
+## [0.9.0] – 2026-11-22 · Fase 10 – M8 Panel del admincontable
+
+### Hecho
+- **Panel**:
+  - Muestra lo que está por aprobar, las incapacidades por revisar y la última nómina.
+  - Muestra alertas: colaboradores sin saldo de vacaciones, contratos fijos por vencer, festivos del año siguiente sin cargar, correos sin confirmar, parámetros por verificar y parámetros por vencer.
+  - Tiene accesos a toda la administración.
+- **Parámetros con vigencia:**
+  - Se ve lo que rige hoy, el historial y lo programado.
+  - Los cambios se **programan** con fecha (hoy o futura): **un parámetro con fecha futura no afecta el presente** y el pasado no se reescribe.
+  - Las versiones programadas se pueden borrar.
+  - Hay validación por tipo y rangos, y validadores de los módulos.
+- **Festivos** por año: se reemplazan con validaciones.
+- **Flujos de aprobación** por tipo, en pantalla (sobre la API de M3, con versiones).
+- **Anular solicitudes aprobadas** (vacaciones, permisos y licencias): con motivo y aviso al colaborador. Se devuelven los días.
+- **Suspensiones (SUS):**
+  - Las registra y anula el área contable.
+  - Las ven el colaborador y el área contable, no el director.
+  - No se cruzan con otras ausencias y restan días laborados para las vacaciones.
+  - Se muestran dentro de la pestaña Licencias, porque el expediente conserva sus 7 pestañas.
+- **Reporte de ausentismo** por sede y rango de fechas: totales y detalle, con días recortados al rango y descarga en **CSV** para Excel.
+- **Auditoría** filtrable por actor (cédula), entidad, acción y fechas (hora de Colombia), paginada.
+
+### Revisión independiente (corregido)
+- **Parámetros:**
+  - La fecha por defecto era la UTC: entre las 19:00 y las 24:00 regía antes de tiempo la versión de "mañana". Ahora es la de Colombia.
+  - La validación era débil: faltaban enteros y rangos de nómina, se podía volver editables campos como salario o cuenta, y se podían poner tipos sensibles inexistentes.
+  - Podían quedar huecos entre versiones.
+  - No se podía corregir una versión creada hoy con inicio hoy.
+  - La marca VERIFICAR nunca se quitaba.
+  - No había alerta de parámetros por vencer.
+  - Una carrera al programar daba 500.
+- Se podía registrar una incapacidad sobre una suspensión.
+- **Ausentismo:** los permisos nunca sumaban días ni horas y los decimales iban con punto en el CSV. Además, la licencia de maternidad aparecía por nombre.
+- **Auditoría:** con fechas inválidas daba 500, no tenía tope de página y se auditaba cada página.
+- **Suspensiones:** la anulación no era condicional y la consulta ajena no se auditaba.
+- **Accesibilidad:** encabezados, etiquetas de festivos por fila y anuncio duplicado en el ausentismo.
+
+### Pruebas
+- `npm test`: **270/270**. Las nuevas son 12 del panel y 10 de regresión de la revisión. Cubren:
+  - vigencia futura, borrar lo programado, pasado no editable, validaciones y auditoría;
+  - festivos;
+  - anular aprobadas con devolución de días;
+  - suspensiones: cruces, días no laborados y alcance;
+  - ausentismo por sede con CSV seguro;
+  - auditoría con filtros;
+  - acceso solo admin.
+- `npm run lint` sin errores.
+- En el navegador:
+  - Panel, parámetros, festivos, flujos, ausentismo y auditoría.
+  - Auditoría y parámetros a 375 px sin desbordamiento.
+  - Botón "Anular aprobación" en una solicitud aprobada.
+
+### Pendiente / riesgos
+- Programar el SMMLV y el auxilio de transporte de 2027; vencen el 31/12/2026 y el panel lo alerta.
+- Quitar de una lista (`LISTA_EPS`, bancos…) un valor que ya se usa hace que esos expedientes fallen al editarse; hay que revisarlo antes de quitarlo.
 ## [0.8.0] – 2026-11-22 · Fase 9 – M7 Certificados
 
 ### Hecho

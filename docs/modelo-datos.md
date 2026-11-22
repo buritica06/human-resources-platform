@@ -146,3 +146,18 @@ Ambos están marcados VERIFICAR.
 
 ### Acciones de auditoría nuevas
 `EMITIR_CERTIFICADO`, `DESCARGAR_CERTIFICADO` y `ANULAR_CERTIFICADO`.
+## M8 (migración `20261122_009_m8_suspensiones`)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| **suspensiones** | id, colaborador_id, fecha_inicio, fecha_fin, dias, motivo, registrado_por, creado_en, anulada_en, anulada_por, motivo_anulacion | Novedad SUS. Anular no borra |
+
+- **`solicitudes.estado`:** nuevo valor `ANULADA`.
+- **`parametros`:** cada cambio es una fila nueva (clave + `vigente_desde` único). `vigente_hasta` de la anterior = día antes de la nueva.
+
+### Acciones de auditoría nuevas
+- `PROGRAMAR_PARAMETRO` y `BORRAR_PARAMETRO_PROGRAMADO`
+- `GUARDAR_FESTIVOS`
+- `ANULAR` (solicitud)
+- `REGISTRAR_SUSPENSION` y `ANULAR_SUSPENSION`
+- `VER_AUSENTISMO` y `VER_AUDITORIA`

@@ -7,7 +7,7 @@ export function pildoraEstado(estado, etiqueta) {
   let ic = 'reloj';
   if (estado === 'APROBADA') [clase, ic] = ['exito', 'ok'];
   else if (estado === 'RECHAZADA') [clase, ic] = ['error', 'cerrar'];
-  else if (estado === 'CANCELADA') [clase, ic] = ['neutro', 'cancelar'];
+  else if (estado === 'CANCELADA' || estado === 'ANULADA') [clase, ic] = ['neutro', 'cancelar'];
   else if (estado === 'BORRADOR') [clase, ic] = ['neutro', 'editar'];
   else if (estado.startsWith('PENDIENTE_CONTABLE')) clase = 'alerta';
   return `<span class="pildora pildora--${clase}">${icono(ic)} ${escapar(etiqueta ?? estado)}</span>`;

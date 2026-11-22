@@ -1,7 +1,7 @@
 // Motor de solicitudes con flujo de aprobación configurable.
 //
 // Estados: BORRADOR → (pasos del flujo, p. ej. PENDIENTE_DIRECTOR → PENDIENTE_CONTABLE) →
-//          APROBADA | RECHAZADA | CANCELADA
+//          APROBADA | RECHAZADA | CANCELADA;  APROBADA → ANULADA (solo el admincontable, con motivo)
 // Reglas:
 // - Los pasos vienen de la tabla `flujos` (versión activa del tipo); cada solicitud queda atada a
 //   la versión con la que se envió. Cada rol aparece una sola vez en un flujo.
@@ -18,8 +18,10 @@ import { ErrorApp, conflicto, invalido, noEncontrado, prohibido } from '../../co
 import { ahora } from '../../core/db.js';
 import { log } from '../../core/logger.js';
 
-export const FINALES = ['APROBADA', 'RECHAZADA', 'CANCELADA'];
-export const ETIQUETAS_ESTADO = { BORRADOR: 'Borrador', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
+export const FINALES = ['APROBADA', 'RECHAZADA', 'CANCELADA', 'ANULADA'];
+// Estados que NO cuentan como ausencia (cruces, saldo de vacaciones, reportes)
+export const SIN_EFECTO = ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA'];
+export const ETIQUETAS_ESTADO = { BORRADOR: 'Borrador', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada', ANULADA: 'Anulada' };
 const ROLES_PASO = ['DIRECTOR', 'ADMIN'];
 const OMITIDO = 'La sede no tiene un director disponible para aprobar; este paso se omite y pasa al siguiente.';
 
@@ -316,6 +318,21 @@ export function crearMotor(ctx) {
     return detalle(req, id);
   }
 
+  // Anular una solicitud APROBADA (corrección del área contable): deja de contar como ausencia,
+  // devuelve los días de vacaciones y, si era una licencia no remunerada, deja de restar días.
+  async function anular(req, id, motivo) {
+    if (req.usuario.rol !== 'ADMIN') throw prohibido('Solo el área contable puede anular una solicitud aprobada.');
+    const s = await cargarConAlcance(req, id);
+    if (s.estado !== 'APROBADA') throw conflicto('Solo se anulan solicitudes aprobadas. Las que están en trámite se rechazan o se cancelan.');
+    await db.transaction((trx) => transicion(trx, s, { hacia: 'ANULADA', paso: null, accion: 'ANULAR', actorId: req.usuario.id, comentario: motivo }));
+    await auditar(req, { accion: 'ANULAR', entidad: 'solicitud', entidadId: id, detalle: { tipo: s.tipo } });
+    await seguro('la notificación de la anulación', async () => {
+      const s2 = await cargar(id);
+      await notificarCambio(s2, { titulo: `Su solicitud de ${ctx.tiposSolicitud.get(s.tipo).etiqueta.toLowerCase()} fue ANULADA por el área contable`, mensaje: `Motivo: ${motivo}` });
+    });
+    return detalle(req, id);
+  }
+
   // ---------- cruce con otras ausencias ----------
   // Rango [desde, hasta) en milisegundos; sin hora = día completo. Fechas y horas locales
   // (Colombia) comparadas entre sí: la zona horaria no influye.
@@ -327,7 +344,7 @@ export function crearMotor(ctx) {
   async function validarSinCruce(trx, s) {
     const [a1, a2] = rango(s);
     const otras = await trx('solicitudes').where({ colaborador_id: s.colaborador_id }).whereNot({ id: s.id ?? -1 })
-      .whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA'])
+      .whereNotIn('estado', SIN_EFECTO)
       .where('fecha_inicio', '<=', s.fecha_fin).where('fecha_fin', '>=', s.fecha_inicio);
     for (const o of otras) {
       const [b1, b2] = rango(o);
@@ -389,6 +406,7 @@ export function crearMotor(ctx) {
       acciones: {
         enviar: propia && s.estado === 'BORRADOR',
         cancelar: propia && !FINALES.includes(s.estado),
+        anular: req.usuario.rol === 'ADMIN' && s.estado === 'APROBADA',
         aprobar: actuar,
         rechazar: actuar && !esAutoaprobacion(req, s),
       },
@@ -449,6 +467,6 @@ export function crearMotor(ctx) {
 
   return {
     flujoActivo, configurarFlujo, colaboradorDe, cargar, cargarConAlcance, puedeVer, validarSinCruce,
-    enviar, despuesDeEnviar, aprobar, rechazar, cancelar, detalle, mias, bandeja, deColaborador, presentar, sedesDirector,
+    enviar, despuesDeEnviar, aprobar, rechazar, cancelar, anular, detalle, mias, bandeja, deColaborador, presentar, sedesDirector,
   };
 }

@@ -1,13 +1,15 @@
 // Módulo M6 – Licencias. Reutiliza el motor de solicitudes (mismo flujo, estados, notificaciones,
 // cruces y documentos); aquí solo van el tipo y las opciones del formulario.
 import { autenticado } from '../../core/security/sesion.js';
-import { crearTipoLicencia, diasAtrasLicencia, tiposLicencia } from './tipo.js';
+import { crearTipoLicencia, diasAtrasLicencia, listaLicenciasValida, tiposLicencia } from './tipo.js';
 import { hoyBogota } from '../vacaciones/calendario.js';
 
 export default {
   nombre: 'licencias',
   inicializar(ctx) {
     ctx.tiposSolicitud.set('LICENCIA', crearTipoLicencia());
+    ctx.validadoresParametros.set('LISTA_TIPOS_LICENCIA', (v) => (listaLicenciasValida(v) ? null
+      : 'Cada tipo necesita: nombre único, código, unidad (calendario u hábiles), diasMax (entero hasta 366 o null) y remunerada, soporteObligatorio, sensible y descuentaVacaciones como true o false.'));
   },
   api(router, ctx) {
     router.get('/licencias/opciones', autenticado(), async (_req, res) => {
@@ -29,5 +31,6 @@ export default {
   },
   paginas: { '/licencias': 'licencias.html', '/licencias/nueva': 'nueva.html' },
   menu: [{ texto: 'Mis licencias', href: '/licencias', icono: 'calendario', orden: 33 }],
-  pestanasExpediente: [{ clave: 'licencias', script: '/m/solicitudes/pestana-expediente.js' }],
+  // Pestaña Licencias: las solicitudes de licencia y, si el panel (M8) está activo, las suspensiones
+  pestanasExpediente: [{ clave: 'licencias', script: '/m/licencias/pestana-expediente.js' }],
 };
