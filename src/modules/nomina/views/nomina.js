@@ -89,14 +89,14 @@ function pasoHojas(hojas) {
     const res = zona.querySelector('#resultados');
     res.innerHTML = '';
     await conCarga(f.querySelector('[type=submit]'), async () => {
-      for (const hoja of elegidas) await cargarHoja(hoja, res, false);
+      for (const hoja of elegidas) await cargarHoja(hoja, res, []);
       await listarPeriodos();
     });
   });
 }
 
 // ---------- Paso 3: validar y guardar ----------
-async function cargarHoja(hoja, res, crearExpedientes) {
+async function cargarHoja(hoja, res, crearCedulas) {
   const bloque = document.createElement('section');
   bloque.className = 'resultado-carga';
   bloque.setAttribute('aria-label', `Resultado de ${hoja}`);
@@ -106,7 +106,7 @@ async function cargarHoja(hoja, res, crearExpedientes) {
   fd.append('archivo', archivo);
   fd.append('hoja', hoja);
   fd.append('huella', huella);
-  fd.append('crearExpedientes', String(crearExpedientes));
+  for (const c of crearCedulas) fd.append('crearCedulas', c);
   try {
     const r = await api('/nomina/cargas', { metodo: 'POST', formulario: fd });
     const adv = r.advertencias?.length
@@ -120,13 +120,24 @@ async function cargarHoja(hoja, res, crearExpedientes) {
     const soloFaltantes = r.faltantes?.length && r.errores.length === r.faltantes.length;
     bloque.innerHTML = `<h3>${escapar(hoja)}</h3>${htmlAviso('error', `No se guardó nada: hay ${r.errores.length} problema(s). Corrija el Excel y vuelva a cargarlo.`)}
       <ul>${r.errores.map((x) => `<li>${x.fila ? `Fila ${x.fila}: ` : ''}${escapar(x.mensaje)}</li>`).join('')}</ul>
-      ${soloFaltantes ? `<div class="aviso aviso--info">${icono('info')}<div><p>Si son colaboradores que ya se retiraron y no están en la hoja EMPLEADOS, la plataforma puede crearles un expediente básico (estado RETIRADO) con el nombre de la nómina, para conservar su historial de volantes.</p>
-        <button type="button" class="btn btn--secundario" data-crear>Crear ${r.faltantes.length} expediente(s) básico(s) y cargar</button></div></div>` : ''}
+      ${soloFaltantes ? `<form class="aviso aviso--info" data-crear novalidate>${icono('info')}<div>
+        <p>Si son colaboradores <strong>que ya se retiraron</strong> y no están en la hoja EMPLEADOS, la plataforma puede crearles un expediente básico (estado RETIRADO) para conservar su historial de volantes. Si alguna cédula está mal escrita, <strong>no la marque</strong>: corrija el Excel.</p>
+        <fieldset class="campo"><legend class="etiqueta">Confirme uno por uno</legend>
+          ${r.faltantes.map((x, i) => `<label><input type="checkbox" name="ced" value="${escapar(x.cedula)}" id="fal-${i}"> ${escapar(x.nombre)} — C.C. ${escapar(x.cedula)} (fila ${x.fila})</label>`).join('<br>')}
+          <span class="error-campo" id="ced-error"></span></fieldset>
+        <button type="submit" class="btn btn--secundario">Crear los expedientes marcados y cargar</button></div></form>` : ''}
       ${adv}`;
-    bloque.querySelector('[data-crear]')?.addEventListener('click', async (ev) => {
-      await conCarga(ev.currentTarget, async () => {
+    bloque.querySelector('[data-crear]')?.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const form = ev.currentTarget;
+      const marcadas = [...form.querySelectorAll('input[name=ced]:checked')].map((c) => c.value);
+      limpiarErrores(form);
+      if (marcadas.length !== r.faltantes.length) {
+        return mostrarErrores(form, { ced: 'Para cargar esta quincena todas las cédulas deben tener expediente: marque las que son retirados o corrija el Excel.' });
+      }
+      await conCarga(form.querySelector('[type=submit]'), async () => {
         bloque.remove();
-        await cargarHoja(hoja, res, true);
+        await cargarHoja(hoja, res, marcadas);
         await listarPeriodos();
       });
     });

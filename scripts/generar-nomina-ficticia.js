@@ -10,7 +10,7 @@ const DIR = path.resolve(import.meta.dirname, '..', 'tests', 'fixtures');
 const fecha = (s) => new Date(`${s}T00:00:00Z`);
 
 // fila: [cedula, nombre, dias, salarioBase, E salario, F rn, G aux, H hx, I inc, J salud, K pension, L prestamo, (M neto opcional), Q obs]
-function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacaciones = [], subI = 'INCAPACIDAD', sinFechas = false }) {
+export function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacaciones = [], subI = 'INCAPACIDAD', sinFechas = false }) {
   const h = libro.addWorksheet(nombre);
   if (!sinFechas) {
     h.getCell('S1').value = fecha(inicio);
@@ -54,7 +54,7 @@ function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacaciones =
     h.getCell(`B${r}`).value = 'RESUMEN DE DESCUENTOS';
     h.getCell(`B${r + 1}`).value = 'DESCUENTO ';
     h.getCell(`C${r + 1}`).value = 'PRESTAMO';
-    h.getCell(`B${r + 2}`).value = t.filas[0][1];
+    h.getCell(`B${r + 2}`).value = t.filas[0]?.[1] ?? 'SIN DESCUENTOS';
     h.getCell(`D${r + 2}`).value = 500000;
     r += 5;
   }
@@ -79,7 +79,7 @@ function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacaciones =
   return h;
 }
 
-function horasResumen(libro, quincena, filas) {
+export function horasResumen(libro, quincena, filas) {
   const h = libro.addWorksheet('HORAS RESUMEN');
   h.getCell('B2').value = 'Quincena:';
   h.getCell('C2').value = quincena;

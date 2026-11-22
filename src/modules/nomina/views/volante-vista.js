@@ -41,7 +41,7 @@ export function htmlVolante(v, { esAdmin = false } = {}) {
       </dl>
       ${tablaConceptos('Devengados', v.devengados, v.totalDevengado, 'Total devengado')}
       ${tablaConceptos('Deducciones', v.deducciones, v.totalDeducido, 'Total deducciones')}
-      <div class="neto" role="status"><span>Neto a pagar</span><strong>${copExacto(v.neto)}</strong></div>
+      <div class="neto"><span>Neto a pagar</span><strong>${copExacto(v.neto)}</strong></div>
       ${tablaConceptos('Pagos adicionales (liquidados aparte)', v.adicionales, v.totalAdicional, 'Total pagos adicionales')}
       ${v.observacion ? `<section class="grupo-datos"><h3>Observaciones</h3><p>${escapar(v.observacion)}</p></section>` : ''}
       <p class="ayuda">Los valores provienen de la nómina liquidada por el área contable${esAdmin ? '' : '. Si encuentra una diferencia, comuníquese con el área contable'}.</p>

@@ -20,7 +20,7 @@
 - **Estados del periodo:**
   - Un borrador se elimina; un periodo publicado se **anula** con motivo, lo que oculta sus volantes y libera el periodo para recargarlo.
   - El índice único parcial impide que haya dos periodos vigentes con las mismas fechas.
-- **Retirados que no están en EMPLEADOS:** con la confirmación explícita del admin, se crea un expediente básico (RETIRADO) para conservar su historial.
+- **Retirados que no están en EMPLEADOS:** con la confirmación del admin, cédula por cédula, se crea un expediente básico (RETIRADO) para conservar su historial.
 - **Volante detallado:** devengados, deducciones y pagos adicionales (liquidación de extras) con cantidad y valor, solo con los conceptos que tiene el colaborador, más el neto y las observaciones. Es una copia fiel de la hoja.
 - **PDF del volante** generado en el servidor con PDFKit. La plantilla corporativa (`src/core/pdf.js`) la reutilizará M7.
 - **Páginas:**
@@ -35,12 +35,43 @@
   - Todo `/nomina/*` es solo para el admin.
   - Se auditan ver, descargar, cargar, publicar, anular y eliminar.
 
+### Revisión independiente de M2
+Veredicto inicial: "sí con correcciones". No hubo hallazgos en control de acceso, XSS, PDF ni rendimiento (21 hojas × 250 filas en menos de 0,3 s). Se corrigió todo, con 14 pruebas de regresión (`tests/unit/lector-nomina.test.js` y `nomina.test.js`):
+1. **ALTO – Publicación parcial silenciosa.** Una cédula con letras ("CC 1000000002"), con decimales o fuera de rango cerraba la tabla y descartaba sin aviso esa fila y las siguientes. Ahora:
+   - Una fila con nombre y valores sin cédula válida es un **error**, y la tabla sigue leyéndose.
+   - Un encabezado con otra palabra en A ("IDENTIFICACIÓN") es un error.
+   - Una cédula con valores fuera de una tabla reconocida es un error.
+   - Los cierres de tabla se reconocen por rótulo (SUBTOTAL, TOTAL, RESUMEN…).
+2. **ALTO – Carrera al reemplazar un borrador.** Ahora:
+   - El cruce de periodos se revalida dentro de la transacción.
+   - Solo se borra un periodo si **sigue** en BORRADOR, así que nunca uno publicado.
+   - Dos cargas simultáneas ya no dan 500 (el índice único → 409).
+3. **MEDIO – Expedientes básicos de retirados.** Ahora:
+   - Se confirman **cédula por cédula**; cualquier otra sigue bloqueando (S6).
+   - Eliminar el borrador borra los expedientes que creó, si no tienen nada más (nueva columna `colaboradores.creado_por_periodo_id`, migración 004).
+4. **MEDIO – Fechas imposibles** en S1/T1 (30 de febrero, mes 13…): ahora son error.
+5. **MEDIO – Devengado negativo:** ahora es error, en vez de mostrarse como positivo.
+6. **MEDIO – Extras que solo traen el neto:** ya no se atribuyen a un concepto. Se muestran como "Pago adicional (la hoja solo trae el neto)", con las cantidades como dato informativo. Si además hay texto en alguna columna, es un error.
+7. **MEDIO – Sede y empleador:**
+   - Cada tabla toma la sede de su título; no se hereda del bloque anterior.
+   - Quien solo aparece en extras no hereda el empleador: se usan los datos del expediente.
+8. **BAJO:**
+   - Celdas con error de Excel (#N/A) → error, en vez de cero.
+   - Longitud de la cédula numérica y del documento.
+   - Fila en cero → advertencia; tabla sin colaboradores → error.
+   - Cédulas enmascaradas en los mensajes.
+   - Foco en el título tras publicar o anular.
+   - "Eliminar" protegido contra doble clic.
+   - Se quitó `role="status"` del neto.
+
+Resultado: **129/129 pruebas** y lint sin errores. El libro real sigue cargando 21/21 quincenas con 0 errores y 444 volantes; ahora todas las tablas reales tienen su sede.
+
 ### Decisiones sobre el formato real (verificadas con el libro, solo con conteos)
 - Fila con nombre pero sin cédula: se avisa y no se carga. Las filas solo con números (totales sin rótulo) se ignoran.
 - "RESUMEN DE DESCUENTOS" cierra la tabla de nómina.
 - Liquidación de extras:
   - Si una columna de valores trae texto (una nota) y el neto cuadra sin ella, se toma como vacía y se avisa.
-  - Si el total está vacío pero hay cantidad y neto en un **único** concepto, el neto se atribuye a ese concepto y se avisa. No se calcula nada.
+  - Si la fila solo trae el neto, se muestra como pago adicional sin desglose (ver revisión, punto 6).
   - Cualquier otro descuadre es un error.
 
 ### Cambios frente al plan

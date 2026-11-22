@@ -38,10 +38,17 @@ export function fechaCelda(v) {
   }
   const s = String(v).trim();
   let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  if (m) return fechaReal(m[1], m[2], m[3]);
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
-  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  if (m) return fechaReal(m[3], m[2], m[1]);
   return undefined; // no reconocida
+}
+
+// 'AAAA-MM-DD' solo si la fecha existe (rechaza 2026-02-30, 45/13/2026…)
+function fechaReal(a, mes, d) {
+  const f = new Date(Date.UTC(Number(a), Number(mes) - 1, Number(d)));
+  if (f.getUTCFullYear() !== Number(a) || f.getUTCMonth() !== Number(mes) - 1 || f.getUTCDate() !== Number(d)) return undefined;
+  return f.toISOString().slice(0, 10);
 }
 
 // Cédula: número sin decimales, o texto sin ".0" final, puntos ni espacios.

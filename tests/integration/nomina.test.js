@@ -59,12 +59,12 @@ describe('carga y validación', () => {
     assert.equal(await contar('periodos_nomina'), 0);
   });
 
-  test('cédula sin expediente: bloquea; con permiso explícito crea el expediente básico (RETIRADO)', async () => {
+  test('cédula sin expediente: bloquea; confirmada una por una crea el expediente básico (RETIRADO)', async () => {
     let r = await cargar('NOMINA OCT 16-31');
     assert.equal(r.body.ok, false);
     assert.deepEqual(r.body.faltantes.map((f) => f.cedula), ['3000000099']);
     assert.equal(await contar('periodos_nomina'), 0);
-    r = await cargar('NOMINA OCT 16-31', { crearExpedientes: 'true' });
+    r = await cargar('NOMINA OCT 16-31', { crearCedulas: '3000000099' });
     assert.equal(r.body.ok, true, JSON.stringify(r.body.errores));
     const c = await env.ctx.db('colaboradores').where({ cedula: '3000000099' }).first();
     assert.equal(c.estado, 'RETIRADO');
@@ -199,6 +199,40 @@ describe('publicación y consulta', () => {
     assert.ok(me.body.widgets.includes('/m/nomina/widget-inicio.js'));
     assert.ok(me.body.menu.some((m) => m.href === '/volantes'));
     assert.ok(!me.body.menu.some((m) => m.href === '/nomina'));
+  });
+});
+
+describe('revisión M2: expedientes básicos, carreras y propio volante del director', () => {
+  test('el director ve SU propio volante publicado (y solo el suyo)', async () => {
+    const pid = (await env.ctx.db('periodos_nomina').where({ fecha_inicio: '2026-11-01', estado: 'PUBLICADO' }).first()).id;
+    const suyo = await env.ctx.db('volantes').where({ periodo_id: pid, cedula: CED.director }).first();
+    assert.equal((await director.get(`/volantes/${suyo.id}`)).status, 200);
+    assert.equal((await director.get('/me/volantes')).body.volantes.length, 1);
+  });
+
+  test('confirmar solo una de varias cédulas faltantes no basta; eliminar el borrador borra los expedientes que creó', async () => {
+    // OCT 16-31 ya se cargó con 3000000099 confirmada: el borrador existe; se elimina
+    const oct = await env.ctx.db('periodos_nomina').where({ fecha_inicio: '2026-10-16' }).first();
+    assert.ok(await env.ctx.db('colaboradores').where({ cedula: '3000000099', creado_por_periodo_id: oct.id }).first());
+    const t = (await admin.get('/auth/csrf')).body.csrf;
+    assert.equal((await admin.agente.delete(`/api/v1/nomina/periodos/${oct.id}`).set('X-CSRF-Token', t)).status, 204);
+    assert.equal(await env.ctx.db('colaboradores').where({ cedula: '3000000099' }).first(), undefined, 'el expediente básico se borra con su borrador');
+    // Una cédula no confirmada sigue bloqueando
+    const r = await cargar('NOMINA OCT 16-31', { crearCedulas: '1234567890' });
+    assert.equal(r.body.ok, false);
+    assert.equal(await env.ctx.db('colaboradores').where({ cedula: '1234567890' }).first(), undefined);
+  });
+
+  test('dos cargas simultáneas del mismo periodo nuevo: ninguna da 500 y queda un solo periodo vigente', async () => {
+    const { huella } = await hojas();
+    const [a, b] = await Promise.all([
+      admin.subir('/nomina/cargas', LIBRO, { hoja: 'NOMINA OCT 16-31', huella, crearCedulas: '3000000099' }),
+      admin.subir('/nomina/cargas', LIBRO, { hoja: 'NOMINA OCT 16-31', huella, crearCedulas: '3000000099' }),
+    ]);
+    assert.ok([200, 409].includes(a.status) && [200, 409].includes(b.status), `${a.status} ${b.status}`);
+    const vigentes = await env.ctx.db('periodos_nomina').where({ fecha_inicio: '2026-10-16' }).whereNot({ estado: 'ANULADO' });
+    assert.equal(vigentes.length, 1);
+    assert.equal((await env.ctx.db('colaboradores').where({ cedula: '3000000099' })).length, 1);
   });
 });
 

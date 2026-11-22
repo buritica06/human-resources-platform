@@ -49,7 +49,11 @@ export function crearServicioNomina(ctx) {
     }
     // Cada cédula debe existir como colaborador
     const cedulas = r.registros.map((x) => x.cedula);
-    const colabs = new Map((await db('colaboradores').whereIn('cedula', cedulas.length ? cedulas : ['-']).select('id', 'cedula', 'cargo', 'rango', 'estado', 'fecha_ingreso')).map((c) => [c.cedula, c]));
+    const colabs = new Map((await db('colaboradores as c')
+      .leftJoin('sedes as s', 's.id', 'c.sede_id').leftJoin('empleadores as e', 'e.id', 'c.empleador_id')
+      .whereIn('c.cedula', cedulas.length ? cedulas : ['-'])
+      .select('c.id', 'c.cedula', 'c.cargo', 'c.rango', 'c.estado', 'c.fecha_ingreso', 's.nombre as sede_nombre', 'e.razon_social as empleador_nombre', 'e.documento as empleador_documento'))
+      .map((c) => [c.cedula, c]));
     for (const x of r.registros) {
       if (!colabs.has(x.cedula)) faltantes.push({ fila: x.fila, cedula: x.cedula, nombre: x.nombre });
     }
@@ -70,7 +74,7 @@ export function crearServicioNomina(ctx) {
   }
 
   // Crea expedientes básicos (RETIRADO) para cédulas de la nómina que no tienen expediente.
-  async function crearFaltantes(trx, req, faltantes, lectura) {
+  async function crearFaltantes(trx, req, faltantes, lectura, periodoId) {
     const t = ahora();
     const empleadores = await trx('empleadores').select('id', 'documento');
     const sedes = await trx('sedes').select('id', 'nombre', 'empleador_id');
@@ -83,7 +87,7 @@ export function crearServicioNomina(ctx) {
         cedula: f.cedula, nombre: String(f.nombre).toUpperCase().slice(0, 150), estado: 'RETIRADO',
         empleador_id: emp?.id ?? sede?.empleador_id ?? null, sede_id: sede?.id ?? null,
         salario_base: reg.salarioBase ?? null, eps: reg.eps?.slice(0, 60) ?? null, afp: reg.afp?.slice(0, 60) ?? null,
-        creado_en: t, actualizado_en: t,
+        creado_por_periodo_id: periodoId, creado_en: t, actualizado_en: t,
       }).returning('id');
       const id = typeof fila === 'object' ? fila.id : fila;
       await trx('expediente_cambios').insert({
@@ -91,18 +95,22 @@ export function crearServicioNomina(ctx) {
         valor_nuevo: `Expediente básico creado al cargar la nómina "${lectura.hoja}" (no estaba en la hoja EMPLEADOS); queda como RETIRADO`,
         origen: 'IMPORTACION', actor_id: req.usuario.id, creado_en: t,
       });
-      creados.set(f.cedula, { id, cargo: null, rango: null });
+      creados.set(f.cedula, { id, cargo: null, rango: null, sede_nombre: sede?.nombre ?? null });
     }
     return creados;
   }
 
-  async function cargar(req, buffer, { hoja, huella, nombreArchivo, crearExpedientes }) {
+  // crearCedulas: cédulas que el admin confirmó UNA POR UNA como colaboradores retirados para
+  // crearles un expediente básico. Cualquier otra cédula sin expediente bloquea (supuesto S6).
+  async function cargar(req, buffer, { hoja, huella, nombreArchivo, crearCedulas = [] }) {
     if (!huella || huella !== sha256(buffer)) throw invalido('El archivo cambió desde que se eligió la hoja. Vuelva a subirlo.');
     const libro = await leerLibro(buffer);
     const v = await validar(libro, hoja);
     const bloquean = [...v.errores];
-    if (v.faltantes.length && !crearExpedientes) {
-      for (const f of v.faltantes) bloquean.push({ fila: f.fila, cedula: f.cedula, mensaje: `${f.nombre} (C.C. ${f.cedula}) no tiene expediente en la plataforma.` });
+    const confirmadas = new Set(crearCedulas);
+    const aCrear = v.faltantes.filter((f) => confirmadas.has(f.cedula));
+    for (const f of v.faltantes.filter((x) => !confirmadas.has(x.cedula))) {
+      bloquean.push({ fila: f.fila, cedula: f.cedula, mensaje: `${f.nombre} (C.C. ***${f.cedula.slice(-4)}) no tiene expediente en la plataforma.` });
     }
     const resumen = {
       hoja, periodo: v.lectura.periodo, colaboradores: v.lectura.registros.length, totales: v.lectura.totales,
@@ -115,9 +123,22 @@ export function crearServicioNomina(ctx) {
 
     const t = ahora();
     const r = v.lectura;
-    const periodoId = await db.transaction(async (trx) => {
-      if (v.reemplaza) await trx('periodos_nomina').where({ id: v.reemplaza.id }).del(); // borrador anterior del mismo periodo
-      const nuevos = v.faltantes.length ? await crearFaltantes(trx, req, v.faltantes, r) : new Map();
+    let periodoId;
+    const reemplazados = [];
+    try {
+      periodoId = await db.transaction(async (trx) => {
+      // Se revalida DENTRO de la transacción: entre la validación y este punto otro admin pudo
+      // publicar o cargar el mismo periodo.
+      const vigentes = await trx('periodos_nomina').whereNot({ estado: 'ANULADO' })
+        .where('fecha_inicio', '<=', r.periodo.fin).where('fecha_fin', '>=', r.periodo.inicio);
+      for (const p of vigentes) {
+        const mismo = p.fecha_inicio === r.periodo.inicio && p.fecha_fin === r.periodo.fin;
+        if (!mismo || p.estado !== 'BORRADOR') throw conflicto(`El periodo cambió mientras se cargaba ("${p.nombre_hoja}" está ${p.estado.toLowerCase()}). Revise y vuelva a intentarlo.`);
+        // Solo se reemplaza si SIGUE siendo borrador (nunca se borra un periodo publicado)
+        const borrados = await trx('periodos_nomina').where({ id: p.id, estado: 'BORRADOR' }).del();
+        if (borrados !== 1) throw conflicto('El borrador anterior cambió mientras se cargaba. Vuelva a intentarlo.');
+        reemplazados.push(p.id);
+      }
       const [fila] = await trx('periodos_nomina').insert({
         nombre_hoja: hoja.trim().slice(0, 60), fecha_inicio: r.periodo.inicio, fecha_fin: r.periodo.fin, estado: 'BORRADOR',
         colaboradores: r.registros.length, total_devengado: r.totales.devengado, total_deducido: r.totales.deducido,
@@ -126,11 +147,18 @@ export function crearServicioNomina(ctx) {
         advertencias: JSON.stringify(v.advertencias.slice(0, 200)), cargado_por: req.usuario.id, cargado_en: t,
       }).returning('id');
       const pid = typeof fila === 'object' ? fila.id : fila;
+      // Los expedientes básicos que había creado el borrador reemplazado pasan a este
+      if (reemplazados.length) await trx('colaboradores').whereIn('creado_por_periodo_id', reemplazados).update({ creado_por_periodo_id: pid });
+      const nuevos = aCrear.length ? await crearFaltantes(trx, req, aCrear, r, pid) : new Map();
       for (const x of r.registros) {
         const c = v.colabs.get(x.cedula) ?? nuevos.get(x.cedula);
+        // Empleador y sede: los de la hoja; si la fila no los trae (p. ej. solo está en extras),
+        // los del expediente. Nunca se infieren de otro bloque.
         const [fv] = await trx('volantes').insert({
           periodo_id: pid, colaborador_id: c.id, cedula: x.cedula, nombre: String(x.nombre).slice(0, 150),
-          empleador: x.empleador?.slice(0, 150) ?? null, empleador_documento: x.empleadorDocumento ?? null, sede: x.sede?.slice(0, 120) ?? null,
+          empleador: (x.empleador ?? c.empleador_nombre)?.slice(0, 150) ?? null,
+          empleador_documento: (x.empleadorDocumento ?? c.empleador_documento)?.slice(0, 20) ?? null,
+          sede: (x.sede ?? c.sede_nombre)?.slice(0, 120) ?? null,
           cargo: c.cargo ?? null, rango: c.rango ?? null,
           dias: x.dias ?? null, salario_base: x.salarioBase ?? null,
           total_devengado: x.devengado ?? 0, total_deducido: x.deducido ?? 0, neto: x.neto ?? 0, total_adicional: x.netoAdicional ?? 0,
@@ -146,10 +174,15 @@ export function crearServicioNomina(ctx) {
         }
       }
       return pid;
-    });
+      });
+    } catch (e) {
+      // Dos cargas simultáneas del mismo periodo: el índice único lo impide → 409, no 500
+      if (e?.code === 'SQLITE_CONSTRAINT_UNIQUE' || e?.code === '23505') throw conflicto('Otra carga de este mismo periodo terminó primero. Recargue la página.');
+      throw e;
+    }
     await auditar(req, {
       accion: 'CARGA_NOMINA', entidad: 'periodo_nomina', entidadId: periodoId,
-      detalle: { hoja, colaboradores: r.registros.length, expedientesCreados: v.faltantes.length, reemplazoBorrador: !!v.reemplaza },
+      detalle: { hoja, colaboradores: r.registros.length, expedientesCreados: aCrear.length, reemplazoBorrador: !!v.reemplaza },
     });
     return { ok: true, periodoId, errores: [], ...resumen };
   }
@@ -208,13 +241,29 @@ export function crearServicioNomina(ctx) {
   }
 
   async function eliminarBorrador(req, id) {
-    const n = await db('periodos_nomina').where({ id, estado: 'BORRADOR' }).del();
-    if (!n) {
-      const p = await db('periodos_nomina').where({ id }).first();
-      if (!p) throw noEncontrado('El periodo no existe.');
-      throw conflicto('Solo se pueden eliminar borradores. Un periodo publicado se anula.');
-    }
-    await auditar(req, { accion: 'ELIMINAR', entidad: 'periodo_nomina', entidadId: id });
+    let expedientesBorrados = 0;
+    await db.transaction(async (trx) => {
+      const n = await trx('periodos_nomina').where({ id, estado: 'BORRADOR' }).del();
+      if (!n) {
+        const p = await trx('periodos_nomina').where({ id }).first();
+        if (!p) throw noEncontrado('El periodo no existe.');
+        throw conflicto('Solo se pueden eliminar borradores. Un periodo publicado se anula.');
+      }
+      // Los expedientes básicos que creó esta carga se eliminan si ya no tienen volantes
+      // ni otros cambios (no deja "basura" por una cédula mal digitada).
+      const creados = await trx('colaboradores').where({ creado_por_periodo_id: id }).select('id');
+      for (const { id: cid } of creados) {
+        const tieneVolantes = await trx('volantes').where({ colaborador_id: cid }).first('id');
+        const otrosCambios = await trx('expediente_cambios').where({ colaborador_id: cid }).whereNot({ campo: '_alta' }).first('id');
+        if (!tieneVolantes && !otrosCambios) {
+          await trx('colaboradores').where({ id: cid }).del();
+          expedientesBorrados++;
+        } else {
+          await trx('colaboradores').where({ id: cid }).update({ creado_por_periodo_id: null });
+        }
+      }
+    });
+    await auditar(req, { accion: 'ELIMINAR', entidad: 'periodo_nomina', entidadId: id, detalle: { expedientesBorrados } });
   }
 
   // ---------- volantes ----------

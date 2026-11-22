@@ -59,20 +59,24 @@ async function cargar() {
         try {
           await api(`/nomina/periodos/${id}/publicar`, { metodo: 'POST' });
           toast('Nómina publicada.');
-          cargar();
+          await cargar();
+          document.getElementById('titulo').focus();
         } catch (err) {
           toast(err.message, 'error');
         }
       });
     });
-    zona.querySelector('#eliminar')?.addEventListener('click', async () => {
+    zona.querySelector('#eliminar')?.addEventListener('click', async (e) => {
+      const boton = e.currentTarget;
       if (!(await confirmar({ titulo: 'Eliminar borrador', mensaje: `Se eliminará el borrador de ${p.hoja} y sus volantes. Podrá volver a cargarlo.`, aceptar: 'Eliminar', peligro: true }))) return;
-      try {
-        await api(`/nomina/periodos/${id}`, { metodo: 'DELETE' });
-        location.assign('/nomina');
-      } catch (err) {
-        toast(err.message, 'error');
-      }
+      await conCarga(boton, async () => {
+        try {
+          await api(`/nomina/periodos/${id}`, { metodo: 'DELETE' });
+          location.assign('/nomina');
+        } catch (err) {
+          toast(err.message, 'error');
+        }
+      });
     });
     zona.querySelector('#anular')?.addEventListener('click', () => dialogoAnular(p));
   } catch (err) {
@@ -106,7 +110,8 @@ function dialogoAnular(p) {
         await api(`/nomina/periodos/${id}/anular`, { metodo: 'POST', datos: { motivo: f.motivo.value } });
         d.close();
         toast('Periodo anulado.');
-        cargar();
+        await cargar();
+        document.getElementById('titulo').focus();
       } catch (err) {
         if (!Object.keys(err.campos ?? {}).length || !mostrarErrores(f, err.campos)) toast(err.message, 'error');
       }

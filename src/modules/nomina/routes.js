@@ -16,7 +16,7 @@ export function montarRutasNomina(router, ctx) {
   const svc = crearServicioNomina(ctx);
   const sesion = autenticado();
   const soloAdmin = [sesion, rol(ROLES.ADMIN)];
-  const subir = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 10 } }).single('archivo');
+  const subir = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 20, fieldSize: 10_000 } }).single('archivo');
   const archivoExcel = (req) => {
     if (!req.file) throw invalido('Adjunte el libro de nómina (.xlsx o .xlsm).', { archivo: 'Adjunte el archivo.' });
     if (!/\.(xlsx|xlsm)$/i.test(req.file.originalname)) throw invalido('El archivo debe ser .xlsx o .xlsm.', { archivo: 'Formato no permitido.' });
@@ -30,9 +30,11 @@ export function montarRutasNomina(router, ctx) {
     const buffer = archivoExcel(req);
     const hoja = String(req.body?.hoja ?? '').slice(0, 60);
     if (!hoja) throw invalido('Elija la hoja de la quincena.', { hoja: 'Elija una hoja.' });
+    // Cédulas confirmadas una por una como retirados (campo repetido o separado por comas)
+    const crearCedulas = [req.body?.crearCedulas ?? []].flat().flatMap((s) => String(s).split(','))
+      .map((s) => s.trim()).filter((s) => /^\d{5,12}$/.test(s)).slice(0, 200);
     res.json(await svc.cargar(req, buffer, {
-      hoja, huella: String(req.body?.huella ?? ''), nombreArchivo: req.file.originalname,
-      crearExpedientes: req.body?.crearExpedientes === 'true',
+      hoja, huella: String(req.body?.huella ?? ''), nombreArchivo: req.file.originalname, crearCedulas,
     }));
   });
   router.get('/nomina/periodos', ...soloAdmin, async (req, res) => res.json(await svc.periodos(validar(esquemaAnio, req.query))));

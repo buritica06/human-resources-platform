@@ -67,7 +67,7 @@ Formato de los valores: fechas `AAAA-MM-DD`, dinero en número (pesos), sí/no e
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
 | POST | `/nomina/hojas` | ADMIN | multipart `archivo`. Devuelve `{ huella, hojas: [{ nombre, inicio, fin, estadoEnPlataforma }] }` |
-| POST | `/nomina/cargas` | ADMIN | multipart `archivo`, `hoja`, `huella` (la de `/nomina/hojas`), `crearExpedientes` (`true` crea expedientes básicos RETIRADO para cédulas sin expediente). Respuesta `{ ok, errores, advertencias, faltantes, periodoId?, totales }`. Si `ok=false` **no se guarda nada**; si `ok=true` el periodo queda en BORRADOR (reemplaza un borrador previo del mismo periodo) |
+| POST | `/nomina/cargas` | ADMIN | multipart `archivo`, `hoja`, `huella` (la de `/nomina/hojas`), `crearCedulas` (cédulas confirmadas una por una como retirados: se les crea un expediente básico RETIRADO; cualquier otra cédula sin expediente bloquea). Respuesta `{ ok, errores, advertencias, faltantes, periodoId?, totales }`. Si `ok=false` **no se guarda nada**; si `ok=true` el periodo queda en BORRADOR (reemplaza un borrador previo del mismo periodo) |
 | GET | `/nomina/periodos` | ADMIN | `?anio` |
 | GET | `/nomina/periodos/:id` | ADMIN | Resumen, advertencias y volantes (vista previa) |
 | POST | `/nomina/periodos/:id/publicar` | ADMIN | Solo desde BORRADOR (si no, 409) |

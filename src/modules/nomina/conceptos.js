@@ -14,6 +14,8 @@ export const CONCEPTOS = {
   RECARGO_NOC_APARTE: { tipo: 'ADICIONAL', etiqueta: 'Recargos nocturnos (pago aparte)', orden: 20 },
   HORAS_EXTRA_APARTE: { tipo: 'ADICIONAL', etiqueta: 'Horas extras (pago aparte)', orden: 21, unidad: 'h' },
   JORNADAS_EXTRA: { tipo: 'ADICIONAL', etiqueta: 'Jornadas extra', orden: 22, unidad: 'jornadas' },
+  // Fila de extras que solo trae el neto (sin total por concepto): se muestra sin desglose
+  ADICIONAL_NETO: { tipo: 'ADICIONAL', etiqueta: 'Pago adicional (la hoja solo trae el neto)', orden: 23 },
 };
 
 // Desglose informativo de horas (hoja HORAS RESUMEN, solo si corresponde a la misma quincena)
