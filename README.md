@@ -2,7 +2,7 @@
 
 Aplicación web (primero móvil) para que los colaboradores consulten su información laboral y hagan solicitudes, y para que el área contable administre usuarios, nómina y aprobaciones.
 
-> Estado: **M0 – Autenticación**, **M1 – Expediente** y **M2 – Nómina y volantes** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
+> Estado: **M0 – Autenticación**, **M1 – Expediente**, **M2 – Nómina y volantes**, **M3 – Permisos y aprobaciones** y **M4 – Vacaciones** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
 
 ## Requisitos
 - Node.js 20.12 o superior (probado con Node 24)
@@ -23,6 +23,8 @@ npm run dev                 # http://localhost:3000
 | 1000000002 | Director administrativo (sedes Norte y Sur) |
 | 1000000003 | Colaborador |
 | 1000000004 | Colaborador |
+
+Cada uno tiene un saldo de vacaciones ficticio al 01/01/2026 para probar M4. El admincontable registra los saldos reales al corte desde el expediente (pestaña Vacaciones).
 
 Contraseña de todos: `Demo2026clave` (se puede cambiar con la variable `SEED_PASSWORD` antes de `npm run setup`). En producción **no** se crean estos usuarios.
 

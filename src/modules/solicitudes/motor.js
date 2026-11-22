@@ -192,7 +192,14 @@ export function crearMotor(ctx) {
     }
   }
 
-  async function enviar(req, id, { trx: trxExterna } = {}) {
+  // previo: lo que el tipo necesita leer ANTES de la transacción (parámetros: en SQLite hay una sola
+  // conexión y leerlos dentro bloquearía). Si la transacción es externa, lo calcula quien llama.
+  async function enviar(req, id, { trx: trxExterna, previo } = {}) {
+    if (!trxExterna && previo === undefined) {
+      const fila = await db('solicitudes').where({ id }).first();
+      const handler = fila && ctx.tiposSolicitud.get(fila.tipo);
+      previo = handler?.prepararEnvio ? await handler.prepararEnvio(ctx, fila) : null;
+    }
     const ejecutar = async (trx) => {
       const s = await cargar(id, trx);
       if (!s || s.cedula !== req.usuario.cedula) throw noEncontrado('No encontramos esa solicitud.');
@@ -200,7 +207,7 @@ export function crearMotor(ctx) {
       // En PostgreSQL, bloquea al colaborador: dos envíos simultáneos no pueden saltarse la
       // validación de cruce (en SQLite las escrituras ya son secuenciales).
       if (esPg()) await trx('colaboradores').where({ id: s.colaborador_id }).forUpdate().first('id');
-      await ctx.tiposSolicitud.get(s.tipo).revalidarAlEnviar?.(ctx, s, trx);
+      await ctx.tiposSolicitud.get(s.tipo).revalidarAlEnviar?.(ctx, s, trx, previo);
       await validarSinCruce(trx, s);
       s.flujo = await flujoActivo(s.tipo, trx);
       await verificarAprobadores(trx, s);
@@ -244,7 +251,11 @@ export function crearMotor(ctx) {
     if (!(await puedeActuar(req, s))) throw prohibido(await motivoNoPuede(req, s));
     const pasoAprobado = s.paso_actual;
     const auto = esAutoaprobacion(req, s);
+    const handler = ctx.tiposSolicitud.get(s.tipo);
+    const previo = handler.prepararAprobacion ? await handler.prepararAprobacion(ctx, s) : null; // fuera de la transacción
     await db.transaction(async (trx) => {
+      if (esPg()) await trx('colaboradores').where({ id: s.colaborador_id }).forUpdate().first('id');
+      await handler.revalidarAlAprobar?.(ctx, s, trx, previo);
       const siguiente = s.paso_actual + 1;
       const final = siguiente >= s.flujo.pasos.length;
       const nota = auto ? ['Autoaprobación del área contable', comentario].filter(Boolean).join(': ') : comentario;

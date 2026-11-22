@@ -91,9 +91,10 @@ export function limpiarErrores(form) {
   for (const el of form.querySelectorAll('.error-campo')) el.textContent = '';
 }
 
-// Marca los campos con error (campos = { nombre: mensaje }) y enfoca el primero.
+// Marca los campos con error (campos = { nombre: mensaje }) y enfoca el primero (salvo enfocar: false,
+// p. ej. en validaciones en vivo mientras la persona escribe).
 // Devuelve false si algún mensaje no tenía dónde mostrarse (el llamador debe dar un aviso general).
-export function mostrarErrores(form, campos = {}) {
+export function mostrarErrores(form, campos = {}, { enfocar = true } = {}) {
   let primero = null;
   let todos = true;
   for (const [nombre, mensaje] of Object.entries(campos)) {
@@ -113,7 +114,7 @@ export function mostrarErrores(form, campos = {}) {
       primero ??= foco;
     }
   }
-  primero?.focus();
+  if (enfocar) primero?.focus();
   return todos;
 }
 

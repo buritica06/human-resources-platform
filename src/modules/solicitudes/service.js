@@ -22,6 +22,7 @@ export function crearServicioSolicitudes(ctx) {
     const sensible = typeof handler.documentoSensible === 'function'
       ? !!(await handler.documentoSensible(ctx, campos)) : !!handler.documentoSensible;
     const maxMb = Number(await ctx.params.valor('UPLOAD_MAX_MB'));
+    const previo = enviar && handler.prepararEnvio ? await handler.prepararEnvio(ctx, campos) : null;
     let archivoGuardado = null;
     let id;
     let enviada = null;
@@ -46,7 +47,7 @@ export function crearServicioSolicitudes(ctx) {
         }).returning('id');
         id = typeof fila === 'object' ? fila.id : fila;
         await trx('solicitud_eventos').insert({ solicitud_id: id, actor_id: req.usuario.id, accion: 'CREAR', estado_desde: null, estado_hasta: 'BORRADOR', creado_en: t });
-        if (enviar) enviada = await motor.enviar(req, id, { trx });
+        if (enviar) enviada = await motor.enviar(req, id, { trx, previo });
       });
     } catch (e) {
       if (archivoGuardado) await documentos.descartar(archivoGuardado);

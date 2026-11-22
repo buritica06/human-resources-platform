@@ -96,3 +96,17 @@ erDiagram
 | **notificaciones** | id, usuario_id, titulo, mensaje, enlace, leida, creada_en | |
 
 Parámetros nuevos: `LISTA_TIPOS_PERMISO`, `PERMISO_MAX_DIAS`.
+
+## M4 (migración `20261122_006_m4_vacaciones`)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| **saldos_vacaciones** | id, colaborador_id, fecha_corte, dias_al_corte (2 decimales), observacion, registrado_por, registrado_en | Días pendientes **antes** de la fecha de corte (P8). Se conserva cada registro y vale el de fecha de corte más reciente. Los datos semilla son ficticios |
+
+Las solicitudes de vacaciones usan la tabla `solicitudes` (M3):
+- `dias_habiles` = días a disfrutar y `dias_compensar` = días en dinero.
+- `fecha_fin` = último día hábil.
+- `datos` = `{ regreso, saldoAlEnviar, festivos[] }`.
+
+### Acciones de auditoría nuevas
+`REGISTRAR_SALDO_VACACIONES` (detalle con el saldo antes y después; `autoregistro: true` si es el propio) y `VER_VACACIONES`.

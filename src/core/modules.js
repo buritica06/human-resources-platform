@@ -13,13 +13,15 @@ import nomina from '../modules/nomina/index.js';
 import notificaciones from '../modules/notificaciones/index.js';
 import solicitudes from '../modules/solicitudes/index.js';
 import permisos from '../modules/permisos/index.js';
+import vacaciones from '../modules/vacaciones/index.js';
 
-export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos];
+export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos, vacaciones];
 
 // Dependencias entre módulos: si falta una, la app no arranca (mensaje claro)
 const REQUIERE = {
   solicitudes: ['colaboradores', 'notificaciones'],
   permisos: ['solicitudes'],
+  vacaciones: ['solicitudes'],
   nomina: ['colaboradores'],
 };
 

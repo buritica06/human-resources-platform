@@ -1,5 +1,6 @@
 // Lista de MIS solicitudes de un tipo (lo usan permisos, vacaciones y licencias).
-// La página indica el tipo con <body data-tipo="PERMISO" data-nueva="/permisos/nuevo">.
+// La página indica el tipo con <body data-tipo="PERMISO" data-nueva="/permisos/nuevo">; con
+// data-cabecera="/m/…/x.js" un módulo puede poner una tarjeta arriba (p. ej. el saldo de vacaciones).
 import { api } from '/static/js/api.js';
 import { montarShell } from '/static/js/shell.js';
 import { icono } from '/static/js/iconos.js';
@@ -7,7 +8,7 @@ import { escapar, fechaHora, htmlAviso } from '/static/js/ui.js';
 import { pildoraEstado, cuando } from '/static/js/estados.js';
 
 await montarShell();
-const { tipo, nueva, etiqueta } = document.body.dataset;
+const { tipo, nueva, etiqueta, cabecera } = document.body.dataset;
 const zona = document.getElementById('zona');
 
 async function cargar() {
@@ -18,7 +19,7 @@ async function cargar() {
       return;
     }
     const enCurso = r.solicitudes.filter((s) => !s.final && s.estado !== 'BORRADOR').length;
-    zona.innerHTML = `
+    zona.innerHTML = `${cabecera ? '<div id="cabecera"></div>' : ''}
       <section class="tarjeta">
         <div class="acciones-grandes acciones-grandes--una">
           <a class="accion-grande" href="${escapar(nueva)}">${icono('agregar')} Nueva solicitud de ${escapar(etiqueta.toLowerCase())}</a>
@@ -34,8 +35,19 @@ async function cargar() {
         </li>`).join('')}</ul>`
         : `<div class="vacio">${icono('reloj')}<h3>Aún no tiene solicitudes</h3><p>Use el botón de arriba para hacer la primera. Verá aquí cómo avanza.</p></div>`}
       </section>`;
+    if (cabecera) {
+      // Un fallo de la tarjeta de arriba no debe ocultar la lista
+      const div = zona.querySelector('#cabecera');
+      try {
+        await (await import(cabecera)).montar(div);
+      } catch (err) {
+        div.innerHTML = htmlAviso('error', err.message);
+      }
+    }
   } catch (err) {
     zona.innerHTML = htmlAviso('error', err.message);
+  } finally {
+    zona.removeAttribute('aria-busy');
   }
 }
 cargar();

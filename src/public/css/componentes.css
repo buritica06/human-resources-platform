@@ -174,6 +174,15 @@ dl.datos { display: grid; grid-template-columns: 1fr; gap: var(--e-3) var(--e-6)
 .item-volante__periodo { font-weight: 700; }
 .item-volante__neto { font-size: var(--t-m); font-weight: 800; color: var(--c-primario); }
 .cifra-grande { font-size: var(--t-xl); font-weight: 800; color: var(--c-primario); margin: 0; }
+.cifra-grande__unidad { font-size: var(--t-m); font-weight: 600; }
+/* Vacaciones: cálculo en vivo y desglose del saldo */
+.calculo { margin: var(--e-4) 0; }
+.resumen-calculo { padding: var(--e-4); border-radius: var(--r-campo); background: var(--c-primario-suave); border-left: 4px solid var(--c-primario); }
+.resumen-calculo p { margin: var(--e-1) 0; display: flex; gap: var(--e-2); align-items: center; flex-wrap: wrap; }
+.datos--compacto { grid-template-columns: 1fr; }
+.datos--compacto .dato { display: flex; justify-content: space-between; gap: var(--e-3); }
+.datos--compacto dd { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tarjeta-interna { margin: var(--e-4) 0; padding: var(--e-3) var(--e-4); border: 1px solid var(--c-borde-suave); border-radius: var(--r-campo); }
 @media (max-width: 639px) { .tabla--volante tfoot tr { display: flex; justify-content: space-between; } .tabla--volante tfoot th[colspan] { padding: var(--e-1) 0; } }
 .opciones-hojas { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--e-2); }
 .opciones-hojas label { display: flex; gap: var(--e-3); align-items: center; flex-wrap: wrap; padding: var(--e-3); border: 1px solid var(--c-borde-suave); border-radius: var(--r-campo); cursor: pointer; min-height: var(--alto-toque); }

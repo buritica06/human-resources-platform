@@ -1,5 +1,68 @@
 # Cambios
 
+## [0.5.0] – 2026-11-22 · Fase 6 – M4 Vacaciones
+
+### Hecho
+- **Cálculo igual al del archivo** (verificado en las fórmulas de LIQ VACACIONES, sin leer datos personales):
+  - Días laborados: DAYS360 + 1.
+  - Último día: WORKDAY.INTL(inicio − 1, días).
+  - Regreso: siguiente día hábil.
+  - Se excluyen domingos y festivos (tabla `festivos`), y los sábados si `SABADO_HABIL` es falso.
+- **Saldo:**
+  - Fórmula: saldo al corte + causado (`VAC_DIAS_HABILES_ANIO` / 360 por día laborado) − disfrutado − compensado.
+  - Lo que está en trámite queda reservado.
+  - En "Mis vacaciones", el Inicio y el expediente se muestra con el desglose de "¿Cómo se calcula?".
+- **Saldo al corte (P8):** el admincontable lo registra desde la pestaña Vacaciones del expediente. Se guarda con historial y auditoría. Sin saldo registrado no se puede solicitar, y se explica por qué.
+- **Solicitud:**
+  - Se pide el primer día y los días hábiles, más una compensación en dinero opcional.
+  - Un **cálculo en vivo** muestra el último día, el regreso, los festivos del periodo y el saldo antes y después.
+  - Antes de enviar se pide confirmación en lenguaje claro, con los pasos de aprobación.
+  - Usa el mismo motor y flujo de M3: director → admincontable.
+- **Validaciones:**
+  - El inicio debe ser un día hábil (si no, se sugiere el siguiente), desde hoy y hasta un año adelante.
+  - Compensación ≤ `VAC_COMPENSACION_MAX_PCT` % del total.
+  - No se puede superar el saldo.
+  - No puede cruzarse con otras ausencias.
+  - Si faltan los festivos de un año, se muestra un aviso claro.
+  - Al enviar un borrador se recalcula todo, y **al aprobar** se revalida el saldo (409 si ya no alcanza).
+- **Motor:**
+  - Hooks `prepararEnvio` y `prepararAprobacion`, que leen los parámetros antes de la transacción, y `revalidarAlAprobar`.
+  - En PostgreSQL, el colaborador queda bloqueado al enviar y al aprobar.
+- **Decisión del negocio:** el admincontable aprueba sus propias solicitudes en el paso contable (autoaprobación marcada en el historial y la auditoría).
+
+### Revisión independiente (corregido)
+- Saldos con decimales como 1,15 o 4,35 se rechazaban por un error de redondeo binario.
+- Un corte con fecha anterior al vigente se aceptaba sin efecto.
+- Días vacíos se registraban como 0.
+- Un parámetro no numérico desactivaba en silencio las validaciones. Ahora falla con un error de configuración.
+- Aprobar no revalidaba el saldo.
+- Se podía enviar un borrador de alguien retirado.
+- El simulador no avisaba de cruces con otras ausencias.
+- No quedaba auditada la consulta del saldo ajeno.
+- El autorregistro del saldo del admincontable no quedaba marcado.
+- El texto de la compensación era ambiguo.
+- Validación en vivo: ya no marca `aria-invalid` mientras se escribe; al enviar enfoca el error o muestra un aviso.
+- En "Mis vacaciones", un fallo de la tarjeta de saldo ya no oculta la lista.
+
+### Pruebas
+- `npm test`: **194/194**. Las nuevas son:
+  - 7 unitarias del calendario: festivo en lunes, cambio de año, sábado hábil sí y no, bisiesto y DAYS360.
+  - 17 de integración de vacaciones.
+  - 10 de regresión de la revisión.
+- `npm run lint` sin errores.
+- En el navegador:
+  - Cálculo en vivo (15 días del 23/12/2026 → 12/01/2027, regreso 13/01/2027, con Navidad, Año Nuevo y Reyes).
+  - Tope de compensación.
+  - Confirmación, envío y detalle con regreso y festivos.
+  - Aprobación.
+  - Pestaña del expediente con registro de saldo al corte.
+  - Inicio y "Mis vacaciones" a 375 px sin desbordamiento.
+
+### Pendiente / riesgos
+- M6 debe restar del causado las licencias no remuneradas y las suspensiones.
+- Una solicitud aprobada no se puede revertir (pendiente para M8).
+- Hay que cargar los festivos de 2028 antes de 2027-12 (el sistema avisa si faltan).
+- Si el inicio y el fin son fin de febrero, DAYS360 puede diferir de Excel en hasta 2 días sobre 360. Falta verificarlo en Excel.
 ## [0.4.1] – 2026-11-22 · M3 – Correcciones de la revisión independiente
 
 ### Corregido

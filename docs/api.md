@@ -105,3 +105,41 @@ Validaciones de la carga: fechas en S1/T1; encabezados de la tabla de nómina; c
 **Reglas del flujo (separación de funciones):** en cada paso actúa solo quien tiene ese rol (el director, solo en sus sedes); el admincontable no atiende el paso del director. Nadie aprueba dos pasos de la misma solicitud ni aprueba lo propio, **excepto el admincontable en el paso contable**, que aprueba sus propias solicitudes (decisión del negocio; queda como "Autoaprobación del área contable" en el historial y `autoaprobacion: true` en la auditoría; lo propio no se rechaza, se cancela). Si no hay un director elegible (la sede no tiene, o el solicitante es el director), ese paso se **omite** automáticamente (evento `OMITIR`) y pasa al área contable. Si no hay ningún admincontable activo, no se puede enviar (400). Cada transición es una actualización condicionada (409 si cambió mientras tanto). Las fallas de correo o notificación se registran en el log y no deshacen la acción.
 
 **Documentos sensibles:** el soporte de los permisos de tipos en `LISTA_TIPOS_PERMISO_SENSIBLES` (por defecto, CITA MÉDICA) es dato de salud: el director no lo ve. Un PDF debe empezar con `%PDF-`; se rechaza contenido activo aunque venga escondido con escapes `#xx`.
+
+## M4 – Vacaciones (`vacaciones`)
+
+Crear, enviar, aprobar, rechazar y cancelar usan las rutas genéricas de solicitudes con `tipo=VACACIONES` y los campos `fecha_inicio`, `dias` (hábiles a disfrutar, entero ≥ 1), `dias_compensar` (entero ≥ 0, opcional) y `motivo` (observaciones, opcional). El servidor calcula `fecha_fin`, el regreso y el saldo; no se aceptan desde el cliente.
+
+| Método | Ruta | Quién | Notas |
+|---|---|---|---|
+| GET | `/vacaciones/opciones` | sesión | `{ hoy, sabadoHabil, pctCompensacion, diasPorAnio, festivos[] }` (festivos del próximo año) |
+| GET | `/me/vacaciones/saldo` | sesión | Saldo propio: `{ registrado, fechaCorte, diasAlCorte, diasLaborados, causadosDesdeCorte, disfrutados, compensados, enTramite, disponibles, paraSolicitar, calculadoAl, diasPorAnio }` |
+| POST | `/vacaciones/simular` | sesión con expediente | `{ fecha_inicio, dias, dias_compensar? }` → `{ fechaInicio, fechaFin, regreso, diasCalendario, festivos[], saldoAntes, saldoDespues, maxCompensar }`. Mismas validaciones que al crear (400 con errores por campo); no guarda nada |
+| GET | `/colaboradores/:id/vacaciones` | el propio, ADMIN, DIRECTOR de la sede; si no, **404** | `{ saldo, cortes[], puedeRegistrar }` (`cortes` solo para director y admin) |
+| POST | `/colaboradores/:id/vacaciones/corte` | ADMIN | `{ fecha_corte, dias, observacion }`: registra el saldo al corte (historial; vale el de fecha más reciente). Auditado como `REGISTRAR_SALDO_VACACIONES` con antes y después |
+
+**Reglas (parámetros con vigencia):**
+- **Causados** = saldo al corte + (DAYS360(corte, hoy) + 1) × `VAC_DIAS_HABILES_ANIO` / 360. Es la misma fórmula de LIQ VACACIONES.
+- **Disfrutados y compensados:** solicitudes APROBADAS que empiezan desde la fecha de corte.
+- **En trámite:** las pendientes reservan sus días.
+- **Para solicitar** = disponibles − en trámite.
+- **Días hábiles:** excluyen domingos, festivos (tabla `festivos`) y sábados si `SABADO_HABIL` es falso.
+  - Fin = WORKDAY.INTL(inicio − 1, días).
+  - Regreso = siguiente día hábil.
+  - Si faltan los festivos de algún año del rango, no se calcula (400).
+- **Validaciones:**
+  - El inicio debe ser un día hábil, desde hoy y hasta un año adelante. Si no es hábil, se sugiere el siguiente.
+  - Compensación ≤ `VAC_COMPENSACION_MAX_PCT` % de los días de la solicitud.
+  - Disfrute + compensación ≤ saldo para solicitar.
+  - Sin cruce con otras ausencias.
+  - Sin saldo al corte registrado no se puede solicitar.
+- **Al enviar**, también un borrador viejo, se recalcula todo dentro de la transacción y se actualizan fin, regreso y saldo. En PostgreSQL, el colaborador queda bloqueado (`FOR UPDATE`) para que dos envíos simultáneos no gasten el mismo saldo.
+- **Al aprobar** (cada paso), el saldo se recalcula sin contar la solicitud. Si ya no alcanza (por ejemplo, porque el área contable registró un saldo menor) o el colaborador se retiró, se responde **409** y la solicitud sigue pendiente.
+- **Compensación (interpretación de CST art. 189):** lo compensado puede ser hasta `VAC_COMPENSACION_MAX_PCT` % del **total** de la solicitud (disfrute + dinero). Con 50 %, se compensan como máximo tantos días como los que se disfrutan.
+- **Saldo al corte:**
+  - No se acepta una fecha anterior al corte vigente. Para corregir, se usa la misma fecha o una posterior.
+  - Los días se registran con hasta 2 decimales (se acepta coma).
+  - Si el admincontable registra su propio saldo, la auditoría lo marca con `autoregistro: true`.
+  - Consultar el saldo de otro colaborador se audita como `VER_VACACIONES`.
+- Una solicitud **aprobada** no se cancela desde la plataforma (decisión pendiente: reversión por el admincontable, M8).
+- **Pendiente M6:** restar de los días laborados las licencias no remuneradas y las suspensiones.
