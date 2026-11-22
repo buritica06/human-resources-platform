@@ -5,11 +5,20 @@ import { ahora } from '../../core/db.js';
 import { CAMPOS, GRUPOS, POR_CLAVE, ESTADOS } from './campos.js';
 import { normalizarCambios, reglasCruzadas } from './validators.js';
 import { crearRepositorioColaboradores, POR_PAGINA } from './repository.js';
+import { log } from '../../core/logger.js';
+
+// Campos que involucra cada regla entre campos (validators.reglasCruzadas). Una regla se
+// verifica si cambia CUALQUIERA de sus campos.
+const CAMPOS_REGLA = {
+  sede_id: ['sede_id', 'empleador_id'],
+  fecha_fin_contrato: ['fecha_fin_contrato', 'fecha_ingreso'],
+  fecha_retiro: ['fecha_retiro', 'estado', 'fecha_ingreso'],
+};
 
 const CAMPOS_PAGO = CAMPOS.filter((c) => c.director === false).map((c) => c.clave);
 const LISTAS = [...new Set(CAMPOS.filter((c) => c.lista && !c.lista.startsWith('_')).map((c) => c.lista))];
 
-export const mascaraCuenta = (n) => (n ? `•••• ${String(n).slice(-4)}` : null);
+export const mascaraCuenta = (n) => (!n ? null : /^\d+$/.test(n) ? `•••• ${String(n).slice(-4)}` : n);
 
 export function crearServicioColaboradores(ctx) {
   const { db, params, auditar, cifrador } = ctx;
@@ -44,7 +53,18 @@ export function crearServicioColaboradores(ctx) {
     return c;
   }
 
-  const descifrarCuenta = (c) => (c.numero_cuenta_cifrado ? cifrador.descifrar(c.numero_cuenta_cifrado) : null);
+  // Si el dato no se puede descifrar (p. ej. se cambió DATA_ENCRYPTION_KEY) no se tumba la página:
+  // se registra el error y se muestra como ilegible.
+  const ILEGIBLE = '(no se puede leer)';
+  function descifrarCuenta(c) {
+    if (!c.numero_cuenta_cifrado) return null;
+    try {
+      return cifrador.descifrar(c.numero_cuenta_cifrado);
+    } catch (e) {
+      log.error('No se pudo descifrar un número de cuenta', { colaborador: c.id, error: e.message });
+      return ILEGIBLE;
+    }
+  }
 
   // vista: PROPIO | DIRECTOR | ADMIN
   function presentar(c, vista) {
@@ -126,15 +146,21 @@ export function crearServicioColaboradores(ctx) {
     return { update, hist };
   }
 
+  // Las diferencias se calculan DENTRO de la transacción, con el registro releído (y bloqueado
+  // en PostgreSQL), para que dos ediciones simultáneas no dejen un historial impreciso.
   async function aplicarCambios(req, c, limpios, origen, v) {
-    const { update, hist } = diferencias(c, limpios, origen, req.usuario.id, v);
-    if (!hist.length) return [];
-    await db.transaction(async (trx) => {
+    const campos = await db.transaction(async (trx) => {
+      const q = trx('colaboradores').where({ id: c.id });
+      if (db.client.config.client === 'pg') q.forUpdate();
+      const actual = await q.first();
+      const { update, hist } = diferencias(actual, limpios, origen, req.usuario.id, v);
+      if (!hist.length) return [];
       await repo.actualizar(trx, c.id, update);
       await repo.registrarCambios(trx, hist.map((h) => ({ ...h, colaborador_id: c.id })));
+      return hist.map((h) => h.campo);
     });
-    await auditar(req, { accion: 'EDITAR', entidad: 'colaborador', entidadId: c.id, detalle: { origen, campos: hist.map((h) => h.campo) } });
-    return hist.map((h) => h.campo);
+    if (campos.length) await auditar(req, { accion: 'EDITAR', entidad: 'colaborador', entidadId: c.id, detalle: { origen, campos } });
+    return campos;
   }
 
   // En el historial se guarda el texto legible (nombre de la sede, SI/NO), no el id.
@@ -152,11 +178,10 @@ export function crearServicioColaboradores(ctx) {
     if (Object.keys(errores).length) throw invalido('Revise los datos marcados.', errores);
     const resultante = { ...c, ...limpios };
     const cruzados = reglasCruzadas(resultante, v);
-    // Solo se reportan reglas cruzadas que involucren lo que se está cambiando o la consistencia empleador/sede
-    const relevantes = Object.fromEntries(Object.entries(cruzados).filter(([k]) =>
-      k in limpios ||
-      (k === 'sede_id' && ('empleador_id' in limpios || 'sede_id' in limpios)) ||
-      (k === 'fecha_retiro' && ('estado' in limpios || 'fecha_retiro' in limpios))));
+    // Se exige toda regla que involucre CUALQUIER campo que cambia (p. ej. mover la fecha de
+    // ingreso después de la de retiro). Las inconsistencias ya existentes en otros datos no bloquean.
+    const relevantes = Object.fromEntries(Object.entries(cruzados).filter(([regla]) =>
+      (CAMPOS_REGLA[regla] ?? [regla]).some((campo) => campo in limpios)));
     if (Object.keys(relevantes).length) throw invalido('Revise los datos marcados.', relevantes);
     return aplicarCambios(req, c, limpios, origen, v);
   }
@@ -186,12 +211,15 @@ export function crearServicioColaboradores(ctx) {
   async function miHistorial(req) {
     const c = await repo.porCedula(req.usuario.cedula);
     if (!c) throw new ErrorApp(404, 'SIN_EXPEDIENTE', 'Aún no tiene un expediente registrado.');
+    await auditar(req, { accion: 'VER_HISTORIAL', entidad: 'colaborador', entidadId: c.id, detalle: { propio: true } });
     return { cambios: presentarHistorial(await repo.historial(c.id)) };
   }
 
   async function listar(req, filtros) {
     const a = await alcance(req);
     const { total, filas } = await repo.listar(filtros, a);
+    // Ley 1581: queda registro de quién consultó la lista y con qué filtros
+    await auditar(req, { accion: 'BUSCAR', entidad: 'colaborador', detalle: { q: filtros.q ?? null, sede: filtros.sede ?? null, estado: filtros.estado ?? null, pagina: filtros.pagina, resultados: total } });
     return {
       total, pagina: filtros.pagina, porPagina: POR_PAGINA,
       colaboradores: filas.map((f) => ({ id: f.id, cedula: f.cedula, nombre: f.nombre, cargo: f.cargo, estado: f.estado, sede: f.sede_nombre })),
@@ -214,6 +242,7 @@ export function crearServicioColaboradores(ctx) {
 
   async function historial(req, id) {
     await cargarConAlcance(req, id);
+    await auditar(req, { accion: 'VER_HISTORIAL', entidad: 'colaborador', entidadId: id });
     const excluir = req.usuario.rol === 'DIRECTOR' ? CAMPOS_PAGO : [];
     return { cambios: presentarHistorial(await repo.historial(id, excluir)) };
   }

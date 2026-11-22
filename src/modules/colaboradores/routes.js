@@ -27,7 +27,7 @@ export function montarRutasColaboradores(router, ctx) {
     if (!req.file) throw invalido('Adjunte el libro de nómina (.xlsx o .xlsm).', { archivo: 'Adjunte el archivo.' });
     if (!/\.(xlsx|xlsm)$/i.test(req.file.originalname)) throw invalido('El archivo debe ser .xlsx o .xlsm.', { archivo: 'Formato no permitido.' });
     const r = req.body?.confirmar === 'true'
-      ? await importador.confirmar(req, req.file.buffer)
+      ? await importador.confirmar(req, req.file.buffer, String(req.body?.huella ?? ''))
       : await importador.vistaPrevia(req.file.buffer);
     res.json(r);
   });

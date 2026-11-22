@@ -18,6 +18,12 @@ before(async () => {
 });
 after(() => env.cerrar());
 
+// Importación en dos pasos, como en la interfaz: vista previa → confirmar con la huella
+async function importar(archivo) {
+  const p = await admin.subir('/colaboradores/importar', path.join(FIX, archivo), { confirmar: 'false' });
+  return admin.subir('/colaboradores/importar', path.join(FIX, archivo), { confirmar: 'true', huella: p.body.huella ?? '' });
+}
+
 const idColab = async (cedula) => (await env.ctx.db('colaboradores').where({ cedula }).first()).id;
 const fila = (cedula) => env.ctx.db('colaboradores').where({ cedula }).first();
 
@@ -217,13 +223,13 @@ describe('importación desde el libro de nómina', () => {
   test('archivo con errores: se reportan por fila y no se escribe nada', async () => {
     const r = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-con-errores.xlsx'), { confirmar: 'false' });
     assert.ok(r.body.errores.length >= 4, JSON.stringify(r.body.errores));
-    const c = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-con-errores.xlsx'), { confirmar: 'true' });
+    const c = await importar('empleados-con-errores.xlsx');
     assert.equal(c.status, 400);
     assert.equal(await fila('2000000002'), undefined);
   });
 
   test('confirmar: crea expedientes y organización, cuenta cifrada, historial de alta', async () => {
-    const r = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-ficticio.xlsx'), { confirmar: 'true' });
+    const r = await importar('empleados-ficticio.xlsx');
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.creados, 8);
     const f = await fila('2000000001');
@@ -249,7 +255,7 @@ describe('importación desde el libro de nómina', () => {
     assert.equal(r.body.sinCambios, 8);
     // El colaborador cambió su celular; el admin cambió el salario en la plataforma
     await env.ctx.db('colaboradores').where({ cedula: '2000000002' }).update({ celular: '3209998877', salario_base: 1900000 });
-    r = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-ficticio.xlsx'), { confirmar: 'true' });
+    r = await importar('empleados-ficticio.xlsx');
     assert.deepEqual(r.body.actualizar.map((a) => a.cedula), ['2000000002']);
     assert.deepEqual(r.body.actualizar[0].campos, ['Salario base mensual']);
     const f = await fila('2000000002');

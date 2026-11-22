@@ -41,6 +41,30 @@
   - Director: lista de su sede y detalle sin datos de pago ni edición.
   - Admin: los 36 campos editables, sedes filtradas por empleador y ver la cuenta.
 
+### Revisión independiente de M1
+Veredicto inicial: "sí con correcciones". El control de acceso, el cifrado de la cuenta y el historial no tenían hallazgos. Se corrigieron los 3 altos, los 5 medios y los 8 bajos, con 12 pruebas de regresión en `tests/integration/revision-m1.test.js`:
+1. **ALTO.** Un valor fuera de la lista que no cabe en su columna (p. ej. ARL "RIESGO MUY ALTO" en 5 caracteres) se omite con advertencia. Antes daba 500 en PostgreSQL. Cada campo de lista tiene su `max`.
+2. **ALTO.** La hoja PARAMETROS se valida en la vista previa:
+   - Las claves repetidas se ignoran.
+   - Una clave de más de 30 caracteres, una sede de un empleador inexistente o una sede desactivada salen como error.
+   - Nada de esto puede fallar ya en la confirmación.
+3. **ALTO.** La clave de cifrado de desarrollo solo se usa con `NODE_ENV` en development o test **y** `APP_URL` en localhost. El servidor avisa al arrancar si la está usando o si no hay ninguna.
+4. **MEDIO.** Las reglas entre campos se aplican si cambia cualquiera de sus fechas. Por ejemplo, mover la fecha de ingreso después del retiro ahora se rechaza.
+5. **MEDIO.** En la reimportación, una celda vacía no borra el dato guardado (cuenta, salario, EPS…), y un retirado con ESTADO vacío sigue RETIRADO.
+6. **MEDIO.** Solo se confirma el mismo archivo que se revisó: la vista previa devuelve una huella SHA-256 y la confirmación la exige. Además, cambiar de archivo en la interfaz borra la revisión anterior.
+7. **MEDIO.** Se auditan también la consulta del historial (`VER_HISTORIAL`) y las búsquedas de la lista (`BUSCAR`, con sus filtros).
+8. **MEDIO.** Las columnas se mapean con alias ("TIPO DE CONTRATO", "Nº CUENTA" con º ordinal…). "ESTADO" exige coincidencia exacta, así que no se confunde con "ESTADO CIVIL", y la vista previa avisa qué columnas faltan.
+9. **BAJO.**
+   - Las fechas de Excel con hora no saltan al día siguiente.
+   - No se asigna a sedes inactivas.
+   - Si la sede actual no es del empleador elegido, se pide elegirla en vez de cambiarla en silencio.
+   - Sin `?id` sale un mensaje claro.
+   - La cuenta revelada se anuncia al lector de pantalla.
+   - Una cuenta que no se puede descifrar muestra "(no se puede leer)" en lugar de un 500.
+   - Las diferencias del historial se calculan dentro de la transacción (con bloqueo en PostgreSQL).
+
+Resultado: **97/97 pruebas** y lint sin errores. El libro real se sigue importando completo (20 expedientes, 0 errores). Verificación en el navegador de los cambios de interfaz.
+
 ## [0.1.0] – 2026-11-21 · Fase 2 – M0 Autenticación y cuentas
 
 ### Hecho

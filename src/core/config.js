@@ -28,9 +28,8 @@ export function cargarConfig(overrides = {}) {
       filename: path.resolve(RAIZ, leer('DB_FILENAME', './data/th.sqlite')),
       url: leer('DATABASE_URL', ''),
     },
-    // En desarrollo, si no hay clave, se usa una fija SOLO para datos ficticios locales.
-    // En producción es obligatoria (ver validación abajo).
-    claveCifrado: leer('DATA_ENCRYPTION_KEY', env === 'production' ? '' : CLAVE_DESARROLLO),
+    // Ver abajo: sin clave, solo en desarrollo/pruebas locales se usa una clave fija.
+    claveCifrado: leer('DATA_ENCRYPTION_KEY', ''),
     modulos: leer('MODULES_ENABLED', 'auth,usuarios,colaboradores')
       .split(',')
       .map((s) => s.trim())
@@ -61,6 +60,14 @@ export function cargarConfig(overrides = {}) {
     throw new Error('APP_URL usa https pero NODE_ENV no es "production". Configure NODE_ENV=production.');
   }
   cfg.esLocal = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(cfg.appUrl);
+
+  // Clave fija de cifrado SOLO para datos ficticios en desarrollo o pruebas en localhost.
+  // En cualquier otro caso, sin DATA_ENCRYPTION_KEY la app no puede cifrar (falla al guardar
+  // datos sensibles) y en producción ni siquiera arranca.
+  if (!cfg.claveCifrado && !cfg.produccion && ['development', 'test'].includes(cfg.env) && cfg.esLocal) {
+    cfg.claveCifrado = CLAVE_DESARROLLO;
+    cfg.claveDesarrollo = true;
+  }
 
   if (cfg.produccion) {
     if (!/^[0-9a-f]{64}$/i.test(cfg.claveCifrado) || cfg.claveCifrado === CLAVE_DESARROLLO) {

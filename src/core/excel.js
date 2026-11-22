@@ -9,6 +9,7 @@ export const normalizar = (s) =>
   String(s ?? '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    .replace(/º/g, '°') // "Nº" (ordinal) y "N°" (grado) se tratan igual
     .replace(/\s+/g, ' ')
     .toUpperCase()
     .trim();
@@ -32,7 +33,8 @@ export function fechaCelda(v) {
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? undefined : v.toISOString().slice(0, 10);
   if (typeof v === 'number') {
     if (v < 1 || v > 80000) return undefined;
-    return new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86_400_000).toISOString().slice(0, 10);
+    // Math.floor: una fecha con hora (p. ej. 46023,75) sigue siendo el mismo día
+    return new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86_400_000).toISOString().slice(0, 10);
   }
   const s = String(v).trim();
   let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);

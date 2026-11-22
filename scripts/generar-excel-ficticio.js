@@ -111,6 +111,34 @@ export async function generar() {
   ]);
   await malo.xlsx.writeFile(path.join(DIR, 'empleados-con-errores.xlsx'));
 
+  // PARAMETROS defectuosa: clave repetida (se ignora), clave demasiado larga y sede de un
+  // empleador que no existe (ambas deben salir como error en la vista previa, no como 500).
+  const pm = new ExcelJS.Workbook();
+  const hp = pm.addWorksheet('PARAMETROS');
+  hp.getRow(4).values = [];
+  hp.getCell('K4').value = 'CLAVE';
+  hp.getCell('M4').value = 'NOMBRE COMPLETO (liquidaciones)';
+  hp.getCell('P4').value = 'EMPLEADOR';
+  hp.getCell('Q4').value = 'SEDE (título en la nómina, en este orden)';
+  [['EMP_A', 'EMPLEADOR DEMO A'], ['EMP_A', 'EMPLEADOR DEMO A'], ['X'.repeat(40), 'CLAVE LARGA']].forEach(([k, n], i) => {
+    hp.getCell(`K${6 + i}`).value = k;
+    hp.getCell(`M${6 + i}`).value = n;
+  });
+  hp.getCell('P6').value = 'EMP_A';
+  hp.getCell('Q6').value = 'SEDE NORTE';
+  hp.getCell('P7').value = 'EMP_ZZ';
+  hp.getCell('Q7').value = 'SEDE FANTASMA';
+  hojaEmpleados(pm, EMPLEADOS_FICTICIOS.slice(0, 1));
+  await pm.xlsx.writeFile(path.join(DIR, 'parametros-malos.xlsx'));
+
+  // Encabezados con variantes ("TIPO DE CONTRATO", "Nº CUENTA" con º ordinal, "ESTADO CIVIL"
+  // antes de "ESTADO", sin columna CAJA) y celdas vacías que NO deben borrar datos existentes.
+  const va = new ExcelJS.Workbook();
+  const hv = va.addWorksheet('EMPLEADOS');
+  hv.getRow(4).values = ['CÉDULA', 'NOMBRE', 'EMPLEADOR', 'SEDE', 'ESTADO CIVIL', 'ESTADO', 'TIPO DE CONTRATO', 'Nº CUENTA', 'SALARIO BASE', 'RIESGO ARL', 'EPS'];
+  hv.getRow(5).values = [2000000001, 'ACOSTA BELTRAN CAMILO ANDRES', 'EMP_A', 'SEDE NORTE', '', '', 'FIJO 1 AÑO', '', '', 'RIESGO MUY ALTO', ''];
+  await va.xlsx.writeFile(path.join(DIR, 'empleados-variantes.xlsx'));
+
   const sinHoja = new ExcelJS.Workbook();
   sinHoja.addWorksheet('OTRA').getCell('A1').value = 'sin hoja de empleados';
   await sinHoja.xlsx.writeFile(path.join(DIR, 'sin-hoja-empleados.xlsx'));

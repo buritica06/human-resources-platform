@@ -23,7 +23,9 @@ if (!propio) document.getElementById('volver').hidden = false;
 
 async function cargar() {
   try {
-    if (!propio && !Number.isInteger(id)) throw Object.assign(new Error('Falta el colaborador.'), { status: 404 });
+    if (!propio && !(Number.isInteger(id) && id > 0)) {
+      throw new Error('No se indicó qué colaborador ver. Vuelva a la lista de colaboradores y elija uno.');
+    }
     datos = await api(base);
     pintar();
   } catch (err) {
@@ -209,7 +211,10 @@ function alternarEdicion(si) {
       const filtrar = () => {
         const actual = Number(sede.value);
         const ops = todas.filter((o) => o.empleador === Number(emp.value));
-        sede.innerHTML = ops.map((o) => `<option value="${o.valor}" ${o.valor === actual ? 'selected' : ''}>${escapar(o.texto)}</option>`).join('');
+        // Si la sede actual no es del empleador elegido, se pide elegir una (no se cambia en silencio).
+        const valida = ops.some((o) => o.valor === actual);
+        sede.innerHTML = (valida ? '' : '<option value="" selected>— Elija la sede —</option>')
+          + ops.map((o) => `<option value="${o.valor}" ${o.valor === actual ? 'selected' : ''}>${escapar(o.texto)}</option>`).join('');
       };
       emp.addEventListener('change', filtrar);
       filtrar();
@@ -270,7 +275,9 @@ async function verCuenta(e) {
   const b = e.currentTarget;
   try {
     const r = await api(`/colaboradores/${id}/cuenta`);
-    b.parentElement.innerHTML = `<span class="secreto-inline">${escapar(r.numeroCuenta)}</span> <span class="ayuda">(consulta registrada)</span>`;
+    const dd = b.parentElement;
+    dd.setAttribute('role', 'status'); // el lector de pantalla anuncia el número revelado
+    dd.innerHTML = `<span class="secreto-inline">${escapar(r.numeroCuenta)}</span> <span class="ayuda">(consulta registrada)</span>`;
   } catch (err) {
     toast(err.message, 'error');
   }

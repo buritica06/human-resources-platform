@@ -102,9 +102,16 @@ document.getElementById('btn-importar').addEventListener('click', () => {
   const form = d.querySelector('form');
   const vista = d.querySelector('#imp-vista');
   const msg = d.querySelector('#imp-msg');
+  let huella = null; // huella del archivo revisado: solo ese se puede confirmar
+  form.elements.archivo.addEventListener('change', () => {
+    huella = null;
+    vista.innerHTML = '';
+    msg.hidden = true;
+  });
   const enviar = (confirmarImp) => {
     const fd = new FormData();
     fd.append('confirmar', String(confirmarImp));
+    if (confirmarImp) fd.append('huella', huella ?? '');
     fd.append('archivo', form.elements.archivo.files[0]);
     return api('/colaboradores/importar', { metodo: 'POST', formulario: fd });
   };
@@ -119,6 +126,7 @@ document.getElementById('btn-importar').addEventListener('click', () => {
     await conCarga(form.querySelector('[type=submit]'), async () => {
       try {
         const r = await enviar(false);
+        huella = r.huella;
         const hayCambios = r.nuevos.length || r.actualizar.length || r.empleadoresNuevos.length || r.sedesNuevas.length;
         vista.innerHTML = `<h3>Resultado de la revisión</h3>
           <ul>

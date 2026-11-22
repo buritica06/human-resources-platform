@@ -7,35 +7,67 @@ import { ahora } from '../../core/db.js';
 import { leerLibro, hoja, buscarEncabezado, valorCelda, fechaCelda, cedulaCelda, normalizar } from '../../core/excel.js';
 import { normalizarCampo, reglasCruzadas } from './validators.js';
 import { POR_CLAVE } from './campos.js';
+import { sha256 } from '../../core/security/cripto.js';
 
-// Encabezado del Excel (normalizado, por prefijo) → campo del expediente
+// Campo del expediente ← encabezados aceptados del Excel (normalizados: sin tildes, en mayúsculas).
+// exacto: el encabezado debe coincidir completo (evita que "ESTADO CIVIL" se tome como "ESTADO").
+// Los demás aceptan prefijo ("AUX. TRANSP. (SI/NO)", "DÍA DE DESCANSO (dominical pactado)").
 const COLUMNAS = [
-  ['CEDULA', 'cedula'], ['NOMBRE', 'nombre'], ['EMPLEADOR', '_empleador'], ['SEDE', '_sede'], ['CARGO', 'cargo'],
-  ['TIPO CONTRATO', 'tipo_contrato'], ['FECHA INGRESO', 'fecha_ingreso'], ['FECHA FIN CONTRATO', 'fecha_fin_contrato'],
-  ['SALARIO BASE', 'salario_base'], ['AUX. TRANSP', 'aux_transporte'], ['EPS', 'eps'], ['AFP', 'afp'],
-  ['CESANTIAS', 'fondo_cesantias'], ['CAJA', 'caja'], ['RIESGO ARL', 'arl_riesgo'], ['BANCO', 'banco'],
-  ['TIPO CUENTA', 'tipo_cuenta'], ['N° CUENTA', 'numero_cuenta'], ['ESTADO', 'estado'], ['FECHA RETIRO', 'fecha_retiro'],
-  ['MOTIVO RETIRO', 'motivo_retiro'], ['CELULAR', 'celular'], ['DIA DE DESCANSO', 'dia_descanso'],
-  ['ESQUEMA DE HORAS', 'esquema_horas'], ['LACTANCIA', 'lactancia'], ['FIN LACTANCIA', 'fin_lactancia'],
+  ['cedula', ['CEDULA', 'CC', 'C.C.'], true],
+  ['nombre', ['NOMBRE', 'NOMBRE COMPLETO', 'NOMBRES Y APELLIDOS', 'APELLIDOS Y NOMBRES'], true],
+  ['_empleador', ['EMPLEADOR'], true],
+  ['_sede', ['SEDE'], true],
+  ['cargo', ['CARGO'], true],
+  ['tipo_contrato', ['TIPO CONTRATO', 'TIPO DE CONTRATO']],
+  ['fecha_ingreso', ['FECHA INGRESO', 'FECHA DE INGRESO']],
+  ['fecha_fin_contrato', ['FECHA FIN CONTRATO', 'FECHA FIN DE CONTRATO', 'FECHA FIN']],
+  ['salario_base', ['SALARIO BASE', 'SALARIO', 'SUELDO BASICO', 'SALARIO BASICO']],
+  ['aux_transporte', ['AUX. TRANSP', 'AUX TRANSP', 'AUXILIO DE TRANSPORTE', 'AUXILIO TRANSPORTE']],
+  ['eps', ['EPS'], true],
+  ['afp', ['AFP', 'PENSION', 'FONDO DE PENSION'], true],
+  ['fondo_cesantias', ['CESANTIAS', 'FONDO DE CESANTIAS', 'FONDO CESANTIAS'], true],
+  ['caja', ['CAJA', 'CAJA DE COMPENSACION', 'CCF'], true],
+  ['arl_riesgo', ['RIESGO ARL', 'CLASE DE RIESGO', 'ARL RIESGO', 'RIESGO']],
+  ['banco', ['BANCO'], true],
+  ['tipo_cuenta', ['TIPO CUENTA', 'TIPO DE CUENTA']],
+  ['numero_cuenta', ['N° CUENTA', 'NO. CUENTA', 'NUMERO DE CUENTA', 'NUMERO CUENTA', 'CUENTA'], true],
+  ['estado', ['ESTADO'], true],
+  ['fecha_retiro', ['FECHA RETIRO', 'FECHA DE RETIRO']],
+  ['motivo_retiro', ['MOTIVO RETIRO', 'MOTIVO DE RETIRO']],
+  ['celular', ['CELULAR', 'TELEFONO', 'TELEFONO CELULAR'], true],
+  ['dia_descanso', ['DIA DE DESCANSO', 'DIA DESCANSO']],
+  ['esquema_horas', ['ESQUEMA DE HORAS', 'ESQUEMA']],
+  ['fin_lactancia', ['FIN LACTANCIA', 'FIN DE LACTANCIA', 'FECHA FIN LACTANCIA'], true],
+  ['lactancia', ['LACTANCIA']],
 ];
 const CRITICOS = new Set(['cedula', 'nombre', '_empleador', '_sede', 'estado']);
 
+// Devuelve { mapa: {campo → columna}, faltantes: [campo] }
 function mapearColumnas(columnas) {
   const mapa = {};
-  for (const [texto, col] of columnas) {
-    // Coincidencia exacta primero (EPS, AFP, CAJA…), luego por prefijo ("AUX. TRANSP. (SI/NO)")
-    const exacta = COLUMNAS.find(([enc]) => texto === normalizar(enc));
-    const prefijo = exacta ?? COLUMNAS.find(([enc]) => texto.startsWith(normalizar(enc)) && !(normalizar(enc) === 'NOMBRE' || normalizar(enc) === 'SEDE'));
-    if (prefijo && !(prefijo[1] in mapa)) mapa[prefijo[1]] = col;
+  // 1) coincidencias exactas; 2) por prefijo solo para los campos que lo permiten
+  for (const exactas of [true, false]) {
+    for (const [texto, col] of columnas) {
+      if (Object.values(mapa).includes(col)) continue;
+      const def = COLUMNAS.find(([campo, alias, soloExacto]) =>
+        !(campo in mapa) && alias.some((a) => (exactas ? texto === normalizar(a) : !soloExacto && texto.startsWith(normalizar(a)))));
+      if (def) mapa[def[0]] = col;
+    }
   }
-  return mapa;
+  const faltantes = COLUMNAS.map(([campo]) => campo).filter((c) => !(c in mapa));
+  return { mapa, faltantes };
 }
 
+const MAX_CLAVE = 30;
+
+// Lee empleadores y sedes de la hoja PARAMETROS. Devuelve también los errores de esa hoja
+// (se reportan en la vista previa; nunca deben llegar a fallar en la confirmación).
 function leerOrganizacion(libro) {
+  const vacio = { empleadores: [], sedes: [], errores: [] };
   const h = hoja(libro, 'PARAMETROS');
-  if (!h) return { empleadores: [], sedes: [] };
+  if (!h) return vacio;
   const enc = buscarEncabezado(h, ['CLAVE'], 10);
-  if (!enc) return { empleadores: [], sedes: [] };
+  if (!enc) return vacio;
   const col = (pref) => [...enc.columnas].find(([t]) => t.startsWith(normalizar(pref)))?.[1];
   const cClave = enc.columnas.get('CLAVE');
   const cNombre = col('NOMBRE COMPLETO');
@@ -44,23 +76,31 @@ function leerOrganizacion(libro) {
   const cSede = col('SEDE');
   const empleadores = [];
   const sedes = [];
+  const errores = [];
   for (let r = enc.fila + 1; r <= Math.min(h.rowCount, enc.fila + 200); r++) {
     const f = h.getRow(r);
     const clave = normalizar(valorCelda(f.getCell(cClave)));
     if (clave && cNombre) {
-      empleadores.push({
-        clave,
-        razon_social: String(valorCelda(f.getCell(cNombre))).trim().toUpperCase().slice(0, 150) || clave,
-        documento: cDoc ? String(valorCelda(f.getCell(cDoc))).replace(/\D/g, '').slice(0, 20) || null : null,
-      });
+      if (clave.length > MAX_CLAVE) {
+        errores.push({ fila: r, mensaje: `PARAMETROS: la clave de empleador "${clave.slice(0, 40)}" supera ${MAX_CLAVE} caracteres.` });
+      } else if (!empleadores.some((e) => e.clave === clave)) { // las repetidas se ignoran
+        empleadores.push({
+          clave,
+          razon_social: String(valorCelda(f.getCell(cNombre))).replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 150) || clave,
+          documento: cDoc ? String(valorCelda(f.getCell(cDoc))).replace(/\D/g, '').slice(0, 20) || null : null,
+        });
+      }
     }
     if (cEmpSede && cSede) {
       const emp = normalizar(valorCelda(f.getCell(cEmpSede)));
       const sede = String(valorCelda(f.getCell(cSede))).replace(/\s+/g, ' ').trim().toUpperCase();
-      if (emp && sede) sedes.push({ empleador: emp, nombre: sede.slice(0, 120) });
+      if (emp && sede) {
+        if (sede.length > 120) errores.push({ fila: r, mensaje: 'PARAMETROS: nombre de sede demasiado largo (máx. 120).' });
+        else if (!sedes.some((s) => s.empleador === emp && s.nombre === sede)) sedes.push({ fila: r, empleador: emp, nombre: sede });
+      }
     }
   }
-  return { empleadores, sedes };
+  return { empleadores, sedes, errores };
 }
 
 export function crearImportador(ctx, svc) {
@@ -73,25 +113,39 @@ export function crearImportador(ctx, svc) {
     if (!h) throw invalido('El libro no tiene la hoja "EMPLEADOS".');
     const enc = buscarEncabezado(h, ['CÉDULA', 'NOMBRE', 'EMPLEADOR', 'SEDE']);
     if (!enc) throw invalido('La hoja EMPLEADOS no tiene el encabezado esperado (CÉDULA, NOMBRE, EMPLEADOR, SEDE…).');
-    const mapa = mapearColumnas(enc.columnas);
+    const { mapa, faltantes } = mapearColumnas(enc.columnas);
 
-    // Organización: la de la BD más la que trae el libro
+    const errores = [...org.errores];
+    const advertencias = [];
+    if (faltantes.length) {
+      advertencias.push({ fila: enc.fila, mensaje: `No se encontraron estas columnas (esos datos no se importan): ${faltantes.map((c) => POR_CLAVE[c]?.etiqueta ?? c.replace('_', '')).join(', ')}.` });
+    }
+
+    // Organización: la de la BD (sedes activas) más la que trae el libro
     const empBD = await db('empleadores').select('id', 'clave', 'razon_social', 'documento');
-    const sedesBD = await db('sedes').select('id', 'empleador_id', 'nombre');
+    const sedesBD = await db('sedes').where({ activa: true }).select('id', 'empleador_id', 'nombre');
+    const sedesInactivas = await db('sedes').where({ activa: false }).select('id', 'empleador_id', 'nombre');
     const empPorClave = new Map(empBD.map((e) => [normalizar(e.clave), e]));
     const empleadoresNuevos = org.empleadores.filter((e) => !empPorClave.has(e.clave));
     const claveDeId = new Map(empBD.map((e) => [e.id, normalizar(e.clave)]));
-    const sedeExiste = (emp, nombre) =>
-      sedesBD.some((s) => claveDeId.get(s.empleador_id) === emp && normalizar(s.nombre) === normalizar(nombre));
-    const sedesNuevas = org.sedes.filter((s) => !sedeExiste(s.empleador, s.nombre));
+    const enLista = (lista, emp, nombre) =>
+      lista.some((s) => claveDeId.get(s.empleador_id) === emp && normalizar(s.nombre) === normalizar(nombre));
     const empleadorConocido = (clave) => empPorClave.has(clave) || empleadoresNuevos.some((e) => e.clave === clave);
-    const sedeConocida = (emp, nombre) => sedeExiste(emp, nombre) || sedesNuevas.some((s) => s.empleador === emp && normalizar(s.nombre) === normalizar(nombre));
+    const sedesNuevas = [];
+    for (const s of org.sedes) {
+      if (enLista(sedesBD, s.empleador, s.nombre)) continue;
+      if (enLista(sedesInactivas, s.empleador, s.nombre)) {
+        errores.push({ fila: s.fila, mensaje: `PARAMETROS: la sede "${s.nombre}" está desactivada en la plataforma.` });
+      } else if (!empleadorConocido(s.empleador)) {
+        errores.push({ fila: s.fila, mensaje: `PARAMETROS: la sede "${s.nombre}" es del empleador "${s.empleador}", que no existe.` });
+      } else sedesNuevas.push(s);
+    }
+    const sedeConocida = (emp, nombre) =>
+      enLista(sedesBD, emp, nombre) || sedesNuevas.some((s) => s.empleador === emp && normalizar(s.nombre) === normalizar(nombre));
 
     const v = await svc.contextoValidacion();
     const editables = await svc.editablesColaborador();
     const filas = [];
-    const errores = [];
-    const advertencias = [];
     const vistas = new Map();
 
     for (let r = enc.fila + 1; r <= h.rowCount; r++) {
@@ -116,17 +170,26 @@ export function crearImportador(ctx, svc) {
           bruto = fch;
         }
         if (campo === 'numero_cuenta' && bruto !== '') bruto = typeof bruto === 'number' ? String(Math.trunc(bruto)) : String(bruto).replace(/[\s.-]/g, '');
-        if (campo === 'estado' && bruto === '') bruto = 'ACTIVO';
-        let res = normalizarCampo(campo, bruto === '' ? null : bruto, v);
-        // Valores de lista fuera del catálogo: se conservan tal cual (el Excel manda) con advertencia.
+        // Celda vacía: no se envía el campo (en un expediente existente NO borra el dato guardado).
+        // El estado vacío de un expediente nuevo se asume ACTIVO más abajo.
+        if (bruto === '' || bruto === null) continue;
+        let res = normalizarCampo(campo, bruto, v);
+        // Valores de lista fuera del catálogo: se conservan tal cual (el Excel manda) con advertencia,
+        // siempre que quepan en la columna; si no, se omiten.
         if (res.error && POR_CLAVE[campo]?.tipo === 'lista' && campo !== 'estado') {
-          const texto = String(bruto).replace(/\s+/g, ' ').trim().slice(0, 60);
-          advertencias.push({ fila: r, mensaje: `${POR_CLAVE[campo].etiqueta}: "${texto}" no está en la lista; se guarda igual.` });
-          res = { valor: texto };
+          const texto = String(bruto).replace(/\s+/g, ' ').trim();
+          const max = POR_CLAVE[campo].max ?? 60;
+          if (texto.length > max) {
+            res = { error: `"${texto.slice(0, 40)}" no está en la lista y supera ${max} caracteres.` };
+          } else {
+            advertencias.push({ fila: r, mensaje: `${POR_CLAVE[campo].etiqueta}: "${texto}" no está en la lista; se guarda igual.` });
+            res = { valor: texto };
+          }
         }
         if (res.error) malos.push([campo, res.error]);
         else reg[campo] = res.valor;
       }
+      if (!reg.nombre && !malos.some(([c]) => c === 'nombre')) malos.push(['nombre', 'Este dato es obligatorio.']);
       if (!reg._empleador || !empleadorConocido(reg._empleador)) malos.push(['_empleador', `Empleador "${reg._empleador || ''}" no existe.`]);
       else if (!reg._sede || !sedeConocida(reg._empleador, reg._sede)) malos.push(['_sede', `Sede "${reg._sede || ''}" no existe para ese empleador.`]);
 
@@ -175,7 +238,7 @@ export function crearImportador(ctx, svc) {
       if (campos.length) actualizados.push({ fila, cedula, nombre: datos.nombre ?? actual.nombre, id: actual.id, _empleador, _sede, datos, campos });
       else sinCambios++;
     }
-    return { org: { empleadoresNuevos, sedesNuevas }, nuevos, actualizados, sinCambios, errores, advertencias, v };
+    return { org: { empleadoresNuevos, sedesNuevas }, nuevos, actualizados, sinCambios, errores, advertencias, v, huella: sha256(buffer) };
   }
 
   // Vista previa: no escribe nada
@@ -184,7 +247,11 @@ export function crearImportador(ctx, svc) {
     return resumen(a, false);
   }
 
-  async function confirmar(req, buffer) {
+  // Se confirma solo el MISMO archivo que se revisó (huella SHA-256 devuelta en la vista previa).
+  async function confirmar(req, buffer, huellaRevisada) {
+    if (!huellaRevisada || huellaRevisada !== sha256(buffer)) {
+      throw invalido('El archivo no coincide con el que se revisó. Revíselo de nuevo antes de confirmar.');
+    }
     const a = await analizar(buffer);
     if (a.errores.length) throw invalido('Corrija los errores del archivo antes de confirmar la importación.');
     const t = ahora();
@@ -198,7 +265,7 @@ export function crearImportador(ctx, svc) {
       for (const s of a.org.sedesNuevas) {
         await trx('sedes').insert({ empleador_id: emp.get(s.empleador).id, nombre: s.nombre, orden: ++orden });
       }
-      const sedes = await trx('sedes').select('id', 'empleador_id', 'nombre');
+      const sedes = await trx('sedes').where({ activa: true }).select('id', 'empleador_id', 'nombre');
       const idSede = (empClave, nombre) => sedes.find((s) => s.empleador_id === emp.get(empClave).id && normalizar(s.nombre) === normalizar(nombre)).id;
       // Contexto con la organización actualizada (para textos del historial)
       const v = { ...a.v, sedes: new Map(sedes.map((s) => [s.id, s])), empleadores: new Map([...emp.values()].map((e) => [e.id, e])) };
@@ -230,6 +297,7 @@ export function crearImportador(ctx, svc) {
   function resumen(a, confirmado) {
     return {
       confirmado,
+      huella: a.huella,
       empleadoresNuevos: a.org.empleadoresNuevos.map((e) => e.clave),
       sedesNuevas: a.org.sedesNuevas.map((s) => `${s.nombre} (${s.empleador})`),
       nuevos: a.nuevos.map((n) => ({ fila: n.fila, cedula: n.cedula, nombre: n.nombre })),
