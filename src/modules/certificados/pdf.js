@@ -46,9 +46,11 @@ export async function pdfCertificado(k, { appUrl, logoBuffer = null, firmaBuffer
   // Logo corporativo opcional (configurado en BD vía CERT_LOGO_BASE64)
   if (logoBuffer) {
     try {
-      const logoAncho = 135;
-      doc.image(logoBuffer, MARGEN_PDF + (ancho - logoAncho) / 2, doc.y, { width: logoAncho });
-      doc.moveDown(5.2);
+      const logoAncho = 120;
+      const logoAlto = 95;
+      const yLogo = doc.y - 6;
+      doc.image(logoBuffer, MARGEN_PDF + (ancho - logoAncho) / 2, yLogo, { fit: [logoAncho, logoAlto], align: 'center', valign: 'center' });
+      doc.y = yLogo + logoAlto + 8;
     } catch {
       /* si el logo no es válido se omite sin fallar el PDF */
     }
