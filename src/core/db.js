@@ -7,9 +7,10 @@ export const DIR_MIGRACIONES = path.resolve(import.meta.dirname, '..', '..', 'mi
 
 export function crearDb(cfgDb) {
   if (cfgDb.client === 'pg') {
+    const connection = cfgDb.ssl ? { connectionString: cfgDb.url, ssl: { rejectUnauthorized: false } } : cfgDb.url;
     return knexFactory({
       client: 'pg',
-      connection: cfgDb.url,
+      connection,
       compileSqlOnError: false, // los mensajes de error no incluyen los valores (datos personales)
       // schema: opcional (las pruebas con PostgreSQL usan un esquema temporal por entorno)
       ...(cfgDb.schema ? { searchPath: [cfgDb.schema] } : {}),

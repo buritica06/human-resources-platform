@@ -59,6 +59,7 @@ nav:
       - Manual del Desarrollador: development/manual-desarrollador.md
   - Despliegue:
       - Producción, Docker y PostgreSQL: deployment/despliegue.md
+      - Render, Railway y Fly.io (PaaS): deployment/paas-render-railway-fly.md
   - Seguridad:
       - OWASP ASVS Nivel 1: security/owasp-asvs.md
       - Revisión OWASP Top 10: security/owasp-top-10.md
