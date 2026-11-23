@@ -52,7 +52,14 @@ export function normalizarCampo(clave, bruto, ctx) {
       return { valor: s };
     }
     case 'dinero': {
-      const n = typeof bruto === 'number' ? bruto : Number(String(bruto).replace(/[$\s.]/g, '').replace(',', '.'));
+      const n =
+        typeof bruto === 'number'
+          ? bruto
+          : Number(
+              String(bruto)
+                .replace(/[$\s.]/g, '')
+                .replace(',', '.'),
+            );
       if (!Number.isFinite(n) || n < 0 || n > 1_000_000_000) return { error: 'Escriba un valor en pesos válido.' };
       return { valor: Math.round(n * 100) / 100 };
     }
@@ -64,14 +71,16 @@ export function normalizarCampo(clave, bruto, ctx) {
       return { error: 'Responda SI o NO.' };
     }
     case 'lista': {
-      const opciones = c.lista === '_ESTADO' ? ESTADOS : ctx.listas?.[c.lista] ?? [];
+      const opciones = c.lista === '_ESTADO' ? ESTADOS : (ctx.listas?.[c.lista] ?? []);
       const s = limpiarTexto(bruto);
       const encontrada = opciones.find((o) => o.toUpperCase() === s.toUpperCase());
       if (!encontrada) return { error: 'Elija una opción de la lista.' };
       return { valor: encontrada };
     }
     case 'celular': {
-      const s = String(bruto).replace(/[\s()+-]/g, '').replace(/^57(?=3\d{9}$)/, '');
+      const s = String(bruto)
+        .replace(/[\s()+-]/g, '')
+        .replace(/^57(?=3\d{9}$)/, '');
       if (!/^3\d{9}$/.test(s)) return { error: 'Celular de 10 dígitos que empiece por 3.' };
       return { valor: s };
     }
@@ -123,7 +132,8 @@ export function reglasCruzadas(r, ctx) {
   return errores;
 }
 
-export const esquemaCuerpo = z.record(z.string().max(40), z.union([z.string().max(300), z.number(), z.boolean(), z.null()]))
+export const esquemaCuerpo = z
+  .record(z.string().max(40), z.union([z.string().max(300), z.number(), z.boolean(), z.null()]))
   .refine((o) => Object.keys(o).length > 0 && Object.keys(o).length <= 50, { message: 'No hay cambios.' });
 
 export const esquemaListar = z.object({

@@ -8,7 +8,9 @@ export function crearParametros(db) {
 
   async function todos() {
     if (!cache || Date.now() - cargadoEn > CACHE_MS) {
-      cache = await db('parametros').select('*').orderBy([{ column: 'clave' }, { column: 'vigente_desde', order: 'desc' }]);
+      cache = await db('parametros')
+        .select('*')
+        .orderBy([{ column: 'clave' }, { column: 'vigente_desde', order: 'desc' }]);
       cargadoEn = Date.now();
     }
     return cache;

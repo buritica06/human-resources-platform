@@ -30,7 +30,15 @@ after(() => env.cerrar());
 async function registrar(c, campos = {}, archivo = { buffer: PDF, nombre: 'certificado.pdf' }) {
   const t = (await c.get('/auth/csrf')).body.csrf;
   let r = c.agente.post('/api/v1/incapacidades').set('X-CSRF-Token', t);
-  const datos = { tipo: 'IGE', entidad: 'Sura', fecha_inicio: sumarDias(hoy, -2), fecha_fin: sumarDias(hoy, 1), diagnostico: DIAG, numero_certificado: 'CERT-001', ...campos };
+  const datos = {
+    tipo: 'IGE',
+    entidad: 'Sura',
+    fecha_inicio: sumarDias(hoy, -2),
+    fecha_fin: sumarDias(hoy, 1),
+    diagnostico: DIAG,
+    numero_certificado: 'CERT-001',
+    ...campos,
+  };
   for (const [k, v] of Object.entries(datos)) if (v !== undefined) r = r.field(k, String(v));
   if (archivo) r = r.attach('soporte', archivo.buffer, archivo.nombre);
   return r;
@@ -76,10 +84,19 @@ describe('registro', () => {
     assert.equal(Boolean((await env.ctx.db('documentos').where({ id: fila.documento_id }).first()).sensible), true);
     // Notificaciones: admin con enlace; director solo fechas (sin diagnóstico ni tipo)
     const u = async (ced) => (await env.ctx.db('usuarios').where({ cedula: ced }).first()).id;
-    const nDir = await env.ctx.db('notificaciones').where({ usuario_id: await u(CED.director) }).orderBy('id', 'desc').first();
+    const nDir = await env.ctx
+      .db('notificaciones')
+      .where({ usuario_id: await u(CED.director) })
+      .orderBy('id', 'desc')
+      .first();
     assert.match(nDir.titulo, /incapacitado/);
     assert.ok(!JSON.stringify(nDir).includes('J06') && !/general|EPS|Sura/i.test(`${nDir.mensaje}`));
-    assert.ok(await env.ctx.db('notificaciones').where({ usuario_id: await u(CED.admin) }).first());
+    assert.ok(
+      await env.ctx
+        .db('notificaciones')
+        .where({ usuario_id: await u(CED.admin) })
+        .first(),
+    );
     assert.ok(!env.ctx.mailer.enviados.some((m) => m.texto.includes('J06')), 'el diagnóstico nunca va por correo');
   });
 
@@ -96,9 +113,16 @@ describe('registro', () => {
 
   test('una solicitud de permiso o vacaciones no puede cruzarse con una incapacidad', async () => {
     const t = (await colab1.get('/auth/csrf')).body.csrf;
-    const r = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', t)
-      .field('tipo', 'PERMISO').field('subtipo', 'DILIGENCIA PERSONAL').field('fecha_inicio', hoy).field('hora_inicio', '08:00')
-      .field('fecha_fin', hoy).field('hora_fin', '10:00').field('motivo', 'Trámite personal');
+    const r = await colab1.agente
+      .post('/api/v1/solicitudes')
+      .set('X-CSRF-Token', t)
+      .field('tipo', 'PERMISO')
+      .field('subtipo', 'DILIGENCIA PERSONAL')
+      .field('fecha_inicio', hoy)
+      .field('hora_inicio', '08:00')
+      .field('fecha_fin', hoy)
+      .field('hora_fin', '10:00')
+      .field('motivo', 'Trámite personal');
     assert.equal(r.status, 400);
     assert.match(r.body.error.mensaje, /incapacidad/);
   });
@@ -111,7 +135,18 @@ describe('visibilidad (Ley 1581)', () => {
     assert.equal(r.body.soloFechas, true);
     assert.ok(r.body.incapacidades.length >= 1);
     const texto = JSON.stringify(r.body);
-    for (const prohibido of ['J06', 'diagnostico', 'tipo', 'entidad', 'Sura', 'CERT-001', 'documentoId', 'numeroCertificado', 'cedula', CED.colab1]) {
+    for (const prohibido of [
+      'J06',
+      'diagnostico',
+      'tipo',
+      'entidad',
+      'Sura',
+      'CERT-001',
+      'documentoId',
+      'numeroCertificado',
+      'cedula',
+      CED.colab1,
+    ]) {
       assert.ok(!texto.includes(prohibido), `no debe incluir "${prohibido}"`);
     }
     assert.deepEqual(Object.keys(r.body.incapacidades[0]).sort(), ['colaborador', 'dias', 'fechaFin', 'fechaInicio']);
@@ -137,17 +172,40 @@ describe('visibilidad (Ley 1581)', () => {
   });
 
   test('el admincontable ve todo; cada lectura del detalle (diagnóstico) y del PDF se audita', async () => {
-    const antes = Number((await env.ctx.db('auditoria').where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) }).count({ n: '*' }))[0].n);
+    const antes = Number(
+      (
+        await env.ctx
+          .db('auditoria')
+          .where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) })
+          .count({ n: '*' })
+      )[0].n,
+    );
     const r = await admin.get(`/incapacidades/${id}`);
     assert.equal(r.body.diagnostico, DIAG);
     assert.equal(r.body.acciones.validar, true);
-    const despues = Number((await env.ctx.db('auditoria').where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) }).count({ n: '*' }))[0].n);
+    const despues = Number(
+      (
+        await env.ctx
+          .db('auditoria')
+          .where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) })
+          .count({ n: '*' })
+      )[0].n,
+    );
     assert.equal(despues, antes + 1);
-    const aud = await env.ctx.db('auditoria').where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) }).orderBy('id', 'desc').first();
+    const aud = await env.ctx
+      .db('auditoria')
+      .where({ accion: 'VER_INCAPACIDAD', entidad_id: String(id) })
+      .orderBy('id', 'desc')
+      .first();
     assert.ok(!String(aud.detalle).includes('J06'), 'la auditoría no guarda el diagnóstico');
     const docId = (await env.ctx.db('incapacidades').where({ id }).first()).documento_id;
     assert.equal((await admin.get(`/documentos/${docId}`)).status, 200);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'DESCARGAR', entidad: 'documento', entidad_id: String(docId) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'DESCARGAR', entidad: 'documento', entidad_id: String(docId) })
+        .first(),
+    );
     const lista = await admin.get('/incapacidades?estado=REGISTRADA');
     assert.equal(lista.body.soloFechas, false);
     assert.ok(!JSON.stringify(lista.body).includes('J06'), 'la lista no trae diagnósticos');
@@ -169,13 +227,21 @@ describe('revisión del área contable', () => {
   test('el colaborador puede anular la suya mientras está en revisión; el admin registra a nombre de otro', async () => {
     const r = await registrar(colab2, { fecha_inicio: sumarDias(hoy, -10), fecha_fin: sumarDias(hoy, -9) });
     assert.equal(r.status, 201);
-    assert.equal((await colab2.post(`/incapacidades/${r.body.id}/anular`, { motivo: 'Subí el archivo equivocado' })).body.estado, 'ANULADA');
+    assert.equal(
+      (await colab2.post(`/incapacidades/${r.body.id}/anular`, { motivo: 'Subí el archivo equivocado' })).body.estado,
+      'ANULADA',
+    );
     const a = await registrar(admin, { colaborador_id: idColab2, fecha_inicio: sumarDias(hoy, -100), fecha_fin: sumarDias(hoy, -98) });
     assert.equal(a.status, 201, 'el admin puede registrar fechas antiguas');
     assert.equal(a.body.colaborador.id, idColab2);
     // un colaborador no puede registrar a nombre de otro: 403 y queda auditado
     const c = await registrar(colab2, { colaborador_id: idColab1, fecha_inicio: sumarDias(hoy, -20), fecha_fin: sumarDias(hoy, -20) });
     assert.equal(c.status, 403);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'ACCESO_DENEGADO', entidad: 'colaborador', entidad_id: String(idColab1) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'ACCESO_DENEGADO', entidad: 'colaborador', entidad_id: String(idColab1) })
+        .first(),
+    );
   });
 });

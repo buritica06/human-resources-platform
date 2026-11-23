@@ -163,7 +163,16 @@ describe('flujo', () => {
     const b = await pedir(colab1, { fecha_inicio: habil(40), dias: 2, enviar: 'false' });
     assert.equal(b.status, 201, JSON.stringify(b.body));
     assert.equal(b.body.estado, 'BORRADOR');
-    assert.equal((await admin.post(`/colaboradores/${idColab1}/vacaciones/corte`, { fecha_corte: hoy, dias: 1, observacion: 'Ajuste por revisión de soportes' })).status, 201);
+    assert.equal(
+      (
+        await admin.post(`/colaboradores/${idColab1}/vacaciones/corte`, {
+          fecha_corte: hoy,
+          dias: 1,
+          observacion: 'Ajuste por revisión de soportes',
+        })
+      ).status,
+      201,
+    );
     const e = await colab1.post(`/solicitudes/${b.body.id}/enviar`, {});
     assert.equal(e.status, 400);
     assert.match(e.body.error.campos.dias, /Solo tiene/);
@@ -171,7 +180,11 @@ describe('flujo', () => {
   });
 
   test('cancelar libera lo reservado', async () => {
-    await admin.post(`/colaboradores/${idColab1}/vacaciones/corte`, { fecha_corte: hoy, dias: 10, observacion: 'Corrección del ajuste anterior' });
+    await admin.post(`/colaboradores/${idColab1}/vacaciones/corte`, {
+      fecha_corte: hoy,
+      dias: 10,
+      observacion: 'Corrección del ajuste anterior',
+    });
     const r = await pedir(colab1, { fecha_inicio: habil(50), dias: 2 });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     assert.equal((await colab1.get('/me/vacaciones/saldo')).body.enTramite, 2);
@@ -202,7 +215,12 @@ describe('saldo al corte (admincontable) y alcance', () => {
     assert.equal(r.status, 201, JSON.stringify(r.body));
     assert.equal(r.body.saldo.disponibles, esperado('2026-06-30', 4.25));
     assert.equal(r.body.cortes[0].registradoPor, 'ADMIN DEMO CONTABLE');
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'REGISTRAR_SALDO_VACACIONES', entidad_id: String(idColab2) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'REGISTRAR_SALDO_VACACIONES', entidad_id: String(idColab2) })
+        .first(),
+    );
   });
 
   test('alcance: el director no ve otra sede; un colaborador no ve a otro; el propio sin historial de cortes', async () => {

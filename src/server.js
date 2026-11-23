@@ -13,7 +13,9 @@ await sembrarBase(ctx.db);
 const app = crearApp(ctx);
 
 if (cfg.claveDesarrollo) {
-  log.warn('Se usa la clave de cifrado de DESARROLLO (solo para datos ficticios). Configure DATA_ENCRYPTION_KEY antes de cargar datos reales.');
+  log.warn(
+    'Se usa la clave de cifrado de DESARROLLO (solo para datos ficticios). Configure DATA_ENCRYPTION_KEY antes de cargar datos reales.',
+  );
 } else if (!cfg.claveCifrado) {
   log.warn('DATA_ENCRYPTION_KEY no está configurada: no se podrán guardar datos sensibles (cuentas, diagnósticos).');
 }

@@ -23,7 +23,9 @@ zona.innerHTML = `
     <p><strong>Correo:</strong> ${escapar(me.usuario.correo ?? '')} <span class="pildora pildora--exito">${icono('ok')} Confirmado</span></p>
     <a class="btn btn--secundario" href="/cuenta">${icono('llave')} Cambiar contraseña o correo</a>
   </section>
-  ${esAdmin ? `
+  ${
+    esAdmin
+      ? `
   <section class="tarjeta" aria-labelledby="t-admin">
     <h2 id="t-admin">Administración</h2>
     <div class="acciones-grandes acciones-grandes--una">
@@ -31,7 +33,9 @@ zona.innerHTML = `
       ${tiene('/colaboradores') ? `<a class="accion-grande" href="/colaboradores">${icono('usuarios')} Expedientes de colaboradores</a>` : ''}
       <a class="accion-grande" href="/usuarios">${icono('llave')} Gestionar usuarios</a>
     </div>
-  </section>` : ''}`;
+  </section>`
+      : ''
+  }`;
 
 // Tarjetas de los módulos (cada una se monta por su cuenta; un fallo no afecta a las demás)
 for (const script of [...(me.widgets ?? [])].reverse()) {

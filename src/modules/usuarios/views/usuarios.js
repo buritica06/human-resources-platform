@@ -3,9 +3,7 @@
 import { api } from '/static/js/api.js';
 import { montarShell, textoRol } from '/static/js/shell.js';
 import { icono, pintarIconos } from '/static/js/iconos.js';
-import {
-  confirmar, conCarga, escapar, fechaHora, htmlAviso, limpiarErrores, mostrarAviso, mostrarErrores, toast,
-} from '/static/js/ui.js';
+import { confirmar, conCarga, escapar, fechaHora, htmlAviso, limpiarErrores, mostrarAviso, mostrarErrores, toast } from '/static/js/ui.js';
 
 await montarShell();
 pintarIconos();
@@ -21,9 +19,11 @@ const sedes = async () => (sedesCache ??= (await api('/sedes')).sedes);
 
 function pildorasEstado(u) {
   const p = [];
-  p.push(u.activo
-    ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
-    : `<span class="pildora pildora--neutro">${icono('cerrar')} Inactivo</span>`);
+  p.push(
+    u.activo
+      ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
+      : `<span class="pildora pildora--neutro">${icono('cerrar')} Inactivo</span>`,
+  );
   if (u.bloqueado) p.push(`<span class="pildora pildora--error">${icono('candado')} Bloqueado</span>`);
   if (u.primerIngresoPendiente) p.push(`<span class="pildora pildora--alerta">${icono('reloj')} Primer ingreso pendiente</span>`);
   return p.join(' ');
@@ -44,22 +44,27 @@ async function cargar() {
       lista.innerHTML = `<table class="tabla"><thead><tr>
           <th scope="col">Cédula</th><th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Último acceso</th><th scope="col"><span class="sr-only">Acciones</span></th>
         </tr></thead><tbody>
-        ${r.usuarios.map((u) => `<tr>
+        ${r.usuarios
+          .map(
+            (u) => `<tr>
           <td data-etiqueta="Cédula">${escapar(u.cedula)}</td>
           <td data-etiqueta="Nombre">${escapar(u.nombre)}</td>
           <td data-etiqueta="Rol">${escapar(textoRol(u.rol))}</td>
           <td data-etiqueta="Estado">${pildorasEstado(u)}</td>
           <td data-etiqueta="Último acceso">${u.ultimoAcceso ? escapar(fechaHora(u.ultimoAcceso)) : 'Nunca'}</td>
           <td class="acciones"><button type="button" class="btn btn--chico btn--secundario" data-editar="${u.id}">${icono('editar')} Editar<span class="sr-only"> ${escapar(u.nombre)}</span></button></td>
-        </tr>`).join('')}
+        </tr>`,
+          )
+          .join('')}
         </tbody></table>`;
     }
     const paginas = Math.max(1, Math.ceil(r.total / r.porPagina));
-    paginacion.innerHTML = paginas > 1
-      ? `<button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina - 1}" ${pagina <= 1 ? 'disabled' : ''}>Anterior</button>
+    paginacion.innerHTML =
+      paginas > 1
+        ? `<button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina - 1}" ${pagina <= 1 ? 'disabled' : ''}>Anterior</button>
          <span>Página ${pagina} de ${paginas}</span>
          <button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina + 1}" ${pagina >= paginas ? 'disabled' : ''}>Siguiente</button>`
-      : '';
+        : '';
   } catch (err) {
     lista.innerHTML = htmlAviso('error', err.message);
   } finally {
@@ -120,14 +125,19 @@ async function camposSedes(seleccionadas = []) {
   const lista = await sedes();
   if (!lista.length) return '<p class="ayuda">No hay sedes registradas.</p>';
   return `<fieldset class="campo" id="grupo-sedes"><legend class="etiqueta">Sedes a su cargo</legend>
-    ${lista.map((s) => `<label><input type="checkbox" name="sedes" value="${s.id}" ${seleccionadas.includes(s.id) ? 'checked' : ''}>
-      ${escapar(s.nombre)} <span class="ayuda">(${escapar(s.empleador)})</span></label>`).join('<br>')}
+    ${lista
+      .map(
+        (s) => `<label><input type="checkbox" name="sedes" value="${s.id}" ${seleccionadas.includes(s.id) ? 'checked' : ''}>
+      ${escapar(s.nombre)} <span class="ayuda">(${escapar(s.empleador)})</span></label>`,
+      )
+      .join('<br>')}
     <span class="error-campo" id="sedes-error"></span></fieldset>`;
 }
 
 function opcionesRol(actual) {
   return ['COLABORADOR', 'DIRECTOR', 'ADMIN']
-    .map((r) => `<option value="${r}" ${r === actual ? 'selected' : ''}>${escapar(textoRol(r))}</option>`).join('');
+    .map((r) => `<option value="${r}" ${r === actual ? 'selected' : ''}>${escapar(textoRol(r))}</option>`)
+    .join('');
 }
 
 function leerForm(form) {
@@ -137,7 +147,9 @@ function leerForm(form) {
 
 // ---------- Nuevo usuario ----------
 document.getElementById('btn-nuevo').addEventListener('click', async () => {
-  const d = dialogo('Nuevo usuario', `
+  const d = dialogo(
+    'Nuevo usuario',
+    `
     <div id="dlg-msg" tabindex="-1" hidden></div>
     <form novalidate>
       <div class="campo"><label for="n-cedula">Cédula <span class="obligatorio" aria-hidden="true">*</span></label>
@@ -151,7 +163,8 @@ document.getElementById('btn-nuevo').addEventListener('click', async () => {
       <div id="zona-sedes" hidden>${await camposSedes()}</div>
       <div class="formulario-acciones"><button class="btn" type="submit">Crear usuario</button>
         <button class="btn btn--secundario" type="button" data-cerrar>Cancelar</button></div>
-    </form>`);
+    </form>`,
+  );
   const form = d.querySelector('form');
   const zonaSedes = d.querySelector('#zona-sedes');
   form.elements.rol.addEventListener('change', () => (zonaSedes.hidden = form.elements.rol.value !== 'DIRECTOR'));
@@ -183,7 +196,9 @@ async function abrirEdicion(id) {
   } catch (err) {
     return toast(err.message, 'error');
   }
-  const d = dialogo(`Editar usuario`, `
+  const d = dialogo(
+    `Editar usuario`,
+    `
     <p><strong>${escapar(u.nombre)}</strong> · C.C. ${escapar(u.cedula)}</p>
     <div id="dlg-msg" tabindex="-1" hidden></div>
     <form novalidate>
@@ -199,7 +214,8 @@ async function abrirEdicion(id) {
         <button class="btn btn--secundario" type="button" id="reset">${icono('llave')} Nueva contraseña temporal</button>
         <button class="btn btn--fantasma" type="button" data-cerrar>Cancelar</button>
       </div>
-    </form>`);
+    </form>`,
+  );
   const form = d.querySelector('form');
   const zonaSedes = d.querySelector('#zona-sedes');
   form.elements.rol.addEventListener('change', () => (zonaSedes.hidden = form.elements.rol.value !== 'DIRECTOR'));
@@ -212,7 +228,12 @@ async function abrirEdicion(id) {
     datos.activo = form.elements.activo.checked;
     if (datos.rol !== 'DIRECTOR') datos.sedes = [];
     if (u.activo && !datos.activo) {
-      const ok = await confirmar({ titulo: 'Desactivar usuario', mensaje: `${u.nombre} no podrá ingresar y se cerrarán sus sesiones abiertas. ¿Continuar?`, aceptar: 'Desactivar', peligro: true });
+      const ok = await confirmar({
+        titulo: 'Desactivar usuario',
+        mensaje: `${u.nombre} no podrá ingresar y se cerrarán sus sesiones abiertas. ¿Continuar?`,
+        aceptar: 'Desactivar',
+        peligro: true,
+      });
       if (!ok) return;
     }
     await conCarga(form.querySelector('[type=submit]'), async () => {
@@ -248,7 +269,9 @@ async function abrirEdicion(id) {
 
 // ---------- Carga masiva ----------
 document.getElementById('btn-masiva').addEventListener('click', () => {
-  const d = dialogo(`${icono('subir')} Carga masiva desde nómina`, `
+  const d = dialogo(
+    `${icono('subir')} Carga masiva desde nómina`,
+    `
     <p>Suba el libro de nómina (.xlsx o .xlsm). Se leerá la hoja <strong>EMPLEADOS</strong> y se crearán usuarios para los colaboradores activos que aún no tengan cuenta. Las macros del libro no se ejecutan y el archivo no se guarda.</p>
     <div id="dlg-msg" tabindex="-1" hidden></div>
     <form novalidate>
@@ -258,7 +281,8 @@ document.getElementById('btn-masiva').addEventListener('click', () => {
       <div class="formulario-acciones"><button class="btn" type="submit">Revisar archivo</button>
         <button class="btn btn--secundario" type="button" data-cerrar>Cancelar</button></div>
     </form>
-    <div id="vista"></div>`);
+    <div id="vista"></div>`,
+  );
   const form = d.querySelector('form');
   const vista = d.querySelector('#vista');
   const msg = d.querySelector('#dlg-msg');
@@ -334,7 +358,14 @@ function mostrarCreados(d, r) {
   });
   d.addEventListener('cancel', async (e) => {
     e.preventDefault();
-    if (await confirmar({ titulo: '¿Ya descargó las contraseñas?', mensaje: 'Si cierra sin descargarlas tendrá que generar nuevas una por una.', aceptar: 'Sí, cerrar' })) d.close();
+    if (
+      await confirmar({
+        titulo: '¿Ya descargó las contraseñas?',
+        mensaje: 'Si cierra sin descargarlas tendrá que generar nuevas una por una.',
+        aceptar: 'Sí, cerrar',
+      })
+    )
+      d.close();
   });
 }
 

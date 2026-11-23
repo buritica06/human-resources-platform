@@ -17,9 +17,12 @@ export const htmlFormulario = (prefijo) => `<form id="${prefijo}-f" novalidate>
 </form>`;
 
 export function htmlLista(certificados, { puedeAnular = false } = {}) {
-  if (!certificados.length) return `<div class="vacio">${icono('documento')}<h3>Aún no hay certificados</h3><p>Los certificados que genere aparecerán aquí para volver a descargarlos.</p></div>`;
+  if (!certificados.length)
+    return `<div class="vacio">${icono('documento')}<h3>Aún no hay certificados</h3><p>Los certificados que genere aparecerán aquí para volver a descargarlos.</p></div>`;
   return `<table class="tabla"><thead><tr><th scope="col">Certificado</th><th scope="col">Código</th><th scope="col">Expedido</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-    <tbody>${certificados.map((k) => `<tr>
+    <tbody>${certificados
+      .map(
+        (k) => `<tr>
       <td data-etiqueta="Certificado">Laboral ${k.conSalario ? 'con salario' : 'sin salario'}<br><span class="ayuda">${escapar(k.dirigidoA ?? '')}</span>
         ${k.anulado ? `<br><span class="pildora pildora--neutro">${icono('cancelar')} Anulado</span>` : ''}</td>
       <td data-etiqueta="Código"><code>${escapar(k.codigo)}</code></td>
@@ -27,7 +30,9 @@ export function htmlLista(certificados, { puedeAnular = false } = {}) {
       <td class="acciones">
         ${k.anulado ? '' : `<a class="btn btn--chico btn--secundario" href="/api/v1/certificados/${k.id}/pdf?descargar=1">${icono('descargar')} PDF<span class="sr-only"> del certificado ${escapar(k.codigo)}</span></a>`}
         ${puedeAnular && !k.anulado ? `<button type="button" class="btn btn--chico btn--fantasma" data-anular="${k.id}">Anular<span class="sr-only"> el certificado ${escapar(k.codigo)}</span></button>` : ''}
-      </td></tr>`).join('')}</tbody></table>`;
+      </td></tr>`,
+      )
+      .join('')}</tbody></table>`;
 }
 
 // Emite y descarga. ruta: '/me/certificados/laboral' o '/colaboradores/ID/certificados/laboral'
@@ -38,7 +43,8 @@ export function activarFormulario(f, ruta, alEmitir, focoTrasEmitir = null) {
     limpiarErrores(f);
     const conSalario = f.conSalario.value === 'si';
     const dirigidoA = f.dirigidoA.value.trim();
-    if (dirigidoA && !/^[\p{L}\p{N} .,&()'-]*$/u.test(dirigidoA)) return mostrarErrores(f, { dirigidoA: 'Use solo letras, números y signos básicos.' });
+    if (dirigidoA && !/^[\p{L}\p{N} .,&()'-]*$/u.test(dirigidoA))
+      return mostrarErrores(f, { dirigidoA: 'Use solo letras, números y signos básicos.' });
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
         const k = await api(ruta, { metodo: 'POST', datos: { conSalario, ...(dirigidoA ? { dirigidoA } : {}) } });

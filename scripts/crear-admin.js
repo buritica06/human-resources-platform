@@ -21,9 +21,14 @@ if (await db('usuarios').where({ cedula }).first()) {
 const clave = generarClaveTemporal();
 const t = ahora();
 await db('usuarios').insert({
-  cedula, nombre: nombre.trim().toUpperCase(), rol: 'ADMIN', password_hash: await hashClave(clave),
-  debe_cambiar_clave: true, clave_temporal_expira: new Date(Date.now() + 72 * 3600_000).toISOString(),
-  creado_en: t, actualizado_en: t,
+  cedula,
+  nombre: nombre.trim().toUpperCase(),
+  rol: 'ADMIN',
+  password_hash: await hashClave(clave),
+  debe_cambiar_clave: true,
+  clave_temporal_expira: new Date(Date.now() + 72 * 3600_000).toISOString(),
+  creado_en: t,
+  actualizado_en: t,
 });
 console.log(`Admincontable creado. Contraseña temporal (vence en 72 h, cópiela ahora): ${clave}`);
 await db.destroy();

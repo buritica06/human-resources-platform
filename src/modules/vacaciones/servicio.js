@@ -13,7 +13,15 @@
 import { invalido, noEncontrado } from '../../core/errors.js';
 import { ahora } from '../../core/db.js';
 import {
-  aniosEntre, dias360, fechaValida, finDeDisfrute, hoyBogota, motivoNoHabil, siguienteHabil, primerHabilDesde, sumarDias,
+  aniosEntre,
+  dias360,
+  fechaValida,
+  finDeDisfrute,
+  hoyBogota,
+  motivoNoHabil,
+  siguienteHabil,
+  primerHabilDesde,
+  sumarDias,
 } from './calendario.js';
 
 const EN_TRAMITE_EXCLUIDOS = ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA', 'APROBADA'];
@@ -32,8 +40,10 @@ export function crearServicioVacaciones(ctx) {
       sabadoHabil: [true, 'SI', 'SÍ', 1].includes(await ctx.params.valor('SABADO_HABIL', fecha)),
       pctCompensacion: Number(await ctx.params.valor('VAC_COMPENSACION_MAX_PCT', fecha)),
     };
-    if (!Number.isFinite(p.diasAnio) || p.diasAnio <= 0 || p.diasAnio > 60) throw new Error('Parámetro mal configurado: VAC_DIAS_HABILES_ANIO');
-    if (!Number.isFinite(p.pctCompensacion) || p.pctCompensacion < 0 || p.pctCompensacion > 100) throw new Error('Parámetro mal configurado: VAC_COMPENSACION_MAX_PCT');
+    if (!Number.isFinite(p.diasAnio) || p.diasAnio <= 0 || p.diasAnio > 60)
+      throw new Error('Parámetro mal configurado: VAC_DIAS_HABILES_ANIO');
+    if (!Number.isFinite(p.pctCompensacion) || p.pctCompensacion < 0 || p.pctCompensacion > 100)
+      throw new Error('Parámetro mal configurado: VAC_COMPENSACION_MAX_PCT');
     return p;
   }
 
@@ -46,13 +56,21 @@ export function crearServicioVacaciones(ctx) {
   function exigirFestivos(cargados, anios) {
     const faltan = anios.filter((y) => !cargados.has(y));
     if (faltan.length) {
-      throw invalido(`Aún no están cargados los festivos de ${faltan.join(', ')}. Pida al área contable que los registre antes de solicitar vacaciones en esas fechas.`, { fecha_inicio: `Faltan los festivos de ${faltan.join(', ')}.` });
+      throw invalido(
+        `Aún no están cargados los festivos de ${faltan.join(', ')}. Pida al área contable que los registre antes de solicitar vacaciones en esas fechas.`,
+        { fecha_inicio: `Faltan los festivos de ${faltan.join(', ')}.` },
+      );
     }
   }
 
   async function corteVigente(colaboradorId, trx = db) {
-    return trx('saldos_vacaciones').where({ colaborador_id: colaboradorId })
-      .orderBy([{ column: 'fecha_corte', order: 'desc' }, { column: 'id', order: 'desc' }]).first();
+    return trx('saldos_vacaciones')
+      .where({ colaborador_id: colaboradorId })
+      .orderBy([
+        { column: 'fecha_corte', order: 'desc' },
+        { column: 'id', order: 'desc' },
+      ])
+      .first();
   }
 
   // Saldo a "hoy". excluirId: no contar esa solicitud (la que se está enviando).
@@ -67,8 +85,11 @@ export function crearServicioVacaciones(ctx) {
     // (DAYS360 + 1) para no mezclar bases. La regla viaja en la solicitud (datos).
     let diasNoLaborados = 0;
     if (hasta >= corte.fecha_corte) {
-      const licencias = await trx('solicitudes').where({ colaborador_id: colaborador.id, tipo: 'LICENCIA', estado: 'APROBADA' })
-        .where('fecha_inicio', '<=', hasta).where('fecha_fin', '>=', corte.fecha_corte).select('fecha_inicio', 'fecha_fin', 'datos');
+      const licencias = await trx('solicitudes')
+        .where({ colaborador_id: colaborador.id, tipo: 'LICENCIA', estado: 'APROBADA' })
+        .where('fecha_inicio', '<=', hasta)
+        .where('fecha_fin', '>=', corte.fecha_corte)
+        .select('fecha_inicio', 'fecha_fin', 'datos');
       for (const l of licencias) {
         if (!JSON.parse(l.datos ?? '{}').descuentaVacaciones) continue;
         const ini = l.fecha_inicio > corte.fecha_corte ? l.fecha_inicio : corte.fecha_corte;
@@ -86,8 +107,10 @@ export function crearServicioVacaciones(ctx) {
     }
     const diasLaborados = hasta >= corte.fecha_corte ? Math.max(0, dias360(corte.fecha_corte, hasta) + 1 - diasNoLaborados) : 0;
     const causadosDesdeCorte = (diasLaborados * p.diasAnio) / 360;
-    const filas = await trx('solicitudes').where({ colaborador_id: colaborador.id, tipo: 'VACACIONES' })
-      .where('fecha_inicio', '>=', corte.fecha_corte).whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA'])
+    const filas = await trx('solicitudes')
+      .where({ colaborador_id: colaborador.id, tipo: 'VACACIONES' })
+      .where('fecha_inicio', '>=', corte.fecha_corte)
+      .whereNotIn('estado', ['BORRADOR', 'RECHAZADA', 'CANCELADA', 'ANULADA'])
       .modify((q) => (excluirId ? q.whereNot('id', excluirId) : q))
       .select('estado', 'dias_habiles', 'dias_compensar');
     let disfrutados = 0;
@@ -106,9 +129,12 @@ export function crearServicioVacaciones(ctx) {
       registrado: true,
       fechaCorte: corte.fecha_corte,
       diasAlCorte: Number(corte.dias_al_corte),
-      diasLaborados, diasNoLaborados,
+      diasLaborados,
+      diasNoLaborados,
       causadosDesdeCorte: r2(causadosDesdeCorte),
-      disfrutados, compensados, enTramite,
+      disfrutados,
+      compensados,
+      enTramite,
       disponibles,
       paraSolicitar: r2(disponibles - enTramite),
       calculadoAl: hasta,
@@ -130,7 +156,10 @@ export function crearServicioVacaciones(ctx) {
     if (!Number.isInteger(dias) || dias < 1) e.dias = 'Escriba cuántos días hábiles quiere disfrutar (número entero, mínimo 1).';
     else if (dias > 90) e.dias = 'Máximo 90 días hábiles por solicitud.';
     if (!Number.isInteger(comp) || comp < 0) e.dias_compensar = 'Escriba un número entero (0 si no quiere compensar).';
-    const motivo = String(body.motivo ?? '').replace(/\p{Cc}/gu, ' ').replace(/\s+/g, ' ').trim();
+    const motivo = String(body.motivo ?? '')
+      .replace(/\p{Cc}/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (motivo.length > 500) e.motivo = 'Máximo 500 caracteres.';
     if (Object.keys(e).length) throw invalido('Revise los datos marcados.', e);
 
@@ -142,7 +171,9 @@ export function crearServicioVacaciones(ctx) {
     const noHabil = motivoNoHabil(fi, op);
     if (noHabil) {
       const sugerida = primerHabilDesde(fi, op);
-      throw invalido('Revise los datos marcados.', { fecha_inicio: `El ${fechaTexto(fi)} no es día hábil (${noHabil}). Puede empezar el ${fechaTexto(sugerida)}.` });
+      throw invalido('Revise los datos marcados.', {
+        fecha_inicio: `El ${fechaTexto(fi)} no es día hábil (${noHabil}). Puede empezar el ${fechaTexto(sugerida)}.`,
+      });
     }
     // Compensación (CST art. 189: "hasta la mitad"): comp ≤ pct % del TOTAL de la solicitud
     // (disfrute + dinero)  ⇔  comp × (100 − pct) ≤ pct × dias. Con 50 %: comp ≤ dias.
@@ -150,8 +181,10 @@ export function crearServicioVacaciones(ctx) {
     const maxComp = pct >= 100 ? Infinity : Math.floor((pct * dias) / (100 - pct));
     if (comp > maxComp) {
       throw invalido('Revise los datos marcados.', {
-        dias_compensar: pct <= 0 ? 'La compensación en dinero no está habilitada.'
-          : `Lo compensado en dinero puede ser máximo el ${pct} % del total de la solicitud (disfrute + dinero): con ${dias} día(s) de disfrute, hasta ${maxComp}.`,
+        dias_compensar:
+          pct <= 0
+            ? 'La compensación en dinero no está habilitada.'
+            : `Lo compensado en dinero puede ser máximo el ${pct} % del total de la solicitud (disfrute + dinero): con ${dias} día(s) de disfrute, hasta ${maxComp}.`,
       });
     }
     const s = await saldo(colaborador, { trx, previo: p, excluirId, hoy });
@@ -168,18 +201,34 @@ export function crearServicioVacaciones(ctx) {
     const regreso = siguienteHabil(ff, op);
     exigirFestivos(anios, aniosEntre(fi, regreso)); // el calendario debe cubrir todo el rango
     // Cruce con otras ausencias (también lo revalida el motor al enviar): se avisa desde la simulación
-    await ctx.servicioSolicitudes?.motor.validarSinCruce(trx, { id: excluirId, colaborador_id: colaborador.id, fecha_inicio: fi, fecha_fin: ff });
+    await ctx.servicioSolicitudes?.motor.validarSinCruce(trx, {
+      id: excluirId,
+      colaborador_id: colaborador.id,
+      fecha_inicio: fi,
+      fecha_fin: ff,
+    });
     const festivosEnRango = [...fest].filter(([f]) => f >= fi && f <= ff).map(([fecha, nombre]) => ({ fecha, nombre }));
     const subtipo = `${dias} día(s) hábil(es)${comp ? ` + ${comp} en dinero` : ''}`;
     return {
       campos: {
-        subtipo, fecha_inicio: fi, fecha_fin: ff, dias_habiles: dias, dias_compensar: comp, motivo: motivo || null,
+        subtipo,
+        fecha_inicio: fi,
+        fecha_fin: ff,
+        dias_habiles: dias,
+        dias_compensar: comp,
+        motivo: motivo || null,
         datos: { regreso, saldoAlEnviar: s.paraSolicitar, festivos: festivosEnRango },
       },
       plan: {
-        fechaInicio: fi, fechaFin: ff, regreso, dias, diasCompensar: comp,
+        fechaInicio: fi,
+        fechaFin: ff,
+        regreso,
+        dias,
+        diasCompensar: comp,
         diasCalendario: Math.round((Date.parse(`${regreso}T00:00:00Z`) - Date.parse(`${fi}T00:00:00Z`)) / 86_400_000),
-        festivos: festivosEnRango, saldoAntes: s.paraSolicitar, saldoDespues: Math.round((s.paraSolicitar - dias - comp) * 100) / 100,
+        festivos: festivosEnRango,
+        saldoAntes: s.paraSolicitar,
+        saldoDespues: Math.round((s.paraSolicitar - dias - comp) * 100) / 100,
         maxCompensar: Number.isFinite(maxComp) ? maxComp : null,
       },
     };
@@ -193,7 +242,8 @@ export function crearServicioVacaciones(ctx) {
     if (!fechaValida(fecha)) e.fecha_corte = 'Escriba una fecha válida.';
     else if (fecha > hoyBogota()) e.fecha_corte = 'La fecha de corte no puede ser futura.';
     else if (c.fecha_ingreso && fecha < c.fecha_ingreso) e.fecha_corte = 'La fecha de corte no puede ser anterior al ingreso.';
-    if (!Number.isFinite(dias) || dias < -60 || dias > 400 || Math.abs(dias * 100 - Math.round(dias * 100)) > 1e-6) e.dias = 'Escriba los días (entre −60 y 400, hasta dos decimales).';
+    if (!Number.isFinite(dias) || dias < -60 || dias > 400 || Math.abs(dias * 100 - Math.round(dias * 100)) > 1e-6)
+      e.dias = 'Escriba los días (entre −60 y 400, hasta dos decimales).';
     if (String(observacion ?? '').trim().length < 5) e.observacion = 'Explique de dónde sale el saldo (mínimo 5 caracteres).';
     const anterior = await corteVigente(c.id);
     // Un corte anterior al vigente no tendría efecto (vale el más reciente): se rechaza
@@ -201,23 +251,44 @@ export function crearServicioVacaciones(ctx) {
       e.fecha_corte = `Ya hay un saldo al ${fechaTexto(anterior.fecha_corte)}. Para corregirlo, registre uno con esa fecha o una posterior.`;
     }
     if (Object.keys(e).length) throw invalido('Revise los datos marcados.', e);
-    const [fila] = await db('saldos_vacaciones').insert({
-      colaborador_id: c.id, fecha_corte: fecha, dias_al_corte: Math.round(dias * 100) / 100, observacion: String(observacion).trim().slice(0, 300),
-      registrado_por: req.usuario.id, registrado_en: ahora(),
-    }).returning('id');
+    const [fila] = await db('saldos_vacaciones')
+      .insert({
+        colaborador_id: c.id,
+        fecha_corte: fecha,
+        dias_al_corte: Math.round(dias * 100) / 100,
+        observacion: String(observacion).trim().slice(0, 300),
+        registrado_por: req.usuario.id,
+        registrado_en: ahora(),
+      })
+      .returning('id');
     await auditar(req, {
-      accion: 'REGISTRAR_SALDO_VACACIONES', entidad: 'colaborador', entidadId: c.id,
+      accion: 'REGISTRAR_SALDO_VACACIONES',
+      entidad: 'colaborador',
+      entidadId: c.id,
       detalle: {
-        antes: anterior ? { fecha: anterior.fecha_corte, dias: Number(anterior.dias_al_corte) } : null, despues: { fecha, dias },
-        id: typeof fila === 'object' ? fila.id : fila, ...(c.cedula === req.usuario.cedula ? { autoregistro: true } : {}),
+        antes: anterior ? { fecha: anterior.fecha_corte, dias: Number(anterior.dias_al_corte) } : null,
+        despues: { fecha, dias },
+        id: typeof fila === 'object' ? fila.id : fila,
+        ...(c.cedula === req.usuario.cedula ? { autoregistro: true } : {}),
       },
     });
   }
 
   async function cortes(colaboradorId) {
-    return db('saldos_vacaciones as s').leftJoin('usuarios as u', 'u.id', 's.registrado_por')
-      .where('s.colaborador_id', colaboradorId).orderBy([{ column: 's.fecha_corte', order: 'desc' }, { column: 's.id', order: 'desc' }])
-      .select('s.fecha_corte as fechaCorte', 's.dias_al_corte as dias', 's.observacion', 's.registrado_en as registradoEn', 'u.nombre as registradoPor')
+    return db('saldos_vacaciones as s')
+      .leftJoin('usuarios as u', 'u.id', 's.registrado_por')
+      .where('s.colaborador_id', colaboradorId)
+      .orderBy([
+        { column: 's.fecha_corte', order: 'desc' },
+        { column: 's.id', order: 'desc' },
+      ])
+      .select(
+        's.fecha_corte as fechaCorte',
+        's.dias_al_corte as dias',
+        's.observacion',
+        's.registrado_en as registradoEn',
+        'u.nombre as registradoPor',
+      )
       .then((f) => f.map((x) => ({ ...x, dias: Number(x.dias) })));
   }
 

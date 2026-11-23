@@ -25,13 +25,23 @@ after(() => env.cerrar());
 async function pedir(c, campos = {}, archivo = null) {
   const t = (await c.get('/auth/csrf')).body.csrf;
   let r = c.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', t);
-  const datos = { tipo: 'LICENCIA', subtipo: 'CALAMIDAD DOMÉSTICA', fecha_inicio: sumarDias(hoy, 10), fecha_fin: sumarDias(hoy, 11), motivo: 'Daño en la vivienda', ...campos };
+  const datos = {
+    tipo: 'LICENCIA',
+    subtipo: 'CALAMIDAD DOMÉSTICA',
+    fecha_inicio: sumarDias(hoy, 10),
+    fecha_fin: sumarDias(hoy, 11),
+    motivo: 'Daño en la vivienda',
+    ...campos,
+  };
   for (const [k, v] of Object.entries(datos)) r = r.field(k, String(v));
   if (archivo) r = r.attach('soporte', archivo, 'soporte.pdf');
   return r;
 }
 async function cambiarParametro(clave, valor) {
-  await env.ctx.db('parametros').where({ clave }).update({ valor: JSON.stringify(valor) });
+  await env.ctx
+    .db('parametros')
+    .where({ clave })
+    .update({ valor: JSON.stringify(valor) });
   env.ctx.params.invalidar();
 }
 
@@ -60,7 +70,10 @@ test('parámetro mal configurado (booleano como texto, nombres repetidos) → er
   const original = (await env.ctx.db('parametros').where({ clave: 'LISTA_TIPOS_LICENCIA' }).first()).valor;
   try {
     const lista = JSON.parse(original);
-    await cambiarParametro('LISTA_TIPOS_LICENCIA', lista.map((t, i) => (i === 0 ? { ...t, sensible: 'false' } : t)));
+    await cambiarParametro(
+      'LISTA_TIPOS_LICENCIA',
+      lista.map((t, i) => (i === 0 ? { ...t, sensible: 'false' } : t)),
+    );
     assert.equal((await colab1.get('/licencias/opciones')).status, 500);
     await cambiarParametro('LISTA_TIPOS_LICENCIA', [...lista, { ...lista[0], nombre: 'maternidad' }]);
     assert.equal((await colab1.post('/licencias/calcular', { subtipo: 'LUTO', fecha_inicio: hoy, fecha_fin: hoy })).status, 500);
@@ -75,7 +88,10 @@ test('la regla queda congelada en la solicitud aunque el parámetro cambie despu
   assert.equal(r.status, 201, JSON.stringify(r.body));
   const original = (await env.ctx.db('parametros').where({ clave: 'LISTA_TIPOS_LICENCIA' }).first()).valor;
   try {
-    await cambiarParametro('LISTA_TIPOS_LICENCIA', JSON.parse(original).map((t) => ({ ...t, descuentaVacaciones: false })));
+    await cambiarParametro(
+      'LISTA_TIPOS_LICENCIA',
+      JSON.parse(original).map((t) => ({ ...t, descuentaVacaciones: false })),
+    );
     const s = (await colab1.get(`/solicitudes/${r.body.id}`)).body;
     assert.equal(s.datos.descuentaVacaciones, true);
   } finally {
@@ -86,7 +102,11 @@ test('la regla queda congelada en la solicitud aunque el parámetro cambie despu
 });
 
 test('maternidad: el director no ve enlace al soporte sensible ni el motivo; el dueño y el admin sí', async () => {
-  const r = await pedir(colab1, { subtipo: 'MATERNIDAD', fecha_inicio: sumarDias(hoy, 60), fecha_fin: sumarDias(hoy, 70), motivo: 'Parto programado por preeclampsia' }, PDF);
+  const r = await pedir(
+    colab1,
+    { subtipo: 'MATERNIDAD', fecha_inicio: sumarDias(hoy, 60), fecha_fin: sumarDias(hoy, 70), motivo: 'Parto programado por preeclampsia' },
+    PDF,
+  );
   assert.equal(r.status, 201, JSON.stringify(r.body));
   const d = (await director.get(`/solicitudes/${r.body.id}`)).body;
   assert.equal(d.documentoVisible, false);

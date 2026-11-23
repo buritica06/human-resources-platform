@@ -33,7 +33,10 @@ describe('control de acceso (validado en el servidor)', () => {
     }
   });
 
-  for (const [rol, ced] of [['colaborador', CED.colab1], ['director', CED.director]]) {
+  for (const [rol, ced] of [
+    ['colaborador', CED.colab1],
+    ['director', CED.director],
+  ]) {
     test(`${rol} → 403 en todas las rutas de administración`, async () => {
       const c = await comoUsuario(env.app, ced);
       for (const [m, ruta, cuerpo] of rutas) {
@@ -44,7 +47,9 @@ describe('control de acceso (validado en el servidor)', () => {
       // Archivo mínimo: el servidor rechaza antes de leer el cuerpo y un archivo grande
       // provocaría un ECONNRESET en el cliente de pruebas (no en el navegador).
       const t = (await c.get('/auth/csrf')).body.csrf;
-      const subida = await c.agente.post('/api/v1/usuarios/carga-masiva').set('X-CSRF-Token', t)
+      const subida = await c.agente
+        .post('/api/v1/usuarios/carga-masiva')
+        .set('X-CSRF-Token', t)
         .attach('archivo', Buffer.from('PK'), 'x.xlsx');
       assert.equal(subida.status, 403);
     });
@@ -85,7 +90,12 @@ describe('gestión de usuarios (admincontable)', () => {
     assert.equal(sedes.length, 9);
     r = await admin.post('/usuarios', { cedula: '5000000002', nombre: 'COLAB CON SEDES', sedes: [sedes[0].id] });
     assert.equal(r.status, 400);
-    r = await admin.post('/usuarios', { cedula: '5000000003', nombre: 'DIRECTORA NUEVA PRUEBA', rol: 'DIRECTOR', sedes: [sedes[0].id, sedes[4].id] });
+    r = await admin.post('/usuarios', {
+      cedula: '5000000003',
+      nombre: 'DIRECTORA NUEVA PRUEBA',
+      rol: 'DIRECTOR',
+      sedes: [sedes[0].id, sedes[4].id],
+    });
     assert.equal(r.status, 201);
     assert.deepEqual(r.body.usuario.sedes.sort(), [sedes[0].id, sedes[4].id].sort());
     r = await admin.post('/usuarios', { cedula: '5000000004', nombre: 'SEDE INEXISTENTE', rol: 'DIRECTOR', sedes: [9999] });
@@ -127,7 +137,11 @@ describe('gestión de usuarios (admincontable)', () => {
     assert.equal(r.status, 200);
     assert.deepEqual(r.body.sedes, [], 'al dejar de ser director pierde sus sedes');
     assert.equal((await dir.get('/auth/me')).status, 401);
-    const aud = await env.ctx.db('auditoria').where({ accion: 'EDITAR', entidad_id: String(id) }).orderBy('id', 'desc').first();
+    const aud = await env.ctx
+      .db('auditoria')
+      .where({ accion: 'EDITAR', entidad_id: String(id) })
+      .orderBy('id', 'desc')
+      .first();
     const det = JSON.parse(aud.detalle);
     assert.equal(det.antes.rol, 'DIRECTOR');
     assert.equal(det.despues.rol, 'COLABORADOR');
@@ -136,7 +150,10 @@ describe('gestión de usuarios (admincontable)', () => {
 
   test('restablecer clave: genera temporal, desbloquea y obliga a primer ingreso', async () => {
     const id = await idDe(CED.colab1);
-    await env.ctx.db('usuarios').where({ id }).update({ bloqueado_hasta: new Date(Date.now() + 600_000).toISOString() });
+    await env.ctx
+      .db('usuarios')
+      .where({ id })
+      .update({ bloqueado_hasta: new Date(Date.now() + 600_000).toISOString() });
     const r = await admin.post(`/usuarios/${id}/reset-clave`, {});
     assert.equal(r.status, 200);
     const l = await cliente(env.app).login(CED.colab1, r.body.claveTemporal);
@@ -152,7 +169,12 @@ describe('gestión de usuarios (admincontable)', () => {
   test('ver el detalle de un usuario queda en la auditoría', async () => {
     const id = await idDe(CED.colab1);
     await admin.get(`/usuarios/${id}`);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER', entidad: 'usuario', entidad_id: String(id) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'VER', entidad: 'usuario', entidad_id: String(id) })
+        .first(),
+    );
   });
 });
 

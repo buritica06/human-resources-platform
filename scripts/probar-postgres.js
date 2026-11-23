@@ -12,5 +12,8 @@ if (/prod/i.test(url)) {
   console.error('Por seguridad, TEST_DATABASE_URL no puede apuntar a una base cuyo nombre contenga "prod".');
   process.exit(2);
 }
-const r = spawnSync(process.execPath, ['--test', '--test-concurrency=1', '--test-timeout=120000', 'tests/**/*.test.js'], { stdio: 'inherit', env: process.env });
+const r = spawnSync(process.execPath, ['--test', '--test-concurrency=1', '--test-timeout=120000', 'tests/**/*.test.js'], {
+  stdio: 'inherit',
+  env: process.env,
+});
 process.exit(r.status ?? 1);

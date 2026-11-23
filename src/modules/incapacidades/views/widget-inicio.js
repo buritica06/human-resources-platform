@@ -5,7 +5,11 @@ import { icono } from '/static/js/iconos.js';
 export async function montar(contenedor, me) {
   const [mias, porRevisar] = await Promise.all([
     api('/me/incapacidades').catch(() => ({ sinExpediente: true })),
-    me.usuario.rol === 'ADMIN' ? api('/incapacidades/pendientes').then((r) => r.pendientes).catch(() => null) : null,
+    me.usuario.rol === 'ADMIN'
+      ? api('/incapacidades/pendientes')
+          .then((r) => r.pendientes)
+          .catch(() => null)
+      : null,
   ]);
   if (mias.sinExpediente && porRevisar === null) return;
   const t = document.createElement('section');

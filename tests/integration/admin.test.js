@@ -29,7 +29,13 @@ after(() => env.cerrar());
 
 async function pedirVacaciones(c, fi, dias = 2) {
   const tk = (await c.get('/auth/csrf')).body.csrf;
-  return c.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', tk).field('tipo', 'VACACIONES').field('fecha_inicio', fi).field('dias', String(dias)).field('dias_compensar', '0');
+  return c.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', tk)
+    .field('tipo', 'VACACIONES')
+    .field('fecha_inicio', fi)
+    .field('dias', String(dias))
+    .field('dias_compensar', '0');
 }
 async function aprobarTodo(id) {
   await director.post(`/solicitudes/${id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' });
@@ -38,11 +44,21 @@ async function aprobarTodo(id) {
 
 describe('acceso', () => {
   test('todo el panel es solo para el admincontable', async () => {
-    for (const ruta of ['/admin/resumen', '/parametros', '/festivos/2026', `/reportes/ausentismo?desde=${hoy}&hasta=${hoy}`, '/auditoria']) {
+    for (const ruta of [
+      '/admin/resumen',
+      '/parametros',
+      '/festivos/2026',
+      `/reportes/ausentismo?desde=${hoy}&hasta=${hoy}`,
+      '/auditoria',
+    ]) {
       assert.equal((await director.get(ruta)).status, 403, ruta);
       assert.equal((await colab1.get(ruta)).status, 403, ruta);
     }
-    assert.equal((await colab1.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: hoy, fecha_fin: hoy, motivo: 'Prueba de acceso' })).status, 403);
+    assert.equal(
+      (await colab1.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: hoy, fecha_fin: hoy, motivo: 'Prueba de acceso' }))
+        .status,
+      403,
+    );
   });
 
   test('resumen con pendientes, última nómina y alertas', async () => {
@@ -50,7 +66,10 @@ describe('acceso', () => {
     assert.equal(r.status, 200);
     assert.equal(typeof r.body.porAprobar, 'number');
     assert.ok(Array.isArray(r.body.alertas));
-    assert.ok(r.body.alertas.some((a) => /VERIFICAR/.test(a.texto)), 'avisa de parámetros por verificar');
+    assert.ok(
+      r.body.alertas.some((a) => /VERIFICAR/.test(a.texto)),
+      'avisa de parámetros por verificar',
+    );
   });
 });
 
@@ -65,22 +84,38 @@ describe('parámetros con vigencia', () => {
     assert.equal(await env.ctx.params.valor('PERMISO_MAX_DIAS', sumarDias(futuro, -1)), 3);
     assert.equal((await colab1.get('/permisos/opciones')).body.maxDias, 3, 'la app usa el de hoy');
     const prog = r.body.versiones.find((v) => v.estado === 'PROGRAMADA');
-    assert.equal((await admin.agente.delete(`/api/v1/parametros/versiones/${prog.id}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)).status, 200);
+    assert.equal(
+      (await admin.agente.delete(`/api/v1/parametros/versiones/${prog.id}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf))
+        .status,
+      200,
+    );
     assert.equal(await env.ctx.params.valor('PERMISO_MAX_DIAS', futuro), 3, 'al borrarla, la anterior vuelve a regir sin fin');
   });
 
   test('no se reescribe el pasado, valida tipo, rango y validadores de módulo, y se audita', async () => {
-    let r = await admin.post('/parametros/PERMISO_MAX_DIAS/versiones', { valor: 4, desde: sumarDias(hoy, -1), motivo: 'Intento retroactivo' });
+    let r = await admin.post('/parametros/PERMISO_MAX_DIAS/versiones', {
+      valor: 4,
+      desde: sumarDias(hoy, -1),
+      motivo: 'Intento retroactivo',
+    });
     assert.match(r.body.error.campos.desde, /hoy o una fecha futura/);
     r = await admin.post('/parametros/UPLOAD_MAX_MB/versiones', { valor: 500, desde: hoy, motivo: 'Archivos más grandes' });
     assert.match(r.body.error.campos.valor, /entre 1 y 20/);
     r = await admin.post('/parametros/SABADO_HABIL/versiones', { valor: 'no', desde: hoy, motivo: 'Cambio de jornada' });
     assert.ok(r.body.error.campos.valor);
-    r = await admin.post('/parametros/LISTA_TIPOS_LICENCIA/versiones', { valor: [{ nombre: 'X' }], desde: hoy, motivo: 'Lista incompleta' });
+    r = await admin.post('/parametros/LISTA_TIPOS_LICENCIA/versiones', {
+      valor: [{ nombre: 'X' }],
+      desde: hoy,
+      motivo: 'Lista incompleta',
+    });
     assert.match(r.body.error.campos.valor, /nombre único/);
     r = await admin.post('/parametros/LISTA_EPS/versiones', { valor: ['Sura', 'SURA'], desde: hoy, motivo: 'Lista con repetidos' });
     assert.match(r.body.error.campos.valor, /repetidos/);
-    r = await admin.post('/parametros/LISTA_EPS/versiones', { valor: ['Sura', 'Sanitas', 'Nueva EPS Demo'], desde: hoy, motivo: 'Actualización de EPS' });
+    r = await admin.post('/parametros/LISTA_EPS/versiones', {
+      valor: ['Sura', 'Sanitas', 'Nueva EPS Demo'],
+      desde: hoy,
+      motivo: 'Actualización de EPS',
+    });
     assert.equal(r.status, 201);
     assert.deepEqual(await env.ctx.params.valor('LISTA_EPS'), ['Sura', 'Sanitas', 'Nueva EPS Demo'], 'rige desde hoy');
     assert.ok(await env.ctx.db('auditoria').where({ accion: 'PROGRAMAR_PARAMETRO', entidad_id: 'LISTA_EPS' }).first());
@@ -89,18 +124,29 @@ describe('parámetros con vigencia', () => {
   test('una versión que ya rige (desde antes de hoy) no se puede borrar', async () => {
     const vigente = (await admin.get('/parametros')).body.parametros.find((p) => p.clave === 'PERMISO_MAX_DIAS').actual;
     assert.ok(vigente.desde < hoy);
-    const r = await admin.agente.delete(`/api/v1/parametros/versiones/${vigente.id}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf);
+    const r = await admin.agente
+      .delete(`/api/v1/parametros/versiones/${vigente.id}`)
+      .set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf);
     assert.equal(r.status, 409);
   });
 });
 
 describe('festivos', () => {
   test('reemplaza un año completo con validaciones', async () => {
-    let r = await admin.agente.put('/api/v1/festivos/2028').set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)
+    let r = await admin.agente
+      .put('/api/v1/festivos/2028')
+      .set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)
       .send({ festivos: [{ fecha: '2027-01-01', nombre: 'Año Nuevo' }] });
     assert.equal(r.status, 400);
-    r = await admin.agente.put('/api/v1/festivos/2028').set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)
-      .send({ festivos: [{ fecha: '2028-01-01', nombre: 'Año Nuevo' }, { fecha: '2028-01-10', nombre: 'Reyes Magos' }] });
+    r = await admin.agente
+      .put('/api/v1/festivos/2028')
+      .set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)
+      .send({
+        festivos: [
+          { fecha: '2028-01-01', nombre: 'Año Nuevo' },
+          { fecha: '2028-01-10', nombre: 'Reyes Magos' },
+        ],
+      });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal((await admin.get('/festivos/2028')).body.festivos.length, 2);
   });
@@ -129,19 +175,39 @@ describe('suspensiones', () => {
   let idSus;
   test('el admin registra: valida, no cruza con otras ausencias y resta días laborados', async () => {
     const antes = (await colab1.get('/me/vacaciones/saldo')).body;
-    let r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: sumarDias(hoy, -10), fecha_fin: sumarDias(hoy, 70), motivo: 'Demasiado larga' });
+    let r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, {
+      fecha_inicio: sumarDias(hoy, -10),
+      fecha_fin: sumarDias(hoy, 70),
+      motivo: 'Demasiado larga',
+    });
     assert.match(r.body.error.campos.fecha_fin, /60 días/);
-    r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: sumarDias(hoy, -10), fecha_fin: sumarDias(hoy, -8), motivo: 'Falta disciplinaria (ficticia)' });
+    r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, {
+      fecha_inicio: sumarDias(hoy, -10),
+      fecha_fin: sumarDias(hoy, -8),
+      motivo: 'Falta disciplinaria (ficticia)',
+    });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     idSus = r.body.id;
     const despues = (await colab1.get('/me/vacaciones/saldo')).body;
     assert.equal(despues.diasNoLaborados - antes.diasNoLaborados, dias360(sumarDias(hoy, -10), sumarDias(hoy, -8)) + 1);
-    r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: sumarDias(hoy, -9), fecha_fin: sumarDias(hoy, -9), motivo: 'Se cruza con la anterior' });
+    r = await admin.post(`/colaboradores/${idColab1}/suspensiones`, {
+      fecha_inicio: sumarDias(hoy, -9),
+      fecha_fin: sumarDias(hoy, -9),
+      motivo: 'Se cruza con la anterior',
+    });
     assert.match(r.body.error.campos.fecha_inicio, /Se cruza/);
     // Una solicitud no puede caer sobre la suspensión
     const tk = (await colab1.get('/auth/csrf')).body.csrf;
-    const p = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', tk).field('tipo', 'PERMISO').field('subtipo', 'DILIGENCIA PERSONAL')
-      .field('fecha_inicio', sumarDias(hoy, -9)).field('hora_inicio', '08:00').field('fecha_fin', sumarDias(hoy, -9)).field('hora_fin', '09:00').field('motivo', 'Trámite personal');
+    const p = await colab1.agente
+      .post('/api/v1/solicitudes')
+      .set('X-CSRF-Token', tk)
+      .field('tipo', 'PERMISO')
+      .field('subtipo', 'DILIGENCIA PERSONAL')
+      .field('fecha_inicio', sumarDias(hoy, -9))
+      .field('hora_inicio', '08:00')
+      .field('fecha_fin', sumarDias(hoy, -9))
+      .field('hora_fin', '09:00')
+      .field('motivo', 'Trámite personal');
     assert.match(p.body.error.mensaje, /suspensión/);
   });
 
@@ -164,12 +230,17 @@ describe('ausentismo', () => {
       assert.equal(r.status, 200, JSON.stringify(r.body));
       assert.ok(r.body.filas.every((f) => f.sede === 'SEDE NORTE'));
       assert.ok(r.body.filas.every((f) => f.ini >= desde && f.fin <= hasta));
-      const csv = await admin.agente.get(`/api/v1/reportes/ausentismo?desde=${desde}&hasta=${hasta}&formato=csv`).buffer(true).parse((res, cb) => {
-        let s = '';
-        res.setEncoding('utf8');
-        res.on('data', (d) => { s += d; });
-        res.on('end', () => cb(null, s));
-      });
+      const csv = await admin.agente
+        .get(`/api/v1/reportes/ausentismo?desde=${desde}&hasta=${hasta}&formato=csv`)
+        .buffer(true)
+        .parse((res, cb) => {
+          let s = '';
+          res.setEncoding('utf8');
+          res.on('data', (d) => {
+            s += d;
+          });
+          res.on('end', () => cb(null, s));
+        });
       assert.match(csv.headers['content-type'], /text\/csv/);
       assert.equal(csv.body.charCodeAt(0), 0xfeff, 'BOM para Excel');
       assert.match(csv.body, /Sede;Cédula;Nombre/);

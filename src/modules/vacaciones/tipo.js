@@ -31,10 +31,19 @@ export function crearTipoVacaciones(svc) {
       if (!previo) throw new Error('revalidarAlEnviar de VACACIONES requiere "previo" (parámetros leídos antes de la transacción).');
       const colaborador = await trx('colaboradores').where({ id: s.colaborador_id }).first();
       if (colaborador?.estado !== 'ACTIVO') throw invalido('El expediente está como retirado; no se pueden enviar solicitudes.');
-      const { campos } = await svc.planear(colaborador, {
-        fecha_inicio: s.fecha_inicio, dias: Number(s.dias_habiles), dias_compensar: Number(s.dias_compensar ?? 0), motivo: s.motivo ?? '',
-      }, { trx, previo, excluirId: s.id });
-      await trx('solicitudes').where({ id: s.id }).update({ fecha_fin: campos.fecha_fin, subtipo: campos.subtipo, datos: JSON.stringify(campos.datos) });
+      const { campos } = await svc.planear(
+        colaborador,
+        {
+          fecha_inicio: s.fecha_inicio,
+          dias: Number(s.dias_habiles),
+          dias_compensar: Number(s.dias_compensar ?? 0),
+          motivo: s.motivo ?? '',
+        },
+        { trx, previo, excluirId: s.id },
+      );
+      await trx('solicitudes')
+        .where({ id: s.id })
+        .update({ fecha_fin: campos.fecha_fin, subtipo: campos.subtipo, datos: JSON.stringify(campos.datos) });
       Object.assign(s, { fecha_fin: campos.fecha_fin, subtipo: campos.subtipo, datos: campos.datos });
     },
 
@@ -48,7 +57,9 @@ export function crearTipoVacaciones(svc) {
       const saldo = await svc.saldo(colaborador, { trx, previo, excluirId: s.id });
       const pide = Number(s.dias_habiles) + Number(s.dias_compensar ?? 0);
       if (!saldo.registrado || pide > saldo.paraSolicitar + 1e-9) {
-        throw conflicto(`El saldo de vacaciones del colaborador cambió y ya no alcanza: tiene ${String(Math.max(0, saldo.paraSolicitar ?? 0)).replace('.', ',')} día(s) y la solicitud pide ${pide}. Rechácela o pida al área contable revisar el saldo.`);
+        throw conflicto(
+          `El saldo de vacaciones del colaborador cambió y ya no alcanza: tiene ${String(Math.max(0, saldo.paraSolicitar ?? 0)).replace('.', ',')} día(s) y la solicitud pide ${pide}. Rechácela o pida al área contable revisar el saldo.`,
+        );
       }
     },
 

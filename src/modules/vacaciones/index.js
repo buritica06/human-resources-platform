@@ -12,7 +12,17 @@ const esquemaId = z.object({ id: z.coerce.number().int().positive() });
 const esquemaCorte = z.object({
   fecha_corte: z.string().max(10),
   // Número o texto numérico (con punto o coma decimal); vacío, null o booleanos se rechazan
-  dias: z.union([z.number(), z.string().trim().regex(/^-?\d+([.,]\d{1,2})?$/)], { error: 'Escriba los días (hasta dos decimales).' })
+  dias: z
+    .union(
+      [
+        z.number(),
+        z
+          .string()
+          .trim()
+          .regex(/^-?\d+([.,]\d{1,2})?$/),
+      ],
+      { error: 'Escriba los días (hasta dos decimales).' },
+    )
     .transform((v) => (typeof v === 'number' ? v : Number(v.replace(',', '.')))),
   observacion: z.string().max(300),
 });
@@ -34,7 +44,8 @@ export default {
       let ok = false;
       if (c) {
         if (c.cedula === req.usuario.cedula || req.usuario.rol === ROLES.ADMIN) ok = true;
-        else if (req.usuario.rol === ROLES.DIRECTOR) ok = (await ctx.servicioSolicitudes.motor.sedesDirector(req.usuario.id)).includes(c.sede_id);
+        else if (req.usuario.rol === ROLES.DIRECTOR)
+          ok = (await ctx.servicioSolicitudes.motor.sedesDirector(req.usuario.id)).includes(c.sede_id);
       }
       if (!ok) {
         await ctx.auditar(req, { accion: 'ACCESO_DENEGADO', entidad: 'colaborador', entidadId: id, detalle: { recurso: 'vacaciones' } });
@@ -50,8 +61,14 @@ export default {
       const { mapa } = await svc.festivosDesde(Number(hoy.slice(0, 4)));
       const hasta = sumarDias(hoy, 400);
       res.json({
-        hoy, sabadoHabil: p.sabadoHabil, pctCompensacion: p.pctCompensacion, diasPorAnio: p.diasAnio,
-        festivos: [...mapa].filter(([f]) => f >= hoy && f <= hasta).map(([fecha, nombre]) => ({ fecha, nombre })).sort((a, b) => a.fecha.localeCompare(b.fecha)),
+        hoy,
+        sabadoHabil: p.sabadoHabil,
+        pctCompensacion: p.pctCompensacion,
+        diasPorAnio: p.diasAnio,
+        festivos: [...mapa]
+          .filter(([f]) => f >= hoy && f <= hasta)
+          .map(([fecha, nombre]) => ({ fecha, nombre }))
+          .sort((a, b) => a.fecha.localeCompare(b.fecha)),
       });
     });
 
@@ -76,9 +93,19 @@ export default {
       let saldo = await svc.saldo(c);
       // El director ve solo lo necesario para aprobar: el desglose revelaría suspensiones o licencias no remuneradas
       if (req.usuario.rol === ROLES.DIRECTOR && c.cedula !== req.usuario.cedula && saldo.registrado) {
-        saldo = { registrado: true, disponibles: saldo.disponibles, enTramite: saldo.enTramite, paraSolicitar: saldo.paraSolicitar, resumido: true };
+        saldo = {
+          registrado: true,
+          disponibles: saldo.disponibles,
+          enTramite: saldo.enTramite,
+          paraSolicitar: saldo.paraSolicitar,
+          resumido: true,
+        };
       }
-      res.json({ saldo, cortes: req.usuario.rol === ROLES.ADMIN ? await svc.cortes(c.id) : [], puedeRegistrar: req.usuario.rol === ROLES.ADMIN });
+      res.json({
+        saldo,
+        cortes: req.usuario.rol === ROLES.ADMIN ? await svc.cortes(c.id) : [],
+        puedeRegistrar: req.usuario.rol === ROLES.ADMIN,
+      });
     });
 
     router.post('/colaboradores/:id/vacaciones/corte', sesion, rol(ROLES.ADMIN), async (req, res) => {

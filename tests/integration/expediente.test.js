@@ -38,7 +38,10 @@ describe('Mi expediente (colaborador)', () => {
     assert.equal(editable.celular, true);
     assert.equal(editable.salario_base, false);
     assert.equal(editable.cedula, false);
-    assert.deepEqual(r.body.pestanas.map((p) => p.titulo), ['Datos', 'Nómina', 'Permisos', 'Vacaciones', 'Incapacidades', 'Licencias', 'Documentos']);
+    assert.deepEqual(
+      r.body.pestanas.map((p) => p.titulo),
+      ['Datos', 'Nómina', 'Permisos', 'Vacaciones', 'Incapacidades', 'Licencias', 'Documentos'],
+    );
     assert.ok(r.body.campos.find((c) => c.clave === 'eps').opciones.includes('Sura'));
   });
 
@@ -84,15 +87,31 @@ describe('Mi expediente (colaborador)', () => {
 
   test('los campos editables son parametrizables', async () => {
     assert.equal((await colab1.patch('/me/expediente', { nacionalidad: 'Colombiana' })).status, 403);
-    await env.ctx.db('parametros').where({ clave: 'CAMPOS_EDITABLES_COLABORADOR' })
-      .update({ valor: JSON.stringify(['celular', 'direccion', 'barrio', 'ciudad_residencia', 'estado_civil', 'nacionalidad', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono']) });
+    await env.ctx
+      .db('parametros')
+      .where({ clave: 'CAMPOS_EDITABLES_COLABORADOR' })
+      .update({
+        valor: JSON.stringify([
+          'celular',
+          'direccion',
+          'barrio',
+          'ciudad_residencia',
+          'estado_civil',
+          'nacionalidad',
+          'contacto_emergencia_nombre',
+          'contacto_emergencia_telefono',
+        ]),
+      });
     env.ctx.params.invalidar();
     assert.equal((await colab1.patch('/me/expediente', { nacionalidad: 'Colombiana' })).status, 200);
   });
 
   test('un usuario sin expediente recibe un mensaje claro', async () => {
     const r = await admin.post('/usuarios', { cedula: '7000000001', nombre: 'SIN EXPEDIENTE PRUEBA' });
-    await env.ctx.db('usuarios').where({ cedula: '7000000001' }).update({ debe_cambiar_clave: false, correo: 'x@example.com', correo_verificado_en: new Date().toISOString() });
+    await env.ctx
+      .db('usuarios')
+      .where({ cedula: '7000000001' })
+      .update({ debe_cambiar_clave: false, correo: 'x@example.com', correo_verificado_en: new Date().toISOString() });
     const c = await comoUsuario(env.app, '7000000001', r.body.claveTemporal);
     const e = await c.get('/me/expediente');
     assert.equal(e.status, 404);
@@ -104,7 +123,13 @@ describe('alcance: nadie ve datos fuera de su alcance', () => {
   test('anónimo 401; colaborador 403 en la gestión de expedientes', async () => {
     assert.equal((await request(env.app).get('/api/v1/me/expediente')).status, 401);
     const otro = await idColab(CED.colab2);
-    for (const ruta of ['/colaboradores', `/colaboradores/${otro}`, `/colaboradores/${otro}/historial`, `/colaboradores/${otro}/cuenta`, '/colaboradores/opciones']) {
+    for (const ruta of [
+      '/colaboradores',
+      `/colaboradores/${otro}`,
+      `/colaboradores/${otro}/historial`,
+      `/colaboradores/${otro}/cuenta`,
+      '/colaboradores/opciones',
+    ]) {
       assert.equal((await colab1.get(ruta)).status, 403, ruta);
     }
     assert.equal((await colab1.patch(`/colaboradores/${otro}`, { cargo: 'X' })).status, 403);
@@ -168,7 +193,10 @@ describe('admincontable', () => {
     r = await admin.patch(`/colaboradores/${id}`, { estado: 'RETIRADO' });
     assert.equal(r.status, 400);
     assert.ok(r.body.error.campos.fecha_retiro);
-    r = await admin.patch(`/colaboradores/${id}`, { empleador_id: (await env.ctx.db('empleadores').where({ clave: 'EMP_A' }).first()).id, sede_id: sedeOtroEmpleador.id });
+    r = await admin.patch(`/colaboradores/${id}`, {
+      empleador_id: (await env.ctx.db('empleadores').where({ clave: 'EMP_A' }).first()).id,
+      sede_id: sedeOtroEmpleador.id,
+    });
     assert.equal(r.status, 200);
     const h = await admin.get(`/colaboradores/${id}/historial`);
     const cambioSede = h.body.cambios.find((c) => c.campo === 'sede_id');
@@ -188,14 +216,24 @@ describe('admincontable', () => {
     assert.equal(c.nuevo, '•••• 2333');
     const r = await admin.get(`/colaboradores/${id}/cuenta`);
     assert.equal(r.body.numeroCuenta, '11112222333');
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER_CUENTA', entidad_id: String(id) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'VER_CUENTA', entidad_id: String(id) })
+        .first(),
+    );
     assert.equal((await admin.patch(`/colaboradores/${id}`, { numero_cuenta: '12-AB' })).status, 400);
   });
 
   test('ver un expediente queda auditado', async () => {
     const id = await idColab(CED.colab1);
     await admin.get(`/colaboradores/${id}`);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER', entidad: 'colaborador', entidad_id: String(id) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'VER', entidad: 'colaborador', entidad_id: String(id) })
+        .first(),
+    );
   });
 });
 
@@ -256,7 +294,10 @@ describe('importación desde el libro de nómina', () => {
     // El colaborador cambió su celular; el admin cambió el salario en la plataforma
     await env.ctx.db('colaboradores').where({ cedula: '2000000002' }).update({ celular: '3209998877', salario_base: 1900000 });
     r = await importar('empleados-ficticio.xlsx');
-    assert.deepEqual(r.body.actualizar.map((a) => a.cedula), ['2000000002']);
+    assert.deepEqual(
+      r.body.actualizar.map((a) => a.cedula),
+      ['2000000002'],
+    );
     assert.deepEqual(r.body.actualizar[0].campos, ['Salario base mensual']);
     const f = await fila('2000000002');
     assert.equal(f.celular, '3209998877', 'el Excel no pisa el celular que actualizó el colaborador');

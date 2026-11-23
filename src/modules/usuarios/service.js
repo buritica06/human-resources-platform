@@ -39,14 +39,20 @@ export function crearServicioUsuarios(ctx) {
 
   async function crear(req, { cedula, nombre, rol, sedes }) {
     if (await repo.existeCedula(cedula)) throw conflicto('Ya existe un usuario con esa cédula.');
-    if (rol !== 'DIRECTOR' && sedes.length) throw invalido('Solo los directores tienen sedes asignadas.', { sedes: 'Solo para directores.' });
+    if (rol !== 'DIRECTOR' && sedes.length)
+      throw invalido('Solo los directores tienen sedes asignadas.', { sedes: 'Solo para directores.' });
     if (!(await repo.sedesValidas(sedes))) throw invalido('Alguna sede no existe.', { sedes: 'Sede no válida.' });
     const claveTemporal = generarClaveTemporal();
     const hash = await hashClave(claveTemporal);
     const id = await db.transaction(async (trx) => {
       const nuevo = await repo.insertar(trx, {
-        cedula, nombre, rol, password_hash: hash, debe_cambiar_clave: true,
-        clave_temporal_expira: venceTemporal(), creado_por: req.usuario.id,
+        cedula,
+        nombre,
+        rol,
+        password_hash: hash,
+        debe_cambiar_clave: true,
+        clave_temporal_expira: venceTemporal(),
+        creado_por: req.usuario.id,
       });
       if (sedes.length) await repo.reemplazarSedes(trx, nuevo, sedes);
       return nuevo;
@@ -86,7 +92,9 @@ export function crearServicioUsuarios(ctx) {
     if (cambios.activo === false || (cambios.rol && cambios.rol !== u.rol)) await sesiones.cerrarTodas(id);
     const despues = await detalle(id);
     await auditar(req, {
-      accion: 'EDITAR', entidad: 'usuario', entidadId: id,
+      accion: 'EDITAR',
+      entidad: 'usuario',
+      entidadId: id,
       detalle: { antes, despues: { nombre: despues.nombre, rol: despues.rol, activo: despues.activo, sedes: despues.sedes } },
     });
     return despues;
@@ -140,9 +148,13 @@ export function crearServicioUsuarios(ctx) {
     await db.transaction(async (trx) => {
       for (const f of preparados) {
         const id = await repo.insertar(trx, {
-          cedula: f.cedula, nombre: f.nombre, rol: 'COLABORADOR',
-          password_hash: f.hash, debe_cambiar_clave: true,
-          clave_temporal_expira: venceTemporal(), creado_por: req.usuario.id,
+          cedula: f.cedula,
+          nombre: f.nombre,
+          rol: 'COLABORADOR',
+          password_hash: f.hash,
+          debe_cambiar_clave: true,
+          clave_temporal_expira: venceTemporal(),
+          creado_por: req.usuario.id,
         });
         creados.push({ id, cedula: f.cedula, nombre: f.nombre, claveTemporal: f.claveTemporal });
       }

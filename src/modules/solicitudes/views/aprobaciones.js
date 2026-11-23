@@ -34,15 +34,20 @@ async function cargar() {
   try {
     const { solicitudes } = await api(`/aprobaciones${filtro ? `?tipo=${filtro}` : ''}`);
     conteo.textContent = `${solicitudes.length} pendiente(s) de su aprobación.`;
-    lista.innerHTML = solicitudes.length ? `<table class="tabla"><thead><tr><th scope="col">Colaborador</th><th scope="col">Solicitud</th><th scope="col">Cuándo</th><th scope="col">Estado</th><th scope="col">Enviada</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-      <tbody>${solicitudes.map((s) => `<tr>
+    lista.innerHTML = solicitudes.length
+      ? `<table class="tabla"><thead><tr><th scope="col">Colaborador</th><th scope="col">Solicitud</th><th scope="col">Cuándo</th><th scope="col">Estado</th><th scope="col">Enviada</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+      <tbody>${solicitudes
+        .map(
+          (s) => `<tr>
         <td data-etiqueta="Colaborador">${escapar(s.colaborador.nombre)}<br><span class="ayuda">${escapar(s.colaborador.cargo ?? '')}</span></td>
         <td data-etiqueta="Solicitud">${escapar(s.tipoEtiqueta)}: ${escapar(s.subtipo ?? '')}</td>
         <td data-etiqueta="Cuándo">${escapar(cuando(s))}</td>
         <td data-etiqueta="Estado">${pildoraEstado(s.estado, s.estadoEtiqueta)}</td>
         <td data-etiqueta="Enviada">${escapar(fechaHora(s.enviadoEn))}</td>
         <td class="acciones"><a class="btn btn--chico" href="/solicitudes/ver?id=${s.id}">Revisar<span class="sr-only"> solicitud de ${escapar(s.colaborador.nombre)}</span></a></td>
-      </tr>`).join('')}</tbody></table>`
+      </tr>`,
+        )
+        .join('')}</tbody></table>`
       : `<div class="vacio">${icono('ok')}<h3>Todo al día</h3><p>No tiene solicitudes pendientes. Le avisaremos cuando llegue una nueva.</p></div>`;
   } catch (err) {
     lista.innerHTML = htmlAviso('error', err.message);

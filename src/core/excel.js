@@ -54,7 +54,10 @@ function fechaReal(a, mes, d) {
 // Cédula: número sin decimales, o texto sin ".0" final, puntos ni espacios.
 export function cedulaCelda(v) {
   if (typeof v === 'number') return Number.isInteger(v) ? String(v) : '';
-  return String(v ?? '').trim().replace(/\.0+$/, '').replace(/[.\s]/g, '');
+  return String(v ?? '')
+    .trim()
+    .replace(/\.0+$/, '')
+    .replace(/[.\s]/g, '');
 }
 
 export async function leerLibro(buffer) {

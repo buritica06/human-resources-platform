@@ -14,7 +14,12 @@ function hoyLargo() {
 }
 
 const iniciales = (nombre) =>
-  String(nombre).split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('');
+  String(nombre)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('');
 
 export async function montarShell({ permitirOnboarding = false } = {}) {
   const me = await api('/auth/me');
@@ -39,7 +44,10 @@ export async function montarShell({ permitirOnboarding = false } = {}) {
     </div>
     <nav aria-label="Secciones"><ul class="nav">
       ${me.menu
-        .map((m) => `<li><a href="${escapar(m.href)}" ${actual === m.href ? 'aria-current="page"' : ''}>${icono(m.icono)}<span>${escapar(m.texto)}</span></a></li>`)
+        .map(
+          (m) =>
+            `<li><a href="${escapar(m.href)}" ${actual === m.href ? 'aria-current="page"' : ''}>${icono(m.icono)}<span>${escapar(m.texto)}</span></a></li>`,
+        )
         .join('')}
     </ul></nav>`;
 

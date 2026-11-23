@@ -11,8 +11,8 @@ const anioActual = Number(new Date(Date.now() - 5 * 3600_000).toISOString().slic
 let anio = anioActual + (new URLSearchParams(location.search).get('siguiente') ? 1 : 0);
 
 const fila = (f = { fecha: '', nombre: '' }, i = 0) => `<tr>
-  <td data-etiqueta="Fecha"><label class="sr-only" for="fe-${i}">Fecha del festivo ${escapar(f.nombre || "nuevo")}</label><input class="entrada" type="date" id="fe-${i}" name="fecha" value="${escapar(f.fecha)}" min="${anio}-01-01" max="${anio}-12-31" required></td>
-  <td data-etiqueta="Nombre"><label class="sr-only" for="fn-${i}">Nombre del festivo ${escapar(f.fecha || "nuevo")}</label><input class="entrada" id="fn-${i}" name="nombre" value="${escapar(f.nombre ?? '')}" maxlength="120" required></td>
+  <td data-etiqueta="Fecha"><label class="sr-only" for="fe-${i}">Fecha del festivo ${escapar(f.nombre || 'nuevo')}</label><input class="entrada" type="date" id="fe-${i}" name="fecha" value="${escapar(f.fecha)}" min="${anio}-01-01" max="${anio}-12-31" required></td>
+  <td data-etiqueta="Nombre"><label class="sr-only" for="fn-${i}">Nombre del festivo ${escapar(f.fecha || 'nuevo')}</label><input class="entrada" id="fn-${i}" name="nombre" value="${escapar(f.nombre ?? '')}" maxlength="120" required></td>
   <td class="acciones"><button type="button" class="btn btn--chico btn--fantasma" data-quitar>${icono('cerrar')}<span class="sr-only">Quitar esta fila</span></button></td></tr>`;
 
 async function cargar() {
@@ -55,8 +55,18 @@ f.addEventListener('click', (e) => {
 });
 f.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const festivos = [...document.querySelectorAll('#cuerpo tr')].map((tr) => ({ fecha: tr.querySelector('[name=fecha]').value, nombre: tr.querySelector('[name=nombre]').value.trim() }));
-  if (!(await confirmar({ titulo: `Guardar festivos de ${anio}`, mensaje: `Se reemplazarán los festivos de ${anio} por estos ${festivos.length}. Las solicitudes ya aprobadas no se recalculan. ¿Guardar?`, aceptar: 'Guardar' }))) return;
+  const festivos = [...document.querySelectorAll('#cuerpo tr')].map((tr) => ({
+    fecha: tr.querySelector('[name=fecha]').value,
+    nombre: tr.querySelector('[name=nombre]').value.trim(),
+  }));
+  if (
+    !(await confirmar({
+      titulo: `Guardar festivos de ${anio}`,
+      mensaje: `Se reemplazarán los festivos de ${anio} por estos ${festivos.length}. Las solicitudes ya aprobadas no se recalculan. ¿Guardar?`,
+      aceptar: 'Guardar',
+    }))
+  )
+    return;
   await conCarga(f.querySelector('[type=submit]'), async () => {
     try {
       await api(`/festivos/${anio}`, { metodo: 'PUT', datos: { festivos } });

@@ -19,7 +19,20 @@ import licencias from '../modules/licencias/index.js';
 import certificados from '../modules/certificados/index.js';
 import admin from '../modules/admin/index.js';
 
-export const DISPONIBLES = [auth, usuarios, colaboradores, nomina, notificaciones, solicitudes, permisos, vacaciones, incapacidades, licencias, certificados, admin];
+export const DISPONIBLES = [
+  auth,
+  usuarios,
+  colaboradores,
+  nomina,
+  notificaciones,
+  solicitudes,
+  permisos,
+  vacaciones,
+  incapacidades,
+  licencias,
+  certificados,
+  admin,
+];
 
 // Dependencias entre módulos: si falta una, la app no arranca (mensaje claro)
 const REQUIERE = {

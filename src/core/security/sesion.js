@@ -10,9 +10,7 @@ const METODOS_SEGUROS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export function nombresCookies(cfg) {
   // El prefijo __Host- exige Secure, Path=/ y sin Domain: solo en producción (HTTPS).
-  return cfg.produccion
-    ? { sesion: '__Host-th_sid', csrf: '__Host-th_csrf' }
-    : { sesion: 'th_sid', csrf: 'th_csrf' };
+  return cfg.produccion ? { sesion: '__Host-th_sid', csrf: '__Host-th_csrf' } : { sesion: 'th_sid', csrf: 'th_csrf' };
 }
 
 export function leerCookies(req) {
@@ -48,7 +46,10 @@ export function crearSesiones(ctx) {
   async function crear(req, res, usuario) {
     // Si el navegador traía otra sesión, se elimina en el servidor (no queda viva en la BD).
     const anterior = leerCookies(req)[nombres.sesion];
-    if (anterior) await db('sesiones').where({ id_hash: sha256(anterior) }).del();
+    if (anterior)
+      await db('sesiones')
+        .where({ id_hash: sha256(anterior) })
+        .del();
     const token = tokenAleatorio(32);
     const csrf = tokenAleatorio(24);
     const t = new Date();
@@ -69,7 +70,10 @@ export function crearSesiones(ctx) {
 
   async function destruir(req, res) {
     const token = leerCookies(req)[nombres.sesion];
-    if (token) await db('sesiones').where({ id_hash: sha256(token) }).del();
+    if (token)
+      await db('sesiones')
+        .where({ id_hash: sha256(token) })
+        .del();
     borrar(res, nombres.sesion);
   }
 

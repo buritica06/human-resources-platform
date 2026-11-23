@@ -3,7 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FESTIVOS } from '../../seeds/datos-iniciales.js';
 import {
-  contarHabiles, dias360, esHabil, fechaValida, finDeDisfrute, motivoNoHabil, primerHabilDesde, siguienteHabil,
+  contarHabiles,
+  dias360,
+  esHabil,
+  fechaValida,
+  finDeDisfrute,
+  motivoNoHabil,
+  primerHabilDesde,
+  siguienteHabil,
 } from '../../src/modules/vacaciones/calendario.js';
 
 const festivos = new Map(FESTIVOS);

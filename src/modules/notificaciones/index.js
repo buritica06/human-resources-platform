@@ -11,7 +11,16 @@ function montar(router, ctx) {
 
   router.get('/notificaciones', sesion, async (req, res) => {
     const filas = await db('notificaciones').where({ usuario_id: req.usuario.id }).orderBy('id', 'desc').limit(50);
-    res.json({ notificaciones: filas.map((n) => ({ id: n.id, titulo: n.titulo, mensaje: n.mensaje, enlace: n.enlace, leida: !!n.leida, creadaEn: n.creada_en })) });
+    res.json({
+      notificaciones: filas.map((n) => ({
+        id: n.id,
+        titulo: n.titulo,
+        mensaje: n.mensaje,
+        enlace: n.enlace,
+        leida: !!n.leida,
+        creadaEn: n.creada_en,
+      })),
+    });
   });
   router.get('/notificaciones/resumen', sesion, async (req, res) => {
     const [{ n }] = await db('notificaciones').where({ usuario_id: req.usuario.id, leida: false }).count({ n: '*' });
@@ -32,7 +41,9 @@ function montar(router, ctx) {
   router.get('/eventos', sesion, (req, res) => {
     const uid = req.usuario.id;
     if ((conexiones.get(uid) ?? 0) >= MAX_CONEXIONES) {
-      return res.status(429).json({ error: { codigo: 'DEMASIADAS_CONEXIONES', mensaje: 'Tiene demasiadas pestañas abiertas con avisos en vivo.' } });
+      return res
+        .status(429)
+        .json({ error: { codigo: 'DEMASIADAS_CONEXIONES', mensaje: 'Tiene demasiadas pestañas abiertas con avisos en vivo.' } });
     }
     conexiones.set(uid, (conexiones.get(uid) ?? 0) + 1);
     res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });

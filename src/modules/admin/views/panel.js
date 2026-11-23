@@ -30,8 +30,12 @@ try {
       <section class="tarjeta" aria-labelledby="p2"><h2 id="p2">Incapacidades por revisar</h2><p class="cifra-grande">${r.incapacidades}</p>
         <a class="btn ${r.incapacidades ? '' : 'btn--secundario'}" href="/incapacidades/equipo">${icono('salud')} Revisar</a></section>
       <section class="tarjeta" aria-labelledby="p3"><h2 id="p3">Última nómina</h2>
-        ${n ? `<p><strong>${escapar(n.nombre_hoja)}</strong><br><span class="ayuda">Del ${escapar(fecha(n.fecha_inicio))} al ${escapar(fecha(n.fecha_fin))} · ${n.colaboradores} colaboradores · ${n.estado === 'PUBLICADO' ? 'publicada' : 'en borrador (sin publicar)'}</span></p>
-          <a class="btn btn--secundario" href="/nomina/periodo?id=${n.id}">Ver</a>` : '<p class="ayuda">Aún no se ha cargado ninguna nómina.</p><a class="btn" href="/nomina">Cargar nómina</a>'}</section>
+        ${
+          n
+            ? `<p><strong>${escapar(n.nombre_hoja)}</strong><br><span class="ayuda">Del ${escapar(fecha(n.fecha_inicio))} al ${escapar(fecha(n.fecha_fin))} · ${n.colaboradores} colaboradores · ${n.estado === 'PUBLICADO' ? 'publicada' : 'en borrador (sin publicar)'}</span></p>
+          <a class="btn btn--secundario" href="/nomina/periodo?id=${n.id}">Ver</a>`
+            : '<p class="ayuda">Aún no se ha cargado ninguna nómina.</p><a class="btn" href="/nomina">Cargar nómina</a>'
+        }</section>
     </div>
     <section class="tarjeta" aria-labelledby="t-alertas"><h2 id="t-alertas">Alertas</h2>
       ${r.alertas.length ? `<ul class="lista-compacta">${r.alertas.map((a) => `<li>${icono(ICONO[a.nivel] ?? 'info')} ${escapar(a.texto)} <a href="${escapar(a.enlace)}">Ver</a></li>`).join('')}</ul>` : `<p class="ayuda">${icono('ok')} Todo en orden.</p>`}

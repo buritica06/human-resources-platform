@@ -21,14 +21,18 @@ async function cargar(anio) {
         <h2 id="t-anio">Volantes de ${escapar(r.anio)}</h2>
         ${r.anios.length > 1 ? `<div class="campo"><label for="anio">Año</label><select class="entrada" id="anio">${r.anios.map((a) => `<option ${a === r.anio ? 'selected' : ''}>${escapar(a)}</option>`).join('')}</select></div>` : ''}
       </header>
-      <ul class="lista-volantes">${r.volantes.map((v) => `<li class="item-volante">
+      <ul class="lista-volantes">${r.volantes
+        .map(
+          (v) => `<li class="item-volante">
           <div><div class="item-volante__periodo">${escapar(v.hoja)}</div><div class="ayuda">Del ${escapar(periodoTexto(v.inicio, v.fin))}</div></div>
           <div><span class="ayuda">Neto</span> <span class="item-volante__neto">${copExacto(v.neto)}</span>
             ${v.adicional ? `<span class="pildora pildora--primario">+ ${copExacto(v.adicional)} adicional</span>` : ''}</div>
           <div class="formulario-acciones">
             <a class="btn btn--chico" href="/volantes/ver?id=${v.id}">${icono('recibo')} Ver<span class="sr-only"> volante ${escapar(v.hoja)}</span></a>
             <a class="btn btn--chico btn--secundario" href="/api/v1/volantes/${v.id}/pdf?descargar=1">${icono('descargar')} PDF<span class="sr-only"> de ${escapar(v.hoja)}</span></a>
-          </div></li>`).join('')}</ul></section>`;
+          </div></li>`,
+        )
+        .join('')}</ul></section>`;
     zona.querySelector('#anio')?.addEventListener('change', (e) => cargar(e.target.value));
   } catch (err) {
     zona.innerHTML = htmlAviso('error', err.message);

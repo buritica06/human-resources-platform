@@ -11,9 +11,16 @@ import { pdfCertificado } from './pdf.js';
 const esquemaId = z.object({ id: z.coerce.number().int().positive() });
 const esquemaEmitir = z.object({
   conSalario: z.boolean({ error: 'Indique si el certificado lleva el salario.' }),
-  dirigidoA: z.string().trim().max(100, 'Máximo 100 caracteres.').regex(/^[\p{Script=Latin}\p{N} .,&()'-]*$/u, 'Use solo letras, números y signos básicos.').optional(),
+  dirigidoA: z
+    .string()
+    .trim()
+    .max(100, 'Máximo 100 caracteres.')
+    .regex(/^[\p{Script=Latin}\p{N} .,&()'-]*$/u, 'Use solo letras, números y signos básicos.')
+    .optional(),
 });
-const esquemaAnular = z.object({ motivo: z.string({ error: 'Escriba el motivo.' }).trim().min(5, 'Explique el motivo (mínimo 5 caracteres).').max(300) });
+const esquemaAnular = z.object({
+  motivo: z.string({ error: 'Escriba el motivo.' }).trim().min(5, 'Explique el motivo (mínimo 5 caracteres).').max(300),
+});
 
 export default {
   nombre: 'certificados',
@@ -21,21 +28,38 @@ export default {
     const svc = crearServicioCertificados(ctx);
     const sesion = autenticado();
     const verificacionLimitada = rateLimit({
-      windowMs: ctx.limites.ventanaMs, limit: ctx.limites.verificar ?? 60, standardHeaders: 'draft-8', legacyHeaders: false,
-      handler: (_req, res) => res.status(429).json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Demasiadas consultas. Espere unos minutos e intente de nuevo.' } }),
+      windowMs: ctx.limites.ventanaMs,
+      limit: ctx.limites.verificar ?? 60,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      handler: (_req, res) =>
+        res
+          .status(429)
+          .json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Demasiadas consultas. Espere unos minutos e intente de nuevo.' } }),
     });
 
     // Emisión: límite por usuario (cada certificado queda guardado y auditado)
     const emisionLimitada = rateLimit({
-      windowMs: ctx.limites.ventanaMs, limit: ctx.limites.emitirCertificado ?? 20, standardHeaders: 'draft-8', legacyHeaders: false,
+      windowMs: ctx.limites.ventanaMs,
+      limit: ctx.limites.emitirCertificado ?? 20,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
       keyGenerator: (req) => `u${req.usuario.id}`,
-      handler: (_req, res) => res.status(429).json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Ha generado muchos certificados seguidos. Espere unos minutos.' } }),
+      handler: (_req, res) =>
+        res
+          .status(429)
+          .json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Ha generado muchos certificados seguidos. Espere unos minutos.' } }),
     });
-    router.post('/me/certificados/laboral', sesion, emisionLimitada, async (req, res) => res.status(201).json(await svc.emitir(req, null, validar(esquemaEmitir, req.body))));
+    router.post('/me/certificados/laboral', sesion, emisionLimitada, async (req, res) =>
+      res.status(201).json(await svc.emitir(req, null, validar(esquemaEmitir, req.body))),
+    );
     router.post('/colaboradores/:id/certificados/laboral', sesion, rol(ROLES.ADMIN), emisionLimitada, async (req, res) =>
-      res.status(201).json(await svc.emitir(req, validar(esquemaId, req.params).id, validar(esquemaEmitir, req.body))));
+      res.status(201).json(await svc.emitir(req, validar(esquemaId, req.params).id, validar(esquemaEmitir, req.body))),
+    );
     router.get('/me/certificados', sesion, async (req, res) => res.json(await svc.lista(req, null)));
-    router.get('/colaboradores/:id/certificados', sesion, async (req, res) => res.json(await svc.lista(req, validar(esquemaId, req.params).id)));
+    router.get('/colaboradores/:id/certificados', sesion, async (req, res) =>
+      res.json(await svc.lista(req, validar(esquemaId, req.params).id)),
+    );
     router.get('/certificados/:id/pdf', sesion, async (req, res) => {
       const k = await svc.cargar(req, validar(esquemaId, req.params).id);
       const pdf = await pdfCertificado(k, { appUrl: ctx.cfg.appUrl });
@@ -48,7 +72,8 @@ export default {
       res.end(pdf);
     });
     router.post('/certificados/:id/anular', sesion, rol(ROLES.ADMIN), async (req, res) =>
-      res.json(await svc.anular(req, validar(esquemaId, req.params).id, validar(esquemaAnular, req.body).motivo)));
+      res.json(await svc.anular(req, validar(esquemaId, req.params).id, validar(esquemaAnular, req.body).motivo)),
+    );
     // Pública (sin sesión)
     router.get('/certificados/verificar/:codigo', verificacionLimitada, async (req, res) => {
       res.set('Cache-Control', 'no-store');

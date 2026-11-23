@@ -26,11 +26,26 @@ after(() => env.cerrar());
 const tk = async (c) => (await c.get('/auth/csrf')).body.csrf;
 
 test('motivo de solicitudes sensibles reservado para el director también en bandeja y expediente', async () => {
-  const m = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'LICENCIA').field('subtipo', 'MATERNIDAD')
-    .field('fecha_inicio', sumarDias(hoy, 50)).field('fecha_fin', sumarDias(hoy, 55)).field('motivo', 'Control por preeclampsia').attach('soporte', PDF, 's.pdf');
+  const m = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'LICENCIA')
+    .field('subtipo', 'MATERNIDAD')
+    .field('fecha_inicio', sumarDias(hoy, 50))
+    .field('fecha_fin', sumarDias(hoy, 55))
+    .field('motivo', 'Control por preeclampsia')
+    .attach('soporte', PDF, 's.pdf');
   assert.equal(m.status, 201, JSON.stringify(m.body));
-  const p = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'PERMISO').field('subtipo', 'CITA MÉDICA')
-    .field('fecha_inicio', sumarDias(hoy, 3)).field('hora_inicio', '08:00').field('fecha_fin', sumarDias(hoy, 3)).field('hora_fin', '10:00').field('motivo', 'Control de cardiología');
+  const p = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'PERMISO')
+    .field('subtipo', 'CITA MÉDICA')
+    .field('fecha_inicio', sumarDias(hoy, 3))
+    .field('hora_inicio', '08:00')
+    .field('fecha_fin', sumarDias(hoy, 3))
+    .field('hora_fin', '10:00')
+    .field('motivo', 'Control de cardiología');
   assert.equal(p.status, 201, JSON.stringify(p.body));
   const bandeja = JSON.stringify((await director.get('/aprobaciones')).body);
   const exp = JSON.stringify((await director.get(`/colaboradores/${idColab1}/solicitudes`)).body);
@@ -42,9 +57,18 @@ test('motivo de solicitudes sensibles reservado para el director también en ban
 });
 
 test('el director no descarga soportes de borradores', async () => {
-  const b = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'PERMISO').field('subtipo', 'DILIGENCIA PERSONAL')
-    .field('fecha_inicio', sumarDias(hoy, 7)).field('hora_inicio', '08:00').field('fecha_fin', sumarDias(hoy, 7)).field('hora_fin', '09:00').field('motivo', 'Trámite en notaría')
-    .field('enviar', 'false').attach('soporte', PDF, 'b.pdf');
+  const b = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'PERMISO')
+    .field('subtipo', 'DILIGENCIA PERSONAL')
+    .field('fecha_inicio', sumarDias(hoy, 7))
+    .field('hora_inicio', '08:00')
+    .field('fecha_fin', sumarDias(hoy, 7))
+    .field('hora_fin', '09:00')
+    .field('motivo', 'Trámite en notaría')
+    .field('enviar', 'false')
+    .attach('soporte', PDF, 'b.pdf');
   assert.equal(b.status, 201, JSON.stringify(b.body));
   assert.equal((await director.get(`/documentos/${b.body.documentoId}`)).status, 404);
   await colab1.post(`/solicitudes/${b.body.id}/enviar`, {});
@@ -61,10 +85,20 @@ test('el director ve el saldo de vacaciones resumido (sin desglose de días no l
 
 test('al aprobar, el director recibe un mensaje de cruce genérico (no revela suspensiones)', async () => {
   const d = sumarDias(hoy, 20);
-  const p = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'PERMISO').field('subtipo', 'DILIGENCIA PERSONAL')
-    .field('fecha_inicio', d).field('hora_inicio', '08:00').field('fecha_fin', d).field('hora_fin', '09:00').field('motivo', 'Trámite en el banco');
+  const p = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'PERMISO')
+    .field('subtipo', 'DILIGENCIA PERSONAL')
+    .field('fecha_inicio', d)
+    .field('hora_inicio', '08:00')
+    .field('fecha_fin', d)
+    .field('hora_fin', '09:00')
+    .field('motivo', 'Trámite en el banco');
   assert.equal(p.status, 201);
-  await env.ctx.db('suspensiones').insert({ colaborador_id: idColab1, fecha_inicio: d, fecha_fin: d, dias: 1, motivo: 'Prueba', creado_en: new Date().toISOString() });
+  await env.ctx
+    .db('suspensiones')
+    .insert({ colaborador_id: idColab1, fecha_inicio: d, fecha_fin: d, dias: 1, motivo: 'Prueba', creado_en: new Date().toISOString() });
   const a = await director.post(`/solicitudes/${p.body.id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' });
   assert.equal(a.status, 400);
   assert.doesNotMatch(a.body.error.mensaje, /suspensi/);
@@ -72,7 +106,14 @@ test('al aprobar, el director recibe un mensaje de cruce genérico (no revela su
 });
 
 test('entradas no numéricas → 400 (no 500)', async () => {
-  const r = await admin.agente.post('/api/v1/incapacidades').set('X-CSRF-Token', await tk(admin)).field('colaborador_id', 'abc')
-    .field('tipo', 'IGE').field('entidad', 'Sura').field('fecha_inicio', hoy).field('fecha_fin', hoy).attach('soporte', PDF, 'c.pdf');
+  const r = await admin.agente
+    .post('/api/v1/incapacidades')
+    .set('X-CSRF-Token', await tk(admin))
+    .field('colaborador_id', 'abc')
+    .field('tipo', 'IGE')
+    .field('entidad', 'Sura')
+    .field('fecha_inicio', hoy)
+    .field('fecha_fin', hoy)
+    .attach('soporte', PDF, 'c.pdf');
   assert.equal(r.status, 400);
 });

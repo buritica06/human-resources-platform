@@ -19,8 +19,9 @@ else document.getElementById('nota-director').hidden = false;
 
 try {
   const op = await api('/colaboradores/opciones');
-  document.getElementById('f-sede').insertAdjacentHTML('beforeend',
-    op.sedes.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join(''));
+  document
+    .getElementById('f-sede')
+    .insertAdjacentHTML('beforeend', op.sedes.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join(''));
 } catch {
   /* el filtro de sede es opcional */
 }
@@ -40,23 +41,30 @@ async function cargar() {
       lista.innerHTML = `<table class="tabla"><thead><tr>
         <th scope="col">Cédula</th><th scope="col">Nombre</th><th scope="col">Sede</th><th scope="col">Cargo</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th>
         </tr></thead><tbody>
-        ${r.colaboradores.map((c) => `<tr>
+        ${r.colaboradores
+          .map(
+            (c) => `<tr>
           <td data-etiqueta="Cédula">${escapar(c.cedula)}</td>
           <td data-etiqueta="Nombre">${escapar(c.nombre)}</td>
           <td data-etiqueta="Sede">${escapar(c.sede ?? '—')}</td>
           <td data-etiqueta="Cargo">${escapar(c.cargo ?? '—')}</td>
-          <td data-etiqueta="Estado">${c.estado === 'ACTIVO'
-            ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
-            : `<span class="pildora pildora--neutro">${icono('cerrar')} Retirado</span>`}</td>
+          <td data-etiqueta="Estado">${
+            c.estado === 'ACTIVO'
+              ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
+              : `<span class="pildora pildora--neutro">${icono('cerrar')} Retirado</span>`
+          }</td>
           <td class="acciones"><a class="btn btn--chico btn--secundario" href="/colaboradores/ver?id=${c.id}">${icono('documento')} Ver expediente<span class="sr-only"> de ${escapar(c.nombre)}</span></a></td>
-        </tr>`).join('')}</tbody></table>`;
+        </tr>`,
+          )
+          .join('')}</tbody></table>`;
     }
     const paginas = Math.max(1, Math.ceil(r.total / r.porPagina));
-    paginacion.innerHTML = paginas > 1
-      ? `<button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina - 1}" ${pagina <= 1 ? 'disabled' : ''}>Anterior</button>
+    paginacion.innerHTML =
+      paginas > 1
+        ? `<button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina - 1}" ${pagina <= 1 ? 'disabled' : ''}>Anterior</button>
          <span>Página ${pagina} de ${paginas}</span>
          <button type="button" class="btn btn--chico btn--secundario" data-pag="${pagina + 1}" ${pagina >= paginas ? 'disabled' : ''}>Siguiente</button>`
-      : '';
+        : '';
   } catch (err) {
     lista.innerHTML = htmlAviso('error', err.message);
   } finally {
@@ -136,23 +144,49 @@ document.getElementById('btn-importar').addEventListener('click', () => {
             ${r.empleadoresNuevos.length ? `<li>Empleadores nuevos: ${escapar(r.empleadoresNuevos.join(', '))}</li>` : ''}
             ${r.sedesNuevas.length ? `<li>Sedes nuevas: ${escapar(r.sedesNuevas.join(', '))}</li>` : ''}
           </ul>
-          ${r.errores.length ? htmlAviso('error', `${r.errores.length} fila(s) con errores. Corríjalas en el Excel y vuelva a subirlo.`)
-            + lista2(r.errores, (x) => `<li>Fila ${x.fila}: ${escapar(x.mensaje)}</li>`) : ''}
-          ${r.advertencias.length ? `<details><summary>${r.advertencias.length} advertencia(s) (no impiden importar)</summary>
-            ${lista2(r.advertencias, (x) => `<li>Fila ${x.fila}: ${escapar(x.mensaje)}</li>`)}</details>` : ''}
-          ${r.actualizar.length ? `<details><summary>Ver los cambios</summary>
-            ${lista2(r.actualizar, (x) => `<li>${escapar(x.nombre)}: ${escapar(x.campos.join(', '))}</li>`)}</details>` : ''}
-          ${r.nuevos.length ? `<details><summary>Ver los nuevos</summary>
-            ${lista2(r.nuevos, (x) => `<li>${escapar(x.cedula)} – ${escapar(x.nombre)}</li>`)}</details>` : ''}
-          ${!r.errores.length && hayCambios
-            ? '<div class="formulario-acciones"><button class="btn" type="button" id="imp-confirmar">Confirmar importación</button></div>'
-            : !r.errores.length ? htmlAviso('info', 'No hay nada nuevo que importar.') : ''}`;
+          ${
+            r.errores.length
+              ? htmlAviso('error', `${r.errores.length} fila(s) con errores. Corríjalas en el Excel y vuelva a subirlo.`) +
+                lista2(r.errores, (x) => `<li>Fila ${x.fila}: ${escapar(x.mensaje)}</li>`)
+              : ''
+          }
+          ${
+            r.advertencias.length
+              ? `<details><summary>${r.advertencias.length} advertencia(s) (no impiden importar)</summary>
+            ${lista2(r.advertencias, (x) => `<li>Fila ${x.fila}: ${escapar(x.mensaje)}</li>`)}</details>`
+              : ''
+          }
+          ${
+            r.actualizar.length
+              ? `<details><summary>Ver los cambios</summary>
+            ${lista2(r.actualizar, (x) => `<li>${escapar(x.nombre)}: ${escapar(x.campos.join(', '))}</li>`)}</details>`
+              : ''
+          }
+          ${
+            r.nuevos.length
+              ? `<details><summary>Ver los nuevos</summary>
+            ${lista2(r.nuevos, (x) => `<li>${escapar(x.cedula)} – ${escapar(x.nombre)}</li>`)}</details>`
+              : ''
+          }
+          ${
+            !r.errores.length && hayCambios
+              ? '<div class="formulario-acciones"><button class="btn" type="button" id="imp-confirmar">Confirmar importación</button></div>'
+              : !r.errores.length
+                ? htmlAviso('info', 'No hay nada nuevo que importar.')
+                : ''
+          }`;
         vista.querySelector('#imp-confirmar')?.addEventListener('click', async (ev) => {
           await conCarga(ev.currentTarget, async () => {
             try {
               const c = await enviar(true);
-              vista.innerHTML = htmlAviso('exito', `Importación terminada: ${c.creados} expediente(s) creado(s) y ${c.actualizadosAplicados} actualizado(s).`)
-                + (c.creados ? `<p>Para que los nuevos colaboradores puedan ingresar, cree sus cuentas en <a href="/usuarios">Usuarios → Carga masiva desde nómina</a>.</p>` : '');
+              vista.innerHTML =
+                htmlAviso(
+                  'exito',
+                  `Importación terminada: ${c.creados} expediente(s) creado(s) y ${c.actualizadosAplicados} actualizado(s).`,
+                ) +
+                (c.creados
+                  ? `<p>Para que los nuevos colaboradores puedan ingresar, cree sus cuentas en <a href="/usuarios">Usuarios → Carga masiva desde nómina</a>.</p>`
+                  : '');
               form.hidden = true;
               cargar();
             } catch (err) {

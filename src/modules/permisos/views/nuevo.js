@@ -57,7 +57,12 @@ function revisarLocal() {
   if (!f.hora_inicio.value) e.hora_inicio = 'Escriba la hora de inicio.';
   if (!f.fecha_fin.value) e.fecha_fin = 'Escriba la fecha de fin.';
   if (!f.hora_fin.value) e.hora_fin = 'Escriba la hora de fin.';
-  if (f.fecha_fin.value && f.hora_fin.value && `${f.fecha_fin.value}T${f.hora_fin.value}` <= `${f.fecha_inicio.value}T${f.hora_inicio.value}`) e.hora_fin = 'El fin debe ser posterior al inicio.';
+  if (
+    f.fecha_fin.value &&
+    f.hora_fin.value &&
+    `${f.fecha_fin.value}T${f.hora_fin.value}` <= `${f.fecha_inicio.value}T${f.hora_inicio.value}`
+  )
+    e.hora_fin = 'El fin debe ser posterior al inicio.';
   if (f.motivo.value.trim().length < 5) e.motivo = 'Explique brevemente el motivo (mínimo 5 caracteres).';
   const archivo = f.soporte.files[0];
   if (archivo && !/\.pdf$/i.test(archivo.name)) e.soporte = 'El soporte debe ser un PDF.';
@@ -71,10 +76,15 @@ async function enviarFormulario(enviar, boton) {
   const e = revisarLocal();
   if (Object.keys(e).length) return mostrarErrores(f, e);
   if (enviar) {
-    const cuando = f.fecha_inicio.value === f.fecha_fin.value
-      ? `el ${fecha(f.fecha_inicio.value)} de ${f.hora_inicio.value} a ${f.hora_fin.value}`
-      : `del ${fecha(f.fecha_inicio.value)} ${f.hora_inicio.value} al ${fecha(f.fecha_fin.value)} ${f.hora_fin.value}`;
-    const ok = await confirmar({ titulo: 'Enviar solicitud', mensaje: `Va a pedir un permiso (${f.subtipo.value.toLowerCase()}) ${cuando}. Pasará por: ${pasos.join(' → ') || 'aprobación'}. ¿Enviar?`, aceptar: 'Enviar' });
+    const cuando =
+      f.fecha_inicio.value === f.fecha_fin.value
+        ? `el ${fecha(f.fecha_inicio.value)} de ${f.hora_inicio.value} a ${f.hora_fin.value}`
+        : `del ${fecha(f.fecha_inicio.value)} ${f.hora_inicio.value} al ${fecha(f.fecha_fin.value)} ${f.hora_fin.value}`;
+    const ok = await confirmar({
+      titulo: 'Enviar solicitud',
+      mensaje: `Va a pedir un permiso (${f.subtipo.value.toLowerCase()}) ${cuando}. Pasará por: ${pasos.join(' → ') || 'aprobación'}. ¿Enviar?`,
+      aceptar: 'Enviar',
+    });
     if (!ok) return;
   }
   const fd = new FormData(f);

@@ -56,10 +56,16 @@ describe('ingreso', () => {
     assert.match(conCorrecta.body.error.mensaje, MSG_GENERICO);
     const u = await env.ctx.db('usuarios').where({ cedula: CED.colab2 }).first();
     assert.ok(Date.parse(u.bloqueado_hasta) > Date.now());
-    const aud = await env.ctx.db('auditoria').where({ accion: 'BLOQUEO', entidad_id: String(u.id) }).first();
+    const aud = await env.ctx
+      .db('auditoria')
+      .where({ accion: 'BLOQUEO', entidad_id: String(u.id) })
+      .first();
     assert.ok(aud);
     // Al vencer el bloqueo vuelve a funcionar
-    await env.ctx.db('usuarios').where({ id: u.id }).update({ bloqueado_hasta: new Date(Date.now() - 1000).toISOString() });
+    await env.ctx
+      .db('usuarios')
+      .where({ id: u.id })
+      .update({ bloqueado_hasta: new Date(Date.now() - 1000).toISOString() });
     assert.equal((await c.login(CED.colab2)).status, 200);
   });
 
@@ -97,7 +103,10 @@ describe('CSRF, cabeceras y sesión', () => {
   test('Origin de otro sitio → 403', async () => {
     const c = cliente(env.app);
     const { body } = await c.get('/auth/csrf');
-    const r = await c.agente.post('/api/v1/auth/login').set('X-CSRF-Token', body.csrf).set('Origin', 'https://sitio-malicioso.example')
+    const r = await c.agente
+      .post('/api/v1/auth/login')
+      .set('X-CSRF-Token', body.csrf)
+      .set('Origin', 'https://sitio-malicioso.example')
       .send({ cedula: CED.colab1, clave: CLAVE_DEMO });
     assert.equal(r.status, 403);
   });
@@ -123,7 +132,10 @@ describe('CSRF, cabeceras y sesión', () => {
   test('cierre por inactividad (15 min) elimina la sesión', async () => {
     const c = await comoUsuario(env.app, CED.colab1);
     const hash = sha256(c.sid);
-    await env.ctx.db('sesiones').where({ id_hash: hash }).update({ ultimo_uso: new Date(Date.now() - 16 * 60_000).toISOString() });
+    await env.ctx
+      .db('sesiones')
+      .where({ id_hash: hash })
+      .update({ ultimo_uso: new Date(Date.now() - 16 * 60_000).toISOString() });
     const r = await c.get('/auth/me');
     assert.equal(r.status, 401);
     assert.match(r.body.error.mensaje, /inactividad/);
@@ -143,7 +155,10 @@ describe('CSRF, cabeceras y sesión', () => {
 
   test('vencimiento absoluto de la sesión', async () => {
     const c = await comoUsuario(env.app, CED.colab1);
-    await env.ctx.db('sesiones').where({ id_hash: sha256(c.sid) }).update({ expira_absoluta: new Date(Date.now() - 1).toISOString() });
+    await env.ctx
+      .db('sesiones')
+      .where({ id_hash: sha256(c.sid) })
+      .update({ expira_absoluta: new Date(Date.now() - 1).toISOString() });
     assert.equal((await c.get('/auth/me')).status, 401);
   });
 
@@ -167,7 +182,10 @@ describe('primer ingreso', () => {
     assert.equal(temporal.length, 12);
     const fila = await env.ctx.db('usuarios').where({ cedula: '3000000001' }).first();
     assert.notEqual(fila.password_hash, temporal);
-    const aud = await env.ctx.db('auditoria').where({ accion: 'CREAR', entidad_id: String(fila.id) }).first();
+    const aud = await env.ctx
+      .db('auditoria')
+      .where({ accion: 'CREAR', entidad_id: String(fila.id) })
+      .first();
     assert.doesNotMatch(aud.detalle, new RegExp(temporal));
   });
 
@@ -229,14 +247,20 @@ describe('primer ingreso', () => {
     const [primero, segundo] = env.ctx.mailer.enviados.map((m) => tokenDeEnlace(m.enlace));
     const anon = cliente(env.app);
     assert.equal((await anon.post('/auth/verificar-correo', { token: primero })).status, 400);
-    await env.ctx.db('tokens').where({ hash: sha256(segundo) }).update({ expira_en: new Date(Date.now() - 1).toISOString() });
+    await env.ctx
+      .db('tokens')
+      .where({ hash: sha256(segundo) })
+      .update({ expira_en: new Date(Date.now() - 1).toISOString() });
     assert.equal((await anon.post('/auth/verificar-correo', { token: segundo })).status, 400);
   });
 
   test('clave temporal vencida (72 h) no permite ingresar', async () => {
     const admin = await comoUsuario(env.app, CED.admin);
     const r = await admin.post('/usuarios', { cedula: '3000000002', nombre: 'TEMPORAL VENCIDA PRUEBA' });
-    await env.ctx.db('usuarios').where({ cedula: '3000000002' }).update({ clave_temporal_expira: new Date(Date.now() - 1000).toISOString() });
+    await env.ctx
+      .db('usuarios')
+      .where({ cedula: '3000000002' })
+      .update({ clave_temporal_expira: new Date(Date.now() - 1000).toISOString() });
     const l = await cliente(env.app).login('3000000002', r.body.claveTemporal);
     assert.equal(l.status, 401);
     assert.equal(l.body.error.codigo, 'CLAVE_TEMPORAL_VENCIDA');
@@ -270,7 +294,10 @@ describe('recuperación de contraseña', () => {
   test('restablecer: nueva clave funciona, la anterior no, cierra sesiones y desbloquea', async () => {
     const sesionVieja = await comoUsuario(env.app, CED.colab1);
     const token = tokenDeEnlace(env.ctx.mailer.enviados.at(-1).enlace);
-    await env.ctx.db('usuarios').where({ cedula: CED.colab1 }).update({ bloqueado_hasta: new Date(Date.now() + 600_000).toISOString() });
+    await env.ctx
+      .db('usuarios')
+      .where({ cedula: CED.colab1 })
+      .update({ bloqueado_hasta: new Date(Date.now() + 600_000).toISOString() });
     const anon = cliente(env.app);
     const debil = await anon.post('/auth/restablecer', { token, nueva: 'debil', confirmacion: 'debil' });
     assert.equal(debil.status, 400);
@@ -282,6 +309,9 @@ describe('recuperación de contraseña', () => {
     assert.equal((await sesionVieja.get('/auth/me')).status, 401);
     assert.equal((await cliente(env.app).login(CED.colab1, CLAVE_DEMO)).status, 401);
     assert.equal((await cliente(env.app).login(CED.colab1, 'Recuperada2026')).status, 200);
-    assert.equal((await anon.post('/auth/restablecer', { token: token2, nueva: 'OtraMas2026x', confirmacion: 'OtraMas2026x' })).status, 400);
+    assert.equal(
+      (await anon.post('/auth/restablecer', { token: token2, nueva: 'OtraMas2026x', confirmacion: 'OtraMas2026x' })).status,
+      400,
+    );
   });
 });

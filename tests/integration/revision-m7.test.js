@@ -86,7 +86,10 @@ test('anulado: el colaborador recibe 410; el admin lo descarga marcado', async (
 test('integridad: si el contenido guardado se altera, no se entrega', async () => {
   const r = await colab1.post('/me/certificados/laboral', { conSalario: true });
   const fila = await env.ctx.db('certificados').where({ id: r.body.id }).first();
-  await env.ctx.db('certificados').where({ id: r.body.id }).update({ contenido: fila.contenido.replace('1750905', '9750905') });
+  await env.ctx
+    .db('certificados')
+    .where({ id: r.body.id })
+    .update({ contenido: fila.contenido.replace('1750905', '9750905') });
   assert.equal((await colab1.get(`/certificados/${r.body.id}/pdf`)).status, 500);
 });
 

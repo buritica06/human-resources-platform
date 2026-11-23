@@ -33,14 +33,23 @@ export const tipoPermiso = {
     const tipos = await ctx.params.valor('LISTA_TIPOS_PERMISO');
     const maxDias = Number(await ctx.params.valor('PERMISO_MAX_DIAS'));
     const e = {};
-    const subtipo = tipos.find((t) => t.toUpperCase() === String(body.subtipo ?? '').trim().toUpperCase());
+    const subtipo = tipos.find(
+      (t) =>
+        t.toUpperCase() ===
+        String(body.subtipo ?? '')
+          .trim()
+          .toUpperCase(),
+    );
     if (!subtipo) e.subtipo = 'Elija el tipo de permiso.';
     const { fecha_inicio: fi, hora_inicio: hi, fecha_fin: ff, hora_fin: hf } = body;
     if (!fechaValida(fi)) e.fecha_inicio = 'Escriba una fecha válida.';
     if (!HORA.test(String(hi ?? ''))) e.hora_inicio = 'Escriba la hora de inicio (HH:MM).';
     if (!fechaValida(ff)) e.fecha_fin = 'Escriba una fecha válida.';
     if (!HORA.test(String(hf ?? ''))) e.hora_fin = 'Escriba la hora de fin (HH:MM).';
-    const motivo = String(body.motivo ?? '').replace(/\p{Cc}/gu, ' ').replace(/\s+/g, ' ').trim();
+    const motivo = String(body.motivo ?? '')
+      .replace(/\p{Cc}/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (motivo.length < 5) e.motivo = 'Explique brevemente el motivo (mínimo 5 caracteres).';
     if (motivo.length > 500) e.motivo = 'Máximo 500 caracteres.';
     if (!e.fecha_inicio && !e.hora_inicio && !e.fecha_fin && !e.hora_fin) {

@@ -22,18 +22,27 @@ async function cargar() {
     zona.innerHTML = `<section class="tarjeta">
       <header class="encabezado-tarjeta"><h2>${noLeidas} sin leer</h2>
         ${noLeidas ? '<button type="button" class="btn btn--chico btn--secundario" id="todas">Marcar todas como leídas</button>' : ''}</header>
-      ${notificaciones.length ? `<ul class="lista-volantes">${notificaciones.map((n) => `<li class="item-volante ${n.leida ? '' : 'no-leida'}">
+      ${
+        notificaciones.length
+          ? `<ul class="lista-volantes">${notificaciones
+              .map(
+                (n) => `<li class="item-volante ${n.leida ? '' : 'no-leida'}">
           <div><div class="item-volante__periodo">${n.leida ? '' : `<span class="pildora pildora--primario">${icono('campana')} Nueva</span> `}${escapar(n.titulo)}</div>
             ${n.mensaje ? `<div>${escapar(n.mensaje)}</div>` : ''}<div class="ayuda">${escapar(fechaHora(n.creadaEn))}</div></div>
           ${enlaceInterno(n.enlace) ? `<a class="btn btn--chico btn--secundario" href="${escapar(n.enlace)}" data-id="${n.id}">Ver<span class="sr-only"> ${escapar(n.titulo)}</span></a>` : ''}
-        </li>`).join('')}</ul>`
-        : `<div class="vacio">${icono('campana')}<h3>Sin notificaciones</h3><p>Aquí verá los avisos de sus solicitudes y aprobaciones.</p></div>`}
+        </li>`,
+              )
+              .join('')}</ul>`
+          : `<div class="vacio">${icono('campana')}<h3>Sin notificaciones</h3><p>Aquí verá los avisos de sus solicitudes y aprobaciones.</p></div>`
+      }
     </section>`;
-    zona.querySelector('#todas')?.addEventListener('click', (e) => conCarga(e.currentTarget, async () => {
-      await api('/notificaciones/leer', { metodo: 'POST', datos: { todas: true } });
-      await cargar();
-      actualizarCampana();
-    }));
+    zona.querySelector('#todas')?.addEventListener('click', (e) =>
+      conCarga(e.currentTarget, async () => {
+        await api('/notificaciones/leer', { metodo: 'POST', datos: { todas: true } });
+        await cargar();
+        actualizarCampana();
+      }),
+    );
     // Al abrir una notificación, se marca como leída (antes de navegar, para que no se pierda)
     for (const a of zona.querySelectorAll('a[data-id]')) {
       a.addEventListener('click', async (e) => {

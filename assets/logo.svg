@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Plataforma de Talento Humano">
+  <rect width="120" height="120" rx="24" fill="#6A1B9A"/>
+  <circle cx="60" cy="44" r="16" fill="#FFFFFF"/>
+  <path d="M32 92c0-15.5 12.5-26 28-26s28 10.5 28 26" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="92" cy="30" r="8" fill="#CE93D8"/>
+</svg>

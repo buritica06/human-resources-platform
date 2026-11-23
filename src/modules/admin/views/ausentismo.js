@@ -11,7 +11,9 @@ const inicioMes = `${hoy.slice(0, 8)}01`;
 let sedes = [];
 try {
   sedes = (await api('/sedes')).sedes ?? [];
-} catch { /* sin filtro de sede */ }
+} catch {
+  /* sin filtro de sede */
+}
 
 zona.innerHTML = `<section class="tarjeta"><form id="f" class="filtros-linea" novalidate>
     <div class="campo"><label for="desde">Desde</label><input class="entrada" type="date" id="desde" name="desde" value="${inicioMes}" required></div>
@@ -25,7 +27,9 @@ zona.removeAttribute('aria-busy');
 const f = document.getElementById('f');
 const res = document.getElementById('res');
 const consulta = () => new URLSearchParams({ desde: f.desde.value, hasta: f.hasta.value, ...(f.sede.value ? { sede: f.sede.value } : {}) });
-const actualizarCsv = () => { document.getElementById('csv').href = `/api/v1/reportes/ausentismo?${consulta()}&formato=csv`; };
+const actualizarCsv = () => {
+  document.getElementById('csv').href = `/api/v1/reportes/ausentismo?${consulta()}&formato=csv`;
+};
 f.addEventListener('change', actualizarCsv);
 actualizarCsv();
 
@@ -33,17 +37,22 @@ async function ver(boton) {
   await conCarga(boton, async () => {
     try {
       const r = await api(`/reportes/ausentismo?${consulta()}`);
-      res.innerHTML = r.filas.length ? `
+      res.innerHTML = r.filas.length
+        ? `
         <h3 class="subtitulo">Totales por sede y tipo</h3>
         <div class="tabla-desplazable"><table class="tabla"><thead><tr><th scope="col">Sede</th><th scope="col">Tipo</th><th scope="col">Días</th><th scope="col">Horas (permisos)</th></tr></thead>
           <tbody>${r.totales.map((t) => `<tr><td data-etiqueta="Sede">${escapar(t.sede)}</td><td data-etiqueta="Tipo">${escapar(t.tipo)}</td><td data-etiqueta="Días">${t.dias}</td><td data-etiqueta="Horas">${t.horas ? String(t.horas).replace('.', ',') : '—'}</td></tr>`).join('')}</tbody></table></div>
         <h3 class="subtitulo">Detalle (${r.filas.length})</h3>
         <div class="tabla-desplazable"><table class="tabla"><thead><tr><th scope="col">Colaborador</th><th scope="col">Tipo</th><th scope="col">Fechas en el rango</th><th scope="col">Días u horas</th></tr></thead>
-          <tbody>${r.filas.map((x) => `<tr>
+          <tbody>${r.filas
+            .map(
+              (x) => `<tr>
             <td data-etiqueta="Colaborador">${escapar(x.nombre)}<br><span class="ayuda">${escapar(x.sede ?? '')} · ${escapar(x.cargo ?? '')}</span></td>
             <td data-etiqueta="Tipo">${escapar(x.tipo)}${x.detalle ? `<br><span class="ayuda">${escapar(x.detalle)}${x.remunerada ? '' : ' · no remunerada'}</span>` : ''}</td>
             <td data-etiqueta="Fechas">${escapar(fecha(x.ini))}${x.ini !== x.fin ? ` al ${escapar(fecha(x.fin))}` : ''}</td>
-            <td data-etiqueta="Días u horas">${x.horas ? `${String(x.horas).replace('.', ',')} h` : `${x.dias} día(s)`}</td></tr>`).join('')}</tbody></table></div>`
+            <td data-etiqueta="Días u horas">${x.horas ? `${String(x.horas).replace('.', ',')} h` : `${x.dias} día(s)`}</td></tr>`,
+            )
+            .join('')}</tbody></table></div>`
         : `<div class="vacio">${icono('ok')}<h3>Sin ausencias</h3><p>No hay ausencias registradas en ese rango.</p></div>`;
       document.getElementById('t-res').focus();
     } catch (err) {

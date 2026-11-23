@@ -8,12 +8,9 @@ export class ErrorApp extends Error {
   }
 }
 
-export const noEncontrado = (msg = 'No encontramos lo que busca.') =>
-  new ErrorApp(404, 'NO_ENCONTRADO', msg);
-export const prohibido = (msg = 'No tiene permiso para esta acción.') =>
-  new ErrorApp(403, 'PROHIBIDO', msg);
-export const noAutenticado = (msg = 'Su sesión terminó. Ingrese de nuevo.') =>
-  new ErrorApp(401, 'NO_AUTENTICADO', msg);
+export const noEncontrado = (msg = 'No encontramos lo que busca.') => new ErrorApp(404, 'NO_ENCONTRADO', msg);
+export const prohibido = (msg = 'No tiene permiso para esta acción.') => new ErrorApp(403, 'PROHIBIDO', msg);
+export const noAutenticado = (msg = 'Su sesión terminó. Ingrese de nuevo.') => new ErrorApp(401, 'NO_AUTENTICADO', msg);
 export const invalido = (msg, campos) => new ErrorApp(400, 'DATOS_INVALIDOS', msg, campos);
 export const conflicto = (msg) => new ErrorApp(409, 'CONFLICTO', msg);
 

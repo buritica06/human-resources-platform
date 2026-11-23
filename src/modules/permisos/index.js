@@ -10,7 +10,12 @@ export default {
   api(router, ctx) {
     // Opciones del formulario (tipos de permiso y duración máxima)
     router.get('/permisos/opciones', autenticado(), async (_req, res) =>
-      res.json({ tipos: await ctx.params.valor('LISTA_TIPOS_PERMISO'), maxDias: Number(await ctx.params.valor('PERMISO_MAX_DIAS')), maxMb: Number(await ctx.params.valor('UPLOAD_MAX_MB')) }));
+      res.json({
+        tipos: await ctx.params.valor('LISTA_TIPOS_PERMISO'),
+        maxDias: Number(await ctx.params.valor('PERMISO_MAX_DIAS')),
+        maxMb: Number(await ctx.params.valor('UPLOAD_MAX_MB')),
+      }),
+    );
   },
   paginas: { '/permisos': 'permisos.html', '/permisos/nuevo': 'nuevo.html' },
   menu: [{ texto: 'Mis permisos', href: '/permisos', icono: 'reloj', orden: 30 }],

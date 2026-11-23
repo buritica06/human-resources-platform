@@ -80,8 +80,10 @@ describe('hallazgo 4 – configuración de producción', () => {
       const c = cliente(prod.app);
       const csrf = await c.agente.get('/api/v1/auth/csrf');
       assert.match(csrf.headers['set-cookie'][0], /^__Host-th_csrf=.*; Secure/);
-      const r = await c.agente.post('/api/v1/auth/login')
-        .set('X-CSRF-Token', csrf.body.csrf).set('Cookie', csrf.headers['set-cookie'][0].split(';')[0])
+      const r = await c.agente
+        .post('/api/v1/auth/login')
+        .set('X-CSRF-Token', csrf.body.csrf)
+        .set('Cookie', csrf.headers['set-cookie'][0].split(';')[0])
         .send({ cedula: CED.colab1, clave: CLAVE_DEMO });
       assert.equal(r.status, 200);
       const sid = r.headers['set-cookie'].find((x) => x.startsWith('__Host-th_sid='));

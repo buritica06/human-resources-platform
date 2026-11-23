@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hr-platform
+  labels:
+    app: hr-platform
+spec:
+  # v1.0 utiliza SSE y rate-limit en memoria; escalar >1 requiere pub/sub compartido (PostgreSQL LISTEN/NOTIFY o Redis).
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hr-platform
+  template:
+    metadata:
+      labels:
+        app: hr-platform
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: app
+          image: ghcr.io/buritica06/human-resources-platform:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: hr-platform-config
+            - secretRef:
+                name: hr-platform-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/auth/csrf
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/v1/auth/csrf
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            - name: backups
+              mountPath: /app/backups
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: hr-platform-uploads-pvc
+        - name: backups
+          persistentVolumeClaim:
+            claimName: hr-platform-backups-pvc

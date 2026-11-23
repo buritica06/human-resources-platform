@@ -24,11 +24,15 @@ before(async () => {
 });
 after(() => env.cerrar());
 
-const pdfDe = (c, id) => c.agente.get(`/api/v1/certificados/${id}/pdf`).buffer(true).parse((res, cb) => {
-  const partes = [];
-  res.on('data', (d) => partes.push(d));
-  res.on('end', () => cb(null, Buffer.concat(partes)));
-});
+const pdfDe = (c, id) =>
+  c.agente
+    .get(`/api/v1/certificados/${id}/pdf`)
+    .buffer(true)
+    .parse((res, cb) => {
+      const partes = [];
+      res.on('data', (d) => partes.push(d));
+      res.on('end', () => cb(null, Buffer.concat(partes)));
+    });
 
 let conSalario;
 let sinSalario;
@@ -57,7 +61,12 @@ describe('emisión', () => {
     assert.equal(c.salario, 1750905);
     assert.equal(c.salarioLetras, 'UN MILLÓN SETECIENTOS CINCUENTA MIL NOVECIENTOS CINCO PESOS M/CTE');
     assert.equal(c.dirigidoA, 'BANCO DEMO S.A.');
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'EMITIR_CERTIFICADO', entidad_id: String(r.body.id) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'EMITIR_CERTIFICADO', entidad_id: String(r.body.id) })
+        .first(),
+    );
   });
 
   test('validaciones: conSalario obligatorio, dirigidoA con caracteres raros', async () => {

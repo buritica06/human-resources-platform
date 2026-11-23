@@ -11,7 +11,15 @@ const zona = document.getElementById('zona');
 const titulo = document.getElementById('titulo');
 const q = new URLSearchParams(location.search);
 const id = Number(q.get('id'));
-const ACCION = { CREAR: 'Creó la solicitud', ENVIAR: 'Envió la solicitud', APROBAR: 'Aprobó', RECHAZAR: 'Rechazó', CANCELAR: 'Canceló', OMITIR: 'Paso omitido automáticamente', ANULAR: 'Anuló (área contable)' };
+const ACCION = {
+  CREAR: 'Creó la solicitud',
+  ENVIAR: 'Envió la solicitud',
+  APROBAR: 'Aprobó',
+  RECHAZAR: 'Rechazó',
+  CANCELAR: 'Canceló',
+  OMITIR: 'Paso omitido automáticamente',
+  ANULAR: 'Anuló (área contable)',
+};
 let estadoActual = null; // el estado que ve el usuario: se envía al aprobar/rechazar (409 si cambió)
 let aviso = q.get('nueva') === '1' ? htmlAviso('exito', 'Solicitud registrada. Verá aquí cómo avanza y le avisaremos cada cambio.') : '';
 history.replaceState(null, '', `/solicitudes/ver?id=${id}`);
@@ -24,16 +32,25 @@ async function cargar() {
     // "Volver": a la página de donde vino (si es de este sitio) o a la lista del tipo
     const ref = document.referrer && new URL(document.referrer).origin === location.origin ? new URL(document.referrer).pathname : null;
     const LISTA = { PERMISO: '/permisos', VACACIONES: '/vacaciones', LICENCIA: '/licencias' };
-    document.getElementById('volver').href = ref && !ref.startsWith('/solicitudes/ver') && !ref.endsWith('/nuevo') ? ref : s.acciones.aprobar ? '/aprobaciones' : (LISTA[s.tipo] ?? '/inicio');
+    document.getElementById('volver').href =
+      ref && !ref.startsWith('/solicitudes/ver') && !ref.endsWith('/nuevo')
+        ? ref
+        : s.acciones.aprobar
+          ? '/aprobaciones'
+          : (LISTA[s.tipo] ?? '/inicio');
     titulo.textContent = `${s.tipoEtiqueta}: ${s.subtipo ?? ''}`.trim();
     document.title = `${titulo.textContent} · Talento Humano`;
     zona.innerHTML = `${aviso}
       <section class="tarjeta" aria-labelledby="t-estado">
         <header class="encabezado-tarjeta"><h2 id="t-estado">Estado</h2>${pildoraEstado(s.estado, s.estadoEtiqueta)}</header>
-        ${s.pasos.length ? `<ol class="pasos pasos--flujo" aria-label="Pasos de aprobación">
+        ${
+          s.pasos.length
+            ? `<ol class="pasos pasos--flujo" aria-label="Pasos de aprobación">
           ${s.pasos.map((p, i) => pasoHtml(p, i)).join('')}
           <li data-hecho="${s.estado === 'APROBADA'}"><span class="num">${s.estado === 'APROBADA' ? icono('ok') : s.pasos.length + 1}</span><span>Aprobada</span></li>
-        </ol>` : ''}
+        </ol>`
+            : ''
+        }
         <dl class="datos">
           <div class="dato"><dt>Colaborador</dt><dd>${escapar(s.colaborador.nombre)}</dd></div>
           <div class="dato"><dt>Tipo</dt><dd>${escapar(s.subtipo ?? s.tipoEtiqueta)}</dd></div>
@@ -41,8 +58,12 @@ async function cargar() {
           ${s.datos?.horas ? `<div class="dato"><dt>Duración</dt><dd>${escapar(String(s.datos.horas).replace('.', ','))} h</dd></div>` : ''}
           ${s.diasHabiles !== null ? `<div class="dato"><dt>Días hábiles</dt><dd>${escapar(String(s.diasHabiles).replace('.', ','))}</dd></div>` : ''}
           ${s.diasCompensar ? `<div class="dato"><dt>Días compensados en dinero</dt><dd>${escapar(String(s.diasCompensar).replace('.', ','))}</dd></div>` : ''}
-          ${s.datos?.unidad ? `<div class="dato"><dt>Duración</dt><dd>${escapar(String(s.datos.dias))} día(s) ${s.datos.unidad === 'habiles' ? 'hábiles' : 'calendario'}</dd></div>
-            <div class="dato"><dt>Remunerada</dt><dd>${s.datos.remunerada ? 'Sí' : 'No'}</dd></div>` : ''}
+          ${
+            s.datos?.unidad
+              ? `<div class="dato"><dt>Duración</dt><dd>${escapar(String(s.datos.dias))} día(s) ${s.datos.unidad === 'habiles' ? 'hábiles' : 'calendario'}</dd></div>
+            <div class="dato"><dt>Remunerada</dt><dd>${s.datos.remunerada ? 'Sí' : 'No'}</dd></div>`
+              : ''
+          }
           ${s.datos?.regreso ? `<div class="dato"><dt>Regresa a trabajar</dt><dd>${escapar(fecha(s.datos.regreso))}</dd></div>` : ''}
           ${s.datos?.festivos?.length ? `<div class="dato"><dt>Festivos en el periodo</dt><dd>${s.datos.festivos.map((x) => `${escapar(x.nombre)} (${escapar(fecha(x.fecha))})`).join(', ')}</dd></div>` : ''}
           ${typeof s.datos?.saldoAlEnviar === 'number' ? `<div class="dato"><dt>Saldo disponible al enviar</dt><dd>${escapar(String(s.datos.saldoAlEnviar).replace('.', ','))} día(s)</dd></div>` : ''}
@@ -58,16 +79,42 @@ async function cargar() {
         </div>
       </section>
       <section class="tarjeta" aria-labelledby="t-hist"><h2 id="t-hist">Historial</h2>
-        <ol class="historial">${s.eventos.map((e) => `<li><strong>${escapar(ACCION[e.accion] ?? e.accion)}</strong> · ${escapar(e.actor ?? '')}
+        <ol class="historial">${s.eventos
+          .map(
+            (e) => `<li><strong>${escapar(ACCION[e.accion] ?? e.accion)}</strong> · ${escapar(e.actor ?? '')}
           <span class="ayuda">${escapar(fechaHora(e.creado_en))} → ${escapar(e.estadoHastaEtiqueta)}</span>
-          ${e.comentario ? `<p class="comentario">“${escapar(e.comentario)}”</p>` : ''}</li>`).join('')}</ol>
+          ${e.comentario ? `<p class="comentario">“${escapar(e.comentario)}”</p>` : ''}</li>`,
+          )
+          .join('')}</ol>
       </section>`;
     aviso = '';
     zona.querySelector('#aprobar')?.addEventListener('click', aprobar);
-    zona.querySelector('#rechazar')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Rechazar solicitud', obligatorio: true, boton: 'Rechazar', ruta: 'rechazar', campo: 'motivo' }));
-    zona.querySelector('#cancelar')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Cancelar solicitud', obligatorio: false, boton: 'Cancelar solicitud', ruta: 'cancelar', campo: 'motivo', ayuda: 'Opcional: cuéntenos por qué.' }));
+    zona
+      .querySelector('#rechazar')
+      ?.addEventListener('click', () =>
+        dialogoMotivo({ titulo: 'Rechazar solicitud', obligatorio: true, boton: 'Rechazar', ruta: 'rechazar', campo: 'motivo' }),
+      );
+    zona.querySelector('#cancelar')?.addEventListener('click', () =>
+      dialogoMotivo({
+        titulo: 'Cancelar solicitud',
+        obligatorio: false,
+        boton: 'Cancelar solicitud',
+        ruta: 'cancelar',
+        campo: 'motivo',
+        ayuda: 'Opcional: cuéntenos por qué.',
+      }),
+    );
     zona.querySelector('#enviar')?.addEventListener('click', enviarBorrador);
-    zona.querySelector('#anular')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Anular solicitud aprobada', obligatorio: true, boton: 'Anular', ruta: 'anular', campo: 'motivo', ayuda: 'Deja de contar como ausencia y, si son vacaciones, se devuelven los días. El colaborador verá el motivo.' }));
+    zona.querySelector('#anular')?.addEventListener('click', () =>
+      dialogoMotivo({
+        titulo: 'Anular solicitud aprobada',
+        obligatorio: true,
+        boton: 'Anular',
+        ruta: 'anular',
+        campo: 'motivo',
+        ayuda: 'Deja de contar como ausencia y, si son vacaciones, se devuelven los días. El colaborador verá el motivo.',
+      }),
+    );
   } catch (err) {
     zona.innerHTML = htmlAviso('error', err.message);
   } finally {
@@ -78,9 +125,12 @@ async function cargar() {
 // Paso del flujo: hecho, omitido, rechazado/cancelado aquí, en curso o pendiente (icono + texto)
 function pasoHtml(p, i) {
   const E = {
-    HECHO: ['ok', 'hecho', 'true'], OMITIDO: ['cancelar', 'omitido: la sede no tiene director', 'omitido'],
-    RECHAZADO: ['cerrar', 'rechazado en este paso', 'rechazado'], CANCELADO: ['cancelar', 'cancelado en este paso', 'omitido'],
-    ACTUAL: [null, 'en curso', 'false'], PENDIENTE: [null, 'pendiente', 'false'],
+    HECHO: ['ok', 'hecho', 'true'],
+    OMITIDO: ['cancelar', 'omitido: la sede no tiene director', 'omitido'],
+    RECHAZADO: ['cerrar', 'rechazado en este paso', 'rechazado'],
+    CANCELADO: ['cancelar', 'cancelado en este paso', 'omitido'],
+    ACTUAL: [null, 'en curso', 'false'],
+    PENDIENTE: [null, 'pendiente', 'false'],
   }[p.estado];
   return `<li ${p.estado === 'ACTUAL' ? 'aria-current="step"' : ''} data-hecho="${E[2]}">
     <span class="num">${E[0] ? icono(E[0]) : i + 1}</span><span>${escapar(p.etiqueta)} <span class="ayuda">(${E[1]})</span></span></li>`;
@@ -88,7 +138,14 @@ function pasoHtml(p, i) {
 
 async function aprobar(e) {
   const boton = e.currentTarget;
-  if (!(await confirmar({ titulo: 'Aprobar solicitud', mensaje: '¿Confirma la aprobación? Se le avisará al colaborador.', aceptar: 'Aprobar' }))) return;
+  if (
+    !(await confirmar({
+      titulo: 'Aprobar solicitud',
+      mensaje: '¿Confirma la aprobación? Se le avisará al colaborador.',
+      aceptar: 'Aprobar',
+    }))
+  )
+    return;
   await conCarga(boton, () => accion('aprobar', { estadoEsperado: estadoActual }, 'Solicitud aprobada.'));
 }
 
@@ -131,13 +188,17 @@ function dialogoMotivo({ titulo: t, obligatorio, boton, ruta, campo, ayuda }) {
     e.preventDefault();
     limpiarErrores(f);
     const valor = f.elements[campo].value.trim();
-    if (obligatorio && valor.length < 5) return mostrarErrores(f, { [campo]: 'Explique el motivo (mínimo 5 caracteres). El colaborador lo verá.' });
+    if (obligatorio && valor.length < 5)
+      return mostrarErrores(f, { [campo]: 'Explique el motivo (mínimo 5 caracteres). El colaborador lo verá.' });
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
         const datos = { ...(valor ? { [campo]: valor } : {}), ...(ruta === 'rechazar' ? { estadoEsperado: estadoActual } : {}) };
-        await accion(ruta, datos, { rechazar: 'Solicitud rechazada.', anular: 'Solicitud anulada.' }[ruta] ?? 'Solicitud cancelada.', () => d.close());
+        await accion(ruta, datos, { rechazar: 'Solicitud rechazada.', anular: 'Solicitud anulada.' }[ruta] ?? 'Solicitud cancelada.', () =>
+          d.close(),
+        );
       } catch (err) {
-        if (Object.keys(err.campos ?? {}).length) mostrarErrores(f, Object.fromEntries(Object.entries(err.campos).map(([, m]) => [campo, m])));
+        if (Object.keys(err.campos ?? {}).length)
+          mostrarErrores(f, Object.fromEntries(Object.entries(err.campos).map(([, m]) => [campo, m])));
       }
     });
   });

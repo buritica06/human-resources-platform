@@ -10,16 +10,22 @@ import { pdfVolante } from './pdf.js';
 
 const esquemaId = z.object({ id: z.coerce.number().int().positive() });
 const esquemaAnio = z.object({ anio: z.coerce.number().int().min(2000).max(2100).optional() });
-const esquemaAnular = z.object({ motivo: z.string({ error: 'Escriba el motivo.' }).trim().min(5, 'Explique el motivo (mínimo 5 caracteres).').max(300) });
+const esquemaAnular = z.object({
+  motivo: z.string({ error: 'Escriba el motivo.' }).trim().min(5, 'Explique el motivo (mínimo 5 caracteres).').max(300),
+});
 
 export function montarRutasNomina(router, ctx) {
   const svc = crearServicioNomina(ctx);
   const sesion = autenticado();
   const soloAdmin = [sesion, rol(ROLES.ADMIN)];
-  const subir = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 20, fieldSize: 10_000 } }).single('archivo');
+  const subir = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 20, fieldSize: 10_000 },
+  }).single('archivo');
   const archivoExcel = (req) => {
     if (!req.file) throw invalido('Adjunte el libro de nómina (.xlsx o .xlsm).', { archivo: 'Adjunte el archivo.' });
-    if (!/\.(xlsx|xlsm)$/i.test(req.file.originalname)) throw invalido('El archivo debe ser .xlsx o .xlsm.', { archivo: 'Formato no permitido.' });
+    if (!/\.(xlsx|xlsm)$/i.test(req.file.originalname))
+      throw invalido('El archivo debe ser .xlsx o .xlsm.', { archivo: 'Formato no permitido.' });
     return req.file.buffer;
   };
 
@@ -31,23 +37,36 @@ export function montarRutasNomina(router, ctx) {
     const hoja = String(req.body?.hoja ?? '').slice(0, 60);
     if (!hoja) throw invalido('Elija la hoja de la quincena.', { hoja: 'Elija una hoja.' });
     // Cédulas confirmadas una por una como retirados (campo repetido o separado por comas)
-    const crearCedulas = [req.body?.crearCedulas ?? []].flat().flatMap((s) => String(s).split(','))
-      .map((s) => s.trim()).filter((s) => /^\d{5,12}$/.test(s)).slice(0, 200);
-    res.json(await svc.cargar(req, buffer, {
-      hoja, huella: String(req.body?.huella ?? ''), nombreArchivo: req.file.originalname, crearCedulas,
-    }));
+    const crearCedulas = [req.body?.crearCedulas ?? []]
+      .flat()
+      .flatMap((s) => String(s).split(','))
+      .map((s) => s.trim())
+      .filter((s) => /^\d{5,12}$/.test(s))
+      .slice(0, 200);
+    res.json(
+      await svc.cargar(req, buffer, {
+        hoja,
+        huella: String(req.body?.huella ?? ''),
+        nombreArchivo: req.file.originalname,
+        crearCedulas,
+      }),
+    );
   });
   router.get('/nomina/periodos', ...soloAdmin, async (req, res) => res.json(await svc.periodos(validar(esquemaAnio, req.query))));
   router.get('/nomina/periodos/:id', ...soloAdmin, async (req, res) => res.json(await svc.periodo(req, validar(esquemaId, req.params).id)));
-  router.post('/nomina/periodos/:id/publicar', ...soloAdmin, async (req, res) => res.json(await svc.publicar(req, validar(esquemaId, req.params).id)));
+  router.post('/nomina/periodos/:id/publicar', ...soloAdmin, async (req, res) =>
+    res.json(await svc.publicar(req, validar(esquemaId, req.params).id)),
+  );
   router.post('/nomina/periodos/:id/anular', ...soloAdmin, async (req, res) =>
-    res.json(await svc.anular(req, validar(esquemaId, req.params).id, validar(esquemaAnular, req.body).motivo)));
+    res.json(await svc.anular(req, validar(esquemaId, req.params).id, validar(esquemaAnular, req.body).motivo)),
+  );
   router.delete('/nomina/periodos/:id', ...soloAdmin, async (req, res) => {
     await svc.eliminarBorrador(req, validar(esquemaId, req.params).id);
     res.status(204).end();
   });
   router.get('/nomina/colaboradores/:id/volantes', ...soloAdmin, async (req, res) =>
-    res.json(await svc.volantesDeColaborador(req, validar(esquemaId, req.params).id, validar(esquemaAnio, req.query))));
+    res.json(await svc.volantesDeColaborador(req, validar(esquemaId, req.params).id, validar(esquemaAnio, req.query))),
+  );
 
   router.get('/me/volantes', sesion, async (req, res) => res.json(await svc.misVolantes(req, validar(esquemaAnio, req.query))));
   router.get('/me/volantes/ultimo', sesion, async (req, res) => res.json(await svc.ultimoVolante(req)));

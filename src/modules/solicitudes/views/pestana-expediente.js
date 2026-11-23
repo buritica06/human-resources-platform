@@ -16,13 +16,17 @@ export async function montar(panel, { propio, id, clave }) {
       return;
     }
     panel.innerHTML = `<table class="tabla"><thead><tr><th scope="col">Solicitud</th><th scope="col">Cuándo</th><th scope="col">Estado</th><th scope="col">Solicitada</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-      <tbody>${lista.map((s) => `<tr>
+      <tbody>${lista
+        .map(
+          (s) => `<tr>
         <td data-etiqueta="Solicitud">${escapar(s.subtipo ?? s.tipoEtiqueta)}</td>
         <td data-etiqueta="Cuándo">${escapar(cuando(s))}</td>
         <td data-etiqueta="Estado">${pildoraEstado(s.estado, s.estadoEtiqueta)}</td>
         <td data-etiqueta="Solicitada">${escapar(fechaHora(s.creadoEn))}</td>
         <td class="acciones"><a class="btn btn--chico btn--secundario" href="/solicitudes/ver?id=${s.id}">Ver<span class="sr-only"> ${escapar(s.subtipo ?? '')}</span></a></td>
-      </tr>`).join('')}</tbody></table>`;
+      </tr>`,
+        )
+        .join('')}</tbody></table>`;
   } catch (err) {
     panel.innerHTML = htmlAviso('error', err.message);
   }

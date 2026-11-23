@@ -69,8 +69,14 @@ describe('hallazgos 1, 5 y 8 – variantes de encabezado, valores largos y celda
     assert.match(avisos, /Caja de compensación/);
     assert.doesNotMatch(avisos, /Tipo de contrato,|Número de cuenta,/, 'las variantes de encabezado sí se reconocen');
     assert.match(avisos, /Clase de riesgo ARL.*supera 5 caracteres/);
-    assert.deepEqual(p.body.actualizar.map((a) => a.campos), [['Tipo de contrato']]);
-    const r = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-variantes.xlsx'), { confirmar: 'true', huella: p.body.huella });
+    assert.deepEqual(
+      p.body.actualizar.map((a) => a.campos),
+      [['Tipo de contrato']],
+    );
+    const r = await admin.subir('/colaboradores/importar', path.join(FIX, 'empleados-variantes.xlsx'), {
+      confirmar: 'true',
+      huella: p.body.huella,
+    });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     const despues = await fila('2000000001');
     assert.equal(despues.tipo_contrato, 'FIJO 1 AÑO');
@@ -107,7 +113,13 @@ describe('asignación masiva y fugas en metadatos', () => {
   test('claves no previstas del admin (__proto__, numero_cuenta_cifrado, id, cedula) → 400 y sin efecto', async () => {
     const id = await idColab(CED.colab1);
     const antes = await fila(CED.colab1);
-    for (const cuerpo of [{ numero_cuenta_cifrado: 'x' }, { id: 999 }, { cedula: '1' }, { creado_en: 'x' }, JSON.parse('{"__proto__": "x"}')]) {
+    for (const cuerpo of [
+      { numero_cuenta_cifrado: 'x' },
+      { id: 999 },
+      { cedula: '1' },
+      { creado_en: 'x' },
+      JSON.parse('{"__proto__": "x"}'),
+    ]) {
       const r = await admin.patch(`/colaboradores/${id}`, cuerpo);
       assert.equal(r.status, 400, JSON.stringify(cuerpo));
     }

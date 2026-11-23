@@ -8,7 +8,12 @@ export const cop = (n) => fmtCOP.format(Math.round(Number(n) || 0));
 export function copExacto(n) {
   const v = Number(n) || 0;
   const entero = Number.isInteger(Math.round(v * 100) / 100);
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: entero ? 0 : 2, maximumFractionDigits: 2 }).format(v);
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: entero ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(v);
 }
 export const periodoTexto = (inicio, fin) => `${fecha(inicio)} al ${fecha(fin)}`;
 
@@ -23,7 +28,14 @@ export function fecha(valor) {
 }
 export const fechaHora = (valor) =>
   valor
-    ? new Date(valor).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' })
+    ? new Date(valor).toLocaleString('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Bogota',
+      })
     : '';
 
 export const escapar = (s) =>

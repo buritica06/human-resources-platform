@@ -9,7 +9,10 @@ const inicial = new URLSearchParams(location.search).get('codigo');
 
 async function verificar() {
   limpiarErrores(f);
-  const codigo = f.codigo.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const codigo = f.codigo.value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
   if (codigo.length !== 12) return mostrarErrores(f, { codigo: 'El código tiene 12 letras y números (por ejemplo: 7KQ2-M9XD-4TRA).' });
   resultado.innerHTML = '<p class="ayuda">Verificando…</p>';
   try {

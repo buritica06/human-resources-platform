@@ -20,29 +20,45 @@ const ESTADO = { VIGENTE: ['exito', 'rige hoy'], PROGRAMADA: ['info', 'programad
 
 function pintar() {
   const lista = parametros.filter((p) => !filtro || `${p.clave} ${p.descripcion}`.toLowerCase().includes(filtro.toLowerCase()));
-  document.getElementById('lista').innerHTML = lista.length ? lista.map((p) => `<details class="tarjeta-interna" data-clave="${escapar(p.clave)}">
+  document.getElementById('lista').innerHTML = lista.length
+    ? lista
+        .map(
+          (p) => `<details class="tarjeta-interna" data-clave="${escapar(p.clave)}">
     <summary><span><strong>${escapar(p.clave)}</strong>${p.verificar ? ` <span class="pildora pildora--alerta">${icono('alerta')} verificar</span>` : ''}<br>
       <span class="ayuda">${escapar(p.descripcion)}</span><br><span class="valor-param">${p.actual ? escapar(mostrarValor(p.actual.valor, p.tipo)) : 'Sin valor vigente hoy'}</span></span></summary>
-    <ul class="lista-compacta">${[...p.versiones].reverse().map((v) => `<li class="version">
+    <ul class="lista-compacta">${[...p.versiones]
+      .reverse()
+      .map(
+        (v) => `<li class="version">
       <span class="pildora pildora--${ESTADO[v.estado][0]}">${escapar(ESTADO[v.estado][1])}</span>
       <span>Desde ${escapar(fecha(v.desde))}${v.hasta ? ` hasta ${escapar(fecha(v.hasta))}` : ''}:</span>
       <span class="valor-param">${escapar(mostrarValor(v.valor, p.tipo))}</span>
       ${v.actualizadoPor ? `<span class="ayuda">(${escapar(v.actualizadoPor)}, ${escapar(fechaHora(v.actualizadoEn))})</span>` : ''}
       ${v.estado === 'PROGRAMADA' ? `<button type="button" class="btn btn--chico btn--fantasma" data-borrar="${v.id}">Borrar<span class="sr-only"> la versión programada de ${escapar(p.clave)}</span></button>` : ''}
-    </li>`).join('')}</ul>
+    </li>`,
+      )
+      .join('')}</ul>
     ${formulario(p)}
-  </details>`).join('') : '<p class="ayuda">Ningún parámetro coincide.</p>';
+  </details>`,
+        )
+        .join('')
+    : '<p class="ayuda">Ningún parámetro coincide.</p>';
 }
 
 function formulario(p) {
   const id = `f-${p.clave}`;
   const v = p.actual?.valor ?? p.versiones.at(-1).valor;
   let control;
-  if (p.tipo === 'booleano') control = `<select class="entrada" id="${id}-valor" name="valor"><option value="true" ${v ? 'selected' : ''}>Sí</option><option value="false" ${v ? '' : 'selected'}>No</option></select>`;
-  else if (p.tipo === 'numero') control = `<input class="entrada" id="${id}-valor" name="valor" inputmode="decimal" value="${escapar(String(v).replace('.', ','))}" aria-describedby="${id}-valor-error">`;
-  else if (p.tipo === 'json' && Array.isArray(v) && v.every((x) => typeof x === 'string')) control = `<textarea class="entrada" id="${id}-valor" name="valor" rows="4" aria-describedby="${id}-valor-ayuda ${id}-valor-error">${escapar(v.join('\n'))}</textarea><span class="ayuda" id="${id}-valor-ayuda">Un valor por línea.</span>`;
-  else if (p.tipo === 'json') control = `<textarea class="entrada valor-param" id="${id}-valor" name="valor" rows="8" spellcheck="false" aria-describedby="${id}-valor-ayuda ${id}-valor-error">${escapar(JSON.stringify(v, null, 2))}</textarea><span class="ayuda" id="${id}-valor-ayuda">Formato JSON: conserve la misma estructura.</span>`;
-  else control = `<input class="entrada" id="${id}-valor" name="valor" maxlength="500" value="${escapar(v)}" aria-describedby="${id}-valor-error">`;
+  if (p.tipo === 'booleano')
+    control = `<select class="entrada" id="${id}-valor" name="valor"><option value="true" ${v ? 'selected' : ''}>Sí</option><option value="false" ${v ? '' : 'selected'}>No</option></select>`;
+  else if (p.tipo === 'numero')
+    control = `<input class="entrada" id="${id}-valor" name="valor" inputmode="decimal" value="${escapar(String(v).replace('.', ','))}" aria-describedby="${id}-valor-error">`;
+  else if (p.tipo === 'json' && Array.isArray(v) && v.every((x) => typeof x === 'string'))
+    control = `<textarea class="entrada" id="${id}-valor" name="valor" rows="4" aria-describedby="${id}-valor-ayuda ${id}-valor-error">${escapar(v.join('\n'))}</textarea><span class="ayuda" id="${id}-valor-ayuda">Un valor por línea.</span>`;
+  else if (p.tipo === 'json')
+    control = `<textarea class="entrada valor-param" id="${id}-valor" name="valor" rows="8" spellcheck="false" aria-describedby="${id}-valor-ayuda ${id}-valor-error">${escapar(JSON.stringify(v, null, 2))}</textarea><span class="ayuda" id="${id}-valor-ayuda">Formato JSON: conserve la misma estructura.</span>`;
+  else
+    control = `<input class="entrada" id="${id}-valor" name="valor" maxlength="500" value="${escapar(v)}" aria-describedby="${id}-valor-error">`;
   return `<form class="formulario-param" data-clave="${escapar(p.clave)}" data-tipo="${p.tipo}" novalidate>
     <h3 class="subtitulo">Programar un cambio</h3>
     <div class="rejilla rejilla--2">
@@ -63,7 +79,11 @@ function leerValor(f) {
     const s = crudo.trim();
     return s === '' ? NaN : Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
   }
-  if (tipo === 'json' && !crudo.trim().startsWith('[') && !crudo.trim().startsWith('{')) return crudo.split('\n').map((x) => x.trim()).filter(Boolean);
+  if (tipo === 'json' && !crudo.trim().startsWith('[') && !crudo.trim().startsWith('{'))
+    return crudo
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean);
   if (tipo === 'json') return JSON.parse(crudo);
   return crudo;
 }
@@ -95,10 +115,20 @@ try {
     }
     const clave = f.dataset.clave;
     if (f.motivo.value.trim().length < 5) return mostrarErrores(f, { motivo: 'Explique el cambio (mínimo 5 caracteres).' });
-    if (!(await confirmar({ titulo: `Programar ${clave}`, mensaje: `Desde el ${fecha(f.desde.value)} regirá el nuevo valor. ${f.desde.value === hoy ? 'Empieza a aplicarse HOY.' : 'Hasta entonces sigue el valor actual.'} ¿Continuar?`, aceptar: 'Programar' }))) return;
+    if (
+      !(await confirmar({
+        titulo: `Programar ${clave}`,
+        mensaje: `Desde el ${fecha(f.desde.value)} regirá el nuevo valor. ${f.desde.value === hoy ? 'Empieza a aplicarse HOY.' : 'Hasta entonces sigue el valor actual.'} ¿Continuar?`,
+        aceptar: 'Programar',
+      }))
+    )
+      return;
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
-        await api(`/parametros/${encodeURIComponent(clave)}/versiones`, { metodo: 'POST', datos: { valor, desde: f.desde.value, motivo: f.motivo.value.trim() } });
+        await api(`/parametros/${encodeURIComponent(clave)}/versiones`, {
+          metodo: 'POST',
+          datos: { valor, desde: f.desde.value, motivo: f.motivo.value.trim() },
+        });
         toast('Cambio programado.');
         await cargar();
         const d = document.querySelector(`details[data-clave="${CSS.escape(clave)}"]`);
@@ -115,7 +145,15 @@ try {
     const b = e.target.closest('[data-borrar]');
     if (!b) return;
     const clave = b.closest('details').dataset.clave;
-    if (!(await confirmar({ titulo: 'Borrar versión programada', mensaje: 'La versión anterior seguirá rigiendo. ¿Borrar?', aceptar: 'Borrar', peligro: true }))) return;
+    if (
+      !(await confirmar({
+        titulo: 'Borrar versión programada',
+        mensaje: 'La versión anterior seguirá rigiendo. ¿Borrar?',
+        aceptar: 'Borrar',
+        peligro: true,
+      }))
+    )
+      return;
     try {
       await api(`/parametros/versiones/${b.dataset.borrar}`, { metodo: 'DELETE' });
       toast('Versión programada borrada.');

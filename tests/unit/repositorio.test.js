@@ -6,7 +6,14 @@ import path from 'node:path';
 
 const RAIZ = path.resolve(import.meta.dirname, '..', '..');
 const IGNORAR = new Set(['node_modules', '.git', 'data', 'uploads', 'backups']);
-const PERMITIDOS = new Set(['empleados-ficticio.xlsx', 'empleados-con-errores.xlsx', 'sin-hoja-empleados.xlsx', 'parametros-malos.xlsx', 'empleados-variantes.xlsx', 'nomina-ficticia.xlsx']);
+const PERMITIDOS = new Set([
+  'empleados-ficticio.xlsx',
+  'empleados-con-errores.xlsx',
+  'sin-hoja-empleados.xlsx',
+  'parametros-malos.xlsx',
+  'empleados-variantes.xlsx',
+  'nomina-ficticia.xlsx',
+]);
 
 function recorrer(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -20,9 +27,7 @@ function recorrer(dir, out = []) {
 
 test('no hay libros de Excel fuera de los ficticios de tests/fixtures', () => {
   const excel = recorrer(RAIZ).filter((p) => /\.(xls|xlsx|xlsm|xlsb)$/i.test(p));
-  const indebidos = excel.filter(
-    (p) => !(path.dirname(p) === path.join(RAIZ, 'tests', 'fixtures') && PERMITIDOS.has(path.basename(p))),
-  );
+  const indebidos = excel.filter((p) => !(path.dirname(p) === path.join(RAIZ, 'tests', 'fixtures') && PERMITIDOS.has(path.basename(p))));
   assert.deepEqual(indebidos, []);
 });
 

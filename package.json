@@ -17,8 +17,15 @@
     "fixtures": "node scripts/generar-excel-ficticio.js && node scripts/generar-nomina-ficticia.js",
     "backup": "node scripts/backup-db.js",
     "test": "node --test --test-concurrency=1 --test-timeout=120000 \"tests/**/*.test.js\"",
+    "test:unit": "node --test --test-concurrency=1 --test-timeout=60000 \"tests/unit/*.test.js\"",
+    "test:integration": "node --test --test-concurrency=1 --test-timeout=120000 \"tests/integration/*.test.js\"",
+    "test:e2e": "node --test --test-concurrency=1 --test-timeout=60000 \"tests/e2e/*.test.js\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-concurrency=1 --test-timeout=120000 \"tests/**/*.test.js\"",
     "test:pg": "node scripts/probar-postgres.js",
-    "lint": "eslint src scripts tests seeds"
+    "lint": "eslint src scripts tests seeds",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"seeds/**/*.js\" \"migrations/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"seeds/**/*.js\" \"migrations/**/*.js\"",
+    "prepare": "husky"
   },
   "dependencies": {
     "argon2": "^0.45.2",
@@ -35,9 +42,13 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.10.1",
     "supertest": "^7.3.2"
   }
 }

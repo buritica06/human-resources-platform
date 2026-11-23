@@ -9,24 +9,33 @@ export async function montar(div, { propio, id, rol }) {
   const ruta = propio ? '/me/suspensiones' : `/colaboradores/${id}/suspensiones`;
   const pintar = async () => {
     const { suspensiones } = await api(ruta);
-    div.querySelector('#sus-lista').innerHTML = suspensiones.length ? `<table class="tabla"><thead><tr><th scope="col">Fechas</th><th scope="col">Días</th><th scope="col">Motivo</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-      <tbody>${suspensiones.map((s) => `<tr>
+    div.querySelector('#sus-lista').innerHTML = suspensiones.length
+      ? `<table class="tabla"><thead><tr><th scope="col">Fechas</th><th scope="col">Días</th><th scope="col">Motivo</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+      <tbody>${suspensiones
+        .map(
+          (s) => `<tr>
         <td data-etiqueta="Fechas">${escapar(fecha(s.fechaInicio))} al ${escapar(fecha(s.fechaFin))}${s.anulada ? ` <span class="pildora pildora--neutro">${icono('cancelar')} Anulada</span>` : ''}</td>
         <td data-etiqueta="Días">${s.dias}</td>
         <td data-etiqueta="Motivo">${escapar(s.motivo)}${s.anulada && s.motivoAnulacion ? `<br><span class="ayuda">Anulada: ${escapar(s.motivoAnulacion)}</span>` : ''}</td>
-        <td class="acciones">${admin && !s.anulada ? `<button type="button" class="btn btn--chico btn--fantasma" data-anular-sus="${s.id}">Anular<span class="sr-only"> la suspensión del ${escapar(fecha(s.fechaInicio))}</span></button>` : ''}</td></tr>`).join('')}</tbody></table>`
+        <td class="acciones">${admin && !s.anulada ? `<button type="button" class="btn btn--chico btn--fantasma" data-anular-sus="${s.id}">Anular<span class="sr-only"> la suspensión del ${escapar(fecha(s.fechaInicio))}</span></button>` : ''}</td></tr>`,
+        )
+        .join('')}</tbody></table>`
       : '<p class="ayuda">Sin suspensiones registradas.</p>';
   };
   try {
     div.innerHTML = `<h3 class="subtitulo" id="sus-titulo" tabindex="-1">Suspensiones</h3>
-      ${admin ? `<details class="tarjeta-interna"><summary>${icono('agregar')} Registrar suspensión</summary>
+      ${
+        admin
+          ? `<details class="tarjeta-interna"><summary>${icono('agregar')} Registrar suspensión</summary>
         <form id="sus-f" novalidate><p class="ayuda">Los días de suspensión no cuentan para causar vacaciones y no pueden cruzarse con otras ausencias.</p>
           <div class="rejilla rejilla--2">
             <div class="campo"><label for="sus-fi">Desde</label><input class="entrada" type="date" id="sus-fi" name="fecha_inicio" required aria-describedby="sus-fi-error"><span class="error-campo" id="sus-fi-error"></span></div>
             <div class="campo"><label for="sus-ff">Hasta</label><input class="entrada" type="date" id="sus-ff" name="fecha_fin" required aria-describedby="sus-ff-error"><span class="error-campo" id="sus-ff-error"></span></div>
           </div>
           <div class="campo"><label for="sus-m">Motivo</label><textarea class="entrada" id="sus-m" name="motivo" rows="2" maxlength="500" required aria-describedby="sus-m-error"></textarea><span class="error-campo" id="sus-m-error"></span></div>
-          <div class="formulario-acciones"><button class="btn" type="submit">${icono('ok')} Registrar</button></div></form></details>` : ''}
+          <div class="formulario-acciones"><button class="btn" type="submit">${icono('ok')} Registrar</button></div></form></details>`
+          : ''
+      }
       <div id="sus-lista"></div>`;
     await pintar();
   } catch (err) {

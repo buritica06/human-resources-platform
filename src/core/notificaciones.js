@@ -17,20 +17,28 @@ export function crearNotificaciones(ctx) {
     const ids = [...new Set(usuarioIds.filter(Boolean))];
     if (!ids.length) return;
     const t = ahora();
-    await db('notificaciones').insert(ids.map((usuario_id) => ({
-      usuario_id, titulo: titulo.slice(0, 150), mensaje: mensaje?.slice(0, 500) ?? null, enlace: enlace ?? null, creada_en: t,
-    })));
+    await db('notificaciones').insert(
+      ids.map((usuario_id) => ({
+        usuario_id,
+        titulo: titulo.slice(0, 150),
+        mensaje: mensaje?.slice(0, 500) ?? null,
+        enlace: enlace ?? null,
+        creada_en: t,
+      })),
+    );
     for (const id of ids) emisor.emit(`u:${id}`, { tipo: 'notificacion', titulo });
     if (!correo) return;
     const destinos = await db('usuarios').whereIn('id', ids).where({ activo: true }).whereNotNull('correo_verificado_en').select('correo');
     for (const { correo: para } of destinos) {
       // En segundo plano: un fallo del correo no afecta la operación (queda en el log)
-      mailer.enviar({
-        para,
-        asunto: `${correoGenerico?.asunto ?? titulo} – Talento Humano`,
-        texto: `${correoGenerico?.texto ?? mensaje ?? titulo}\n\n${enlace ? `Ver en la plataforma: ${cfg.appUrl}${enlace}` : ''}\n\nEste es un mensaje automático; no lo responda.`,
-        enlace: enlace ? `${cfg.appUrl}${enlace}` : undefined,
-      }).catch((e) => log.error('No se pudo enviar una notificación por correo', { error: e.message }));
+      mailer
+        .enviar({
+          para,
+          asunto: `${correoGenerico?.asunto ?? titulo} – Talento Humano`,
+          texto: `${correoGenerico?.texto ?? mensaje ?? titulo}\n\n${enlace ? `Ver en la plataforma: ${cfg.appUrl}${enlace}` : ''}\n\nEste es un mensaje automático; no lo responda.`,
+          enlace: enlace ? `${cfg.appUrl}${enlace}` : undefined,
+        })
+        .catch((e) => log.error('No se pudo enviar una notificación por correo', { error: e.message }));
     }
   }
 

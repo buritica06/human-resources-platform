@@ -23,7 +23,12 @@ zona.removeAttribute('aria-busy');
 const f = document.getElementById('f');
 const res = document.getElementById('res');
 
-const detalleTexto = (d) => (d ? Object.entries(d).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ') : '');
+const detalleTexto = (d) =>
+  d
+    ? Object.entries(d)
+        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+        .join(' · ')
+    : '';
 
 async function buscar(boton) {
   limpiarErrores(f);
@@ -42,13 +47,18 @@ async function buscar(boton) {
       document.getElementById('conteo').textContent = `${r.total} registro(s) · página ${r.pagina} de ${paginas}`;
       document.getElementById('ant').disabled = r.pagina <= 1;
       document.getElementById('sig').disabled = r.pagina >= paginas;
-      res.innerHTML = r.registros.length ? `<div class="tabla-desplazable"><table class="tabla"><thead><tr><th scope="col">Fecha</th><th scope="col">Quién</th><th scope="col">Acción</th><th scope="col">Sobre</th><th scope="col">Detalle</th></tr></thead>
-        <tbody>${r.registros.map((x) => `<tr>
+      res.innerHTML = r.registros.length
+        ? `<div class="tabla-desplazable"><table class="tabla"><thead><tr><th scope="col">Fecha</th><th scope="col">Quién</th><th scope="col">Acción</th><th scope="col">Sobre</th><th scope="col">Detalle</th></tr></thead>
+        <tbody>${r.registros
+          .map(
+            (x) => `<tr>
           <td data-etiqueta="Fecha">${escapar(fechaHora(x.fecha))}</td>
           <td data-etiqueta="Quién">${x.actor ? `${escapar(x.actor.nombre)}<br><span class="ayuda">${escapar(x.actor.cedula)}</span>` : '<span class="ayuda">Sistema / sin sesión</span>'}</td>
           <td data-etiqueta="Acción">${escapar(x.accion)}</td>
           <td data-etiqueta="Sobre">${escapar(x.entidad)}${x.entidadId ? ` #${escapar(x.entidadId)}` : ''}</td>
-          <td data-etiqueta="Detalle"><span class="valor-param">${escapar(detalleTexto(x.detalle))}</span></td></tr>`).join('')}</tbody></table></div>`
+          <td data-etiqueta="Detalle"><span class="valor-param">${escapar(detalleTexto(x.detalle))}</span></td></tr>`,
+          )
+          .join('')}</tbody></table></div>`
         : `<div class="vacio">${icono('candado')}<h3>Sin registros</h3><p>No hay registros con esos filtros.</p></div>`;
     } catch (err) {
       res.innerHTML = htmlAviso('error', err.message);
@@ -60,6 +70,12 @@ f.addEventListener('submit', (e) => {
   pagina = 1;
   buscar(f.querySelector('[type=submit]'));
 });
-document.getElementById('ant').addEventListener('click', (e) => { pagina--; buscar(e.currentTarget).then(() => document.getElementById('t-res').focus()); });
-document.getElementById('sig').addEventListener('click', (e) => { pagina++; buscar(e.currentTarget).then(() => document.getElementById('t-res').focus()); });
+document.getElementById('ant').addEventListener('click', (e) => {
+  pagina--;
+  buscar(e.currentTarget).then(() => document.getElementById('t-res').focus());
+});
+document.getElementById('sig').addEventListener('click', (e) => {
+  pagina++;
+  buscar(e.currentTarget).then(() => document.getElementById('t-res').focus());
+});
 buscar(f.querySelector('[type=submit]'));

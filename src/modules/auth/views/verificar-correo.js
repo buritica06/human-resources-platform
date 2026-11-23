@@ -11,8 +11,9 @@ const token = new URLSearchParams(location.search).get('token') ?? '';
 history.replaceState(null, '', '/verificar-correo');
 
 if (token.length < 20) {
-  zona.innerHTML = htmlAviso('error', 'El enlace está incompleto. Ábralo de nuevo desde el correo.')
-    + '<a class="btn btn--secundario" href="/bienvenida">Solicitar un nuevo enlace</a>';
+  zona.innerHTML =
+    htmlAviso('error', 'El enlace está incompleto. Ábralo de nuevo desde el correo.') +
+    '<a class="btn btn--secundario" href="/bienvenida">Solicitar un nuevo enlace</a>';
 } else {
   boton.addEventListener('click', () =>
     conCarga(boton, async () => {
@@ -20,7 +21,8 @@ if (token.length < 20) {
         await api('/auth/verificar-correo', { metodo: 'POST', datos: { token } });
         zona.innerHTML = htmlAviso('exito', 'Su correo quedó confirmado.') + '<a class="btn" href="/inicio">Continuar</a>';
       } catch (err) {
-        zona.innerHTML = htmlAviso('error', err.message) + '<a class="btn btn--secundario" href="/bienvenida">Solicitar un nuevo enlace</a>';
+        zona.innerHTML =
+          htmlAviso('error', err.message) + '<a class="btn btn--secundario" href="/bienvenida">Solicitar un nuevo enlace</a>';
       }
       zona.querySelector('a')?.focus();
     }),

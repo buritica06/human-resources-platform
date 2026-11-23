@@ -42,13 +42,25 @@ export function crearServicioAuth(ctx) {
         await sesiones.cerrarTodas(u.id);
         await auditar(req, { accion: 'BLOQUEO', entidad: 'usuario', entidadId: u.id, detalle: { minutos }, actorId: null });
       } else {
-        await auditar(req, { accion: 'LOGIN_FALLIDO', entidad: 'usuario', entidadId: u.id, detalle: { motivo: 'clave', intentos }, actorId: null });
+        await auditar(req, {
+          accion: 'LOGIN_FALLIDO',
+          entidad: 'usuario',
+          entidadId: u.id,
+          detalle: { motivo: 'clave', intentos },
+          actorId: null,
+        });
       }
       throw new ErrorApp(401, 'CREDENCIALES', MSG_LOGIN);
     }
     // La clave es correcta: ya se puede informar con precisión.
     if (u.debe_cambiar_clave && u.clave_temporal_expira && Date.parse(u.clave_temporal_expira) < Date.now()) {
-      await auditar(req, { accion: 'LOGIN_FALLIDO', entidad: 'usuario', entidadId: u.id, detalle: { motivo: 'temporal_vencida' }, actorId: u.id });
+      await auditar(req, {
+        accion: 'LOGIN_FALLIDO',
+        entidad: 'usuario',
+        entidadId: u.id,
+        detalle: { motivo: 'temporal_vencida' },
+        actorId: u.id,
+      });
       throw new ErrorApp(401, 'CLAVE_TEMPORAL_VENCIDA', 'Su contraseña temporal venció. Pida una nueva al área contable.');
     }
     await repo.actualizar(u.id, { intentos_fallidos: 0, bloqueado_hasta: null, ultimo_acceso: ahora() });
@@ -85,7 +97,13 @@ export function crearServicioAuth(ctx) {
       para: correo,
       asunto: 'Confirme su correo – Talento Humano',
       texto: `Hola ${primerNombre(u.nombre)}:\n\nPara confirmar este correo en la plataforma de Talento Humano abra este enlace (vence en ${HORAS_VERIFICACION} horas):\n${enlace}\n\nSi usted no lo solicitó, ignore este mensaje.`,
-      html: plantillaHtml(u.nombre, 'Confirme su correo', `Para confirmar este correo en la plataforma de Talento Humano pulse el botón. El enlace vence en ${HORAS_VERIFICACION} horas.`, enlace, 'Confirmar correo'),
+      html: plantillaHtml(
+        u.nombre,
+        'Confirme su correo',
+        `Para confirmar este correo en la plataforma de Talento Humano pulse el botón. El enlace vence en ${HORAS_VERIFICACION} horas.`,
+        enlace,
+        'Confirmar correo',
+      ),
       enlace,
     });
     await auditar(req, { accion: 'CORREO_REGISTRADO', entidad: 'usuario', entidadId: u.id, detalle: { pendienteVerificacion: true } });
@@ -109,13 +127,21 @@ export function crearServicioAuth(ctx) {
     const enlace = `${cfg.appUrl}/restablecer?token=${encodeURIComponent(token)}`;
     // El envío va en segundo plano: el tiempo de respuesta y un fallo del SMTP no deben
     // delatar si la cédula existe.
-    mailer.enviar({
-      para: u.correo,
-      asunto: 'Restablecer contraseña – Talento Humano',
-      texto: `Hola ${primerNombre(u.nombre)}:\n\nRecibimos una solicitud para restablecer su contraseña. Abra este enlace (vence en ${HORAS_RECUPERACION} hora):\n${enlace}\n\nSi usted no lo solicitó, ignore este mensaje; su contraseña no cambiará.`,
-      html: plantillaHtml(u.nombre, 'Restablecer contraseña', `Recibimos una solicitud para restablecer su contraseña. El enlace vence en ${HORAS_RECUPERACION} hora. Si usted no lo solicitó, ignore este mensaje.`, enlace, 'Crear nueva contraseña'),
-      enlace,
-    }).catch((e) => log.error('No se pudo enviar el correo de recuperación', { usuario: u.id, error: e.message }));
+    mailer
+      .enviar({
+        para: u.correo,
+        asunto: 'Restablecer contraseña – Talento Humano',
+        texto: `Hola ${primerNombre(u.nombre)}:\n\nRecibimos una solicitud para restablecer su contraseña. Abra este enlace (vence en ${HORAS_RECUPERACION} hora):\n${enlace}\n\nSi usted no lo solicitó, ignore este mensaje; su contraseña no cambiará.`,
+        html: plantillaHtml(
+          u.nombre,
+          'Restablecer contraseña',
+          `Recibimos una solicitud para restablecer su contraseña. El enlace vence en ${HORAS_RECUPERACION} hora. Si usted no lo solicitó, ignore este mensaje.`,
+          enlace,
+          'Crear nueva contraseña',
+        ),
+        enlace,
+      })
+      .catch((e) => log.error('No se pudo enviar el correo de recuperación', { usuario: u.id, error: e.message }));
     await auditar(req, { accion: 'RECUPERACION_SOLICITADA', entidad: 'usuario', entidadId: u.id, actorId: null });
   }
 
@@ -153,7 +179,9 @@ export function crearServicioAuth(ctx) {
 
 export const primerNombre = (nombreCompleto) => {
   // La matriz guarda "APELLIDOS NOMBRES": se usa la última parte como saludo si hay 3+ palabras.
-  const partes = String(nombreCompleto || '').trim().split(/\s+/);
+  const partes = String(nombreCompleto || '')
+    .trim()
+    .split(/\s+/);
   const p = partes.length >= 3 ? partes[2] : partes[0];
   return p ? p.charAt(0) + p.slice(1).toLowerCase() : '';
 };

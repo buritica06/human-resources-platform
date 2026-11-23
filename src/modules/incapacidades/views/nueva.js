@@ -45,10 +45,19 @@ zona.innerHTML = `<section class="tarjeta">
         ${op.tipos.map((t, i) => `<label><input type="radio" name="tipo" value="${escapar(t.codigo)}" ${i === 0 ? 'checked' : ''}><span>${escapar(t.etiqueta)} <span class="ayuda">(la expide la ${escapar(t.entidad)})</span></span></label>`).join('')}
       </div><span class="error-campo" id="tipo-error"></span></fieldset>
     ${campo('entidad', 'EPS o ARL que la expidió', `<input class="entrada" id="entidad" name="entidad" maxlength="80" required value="${escapar(op.eps ?? '')}" autocomplete="off" ${desc('entidad', false)}>`)}
-    ${op.prorrogables.length ? campo('prorroga_de', '¿Es prórroga de una incapacidad anterior?', `<select class="entrada" id="prorroga_de" name="prorroga_de" ${desc('prorroga_de', true)}>
+    ${
+      op.prorrogables.length
+        ? campo(
+            'prorroga_de',
+            '¿Es prórroga de una incapacidad anterior?',
+            `<select class="entrada" id="prorroga_de" name="prorroga_de" ${desc('prorroga_de', true)}>
         <option value="">No, es una incapacidad nueva</option>
         ${op.prorrogables.map((p) => `<option value="${p.id}" data-fin="${escapar(p.fechaFin)}">Sí, de la del ${escapar(fecha(p.fechaInicio))} al ${escapar(fecha(p.fechaFin))}</option>`).join('')}
-      </select>`, { obligatorio: false, ayuda: 'La prórroga empieza el día siguiente al fin de la anterior.' }) : ''}
+      </select>`,
+            { obligatorio: false, ayuda: 'La prórroga empieza el día siguiente al fin de la anterior.' },
+          )
+        : ''
+    }
     <div class="rejilla rejilla--2">
       ${campo('fecha_inicio', 'Desde', `<input class="entrada" type="date" id="fecha_inicio" name="fecha_inicio" required ${desc('fecha_inicio', false)}>`)}
       ${campo('fecha_fin', 'Hasta', `<input class="entrada" type="date" id="fecha_fin" name="fecha_fin" required ${desc('fecha_fin', true)}>`, { ayuda: 'Incluido. Cuentan todos los días del calendario.' })}
@@ -64,8 +73,10 @@ const f = zona.querySelector('#f');
 const msg = zona.querySelector('#msg');
 const diasEl = zona.querySelector('#dias');
 const sumar = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-const contar = () => (f.fecha_inicio.value && f.fecha_fin.value && f.fecha_fin.value >= f.fecha_inicio.value
-  ? Math.round((Date.parse(`${f.fecha_fin.value}T00:00:00Z`) - Date.parse(`${f.fecha_inicio.value}T00:00:00Z`)) / 86_400_000) + 1 : null);
+const contar = () =>
+  f.fecha_inicio.value && f.fecha_fin.value && f.fecha_fin.value >= f.fecha_inicio.value
+    ? Math.round((Date.parse(`${f.fecha_fin.value}T00:00:00Z`) - Date.parse(`${f.fecha_inicio.value}T00:00:00Z`)) / 86_400_000) + 1
+    : null;
 function actualizarDias() {
   const n = contar();
   diasEl.textContent = n ? `${n} día(s) de incapacidad.` : '';
@@ -83,9 +94,12 @@ f.prorroga_de?.addEventListener('change', () => {
     actualizarDias();
   }
 });
-f.tipo.forEach?.((r) => r.addEventListener('change', () => {
-  if (r.checked) f.entidad.value = r.value === 'IRL' ? (f.entidad.value === op.eps ? '' : f.entidad.value) : (f.entidad.value || op.eps || '');
-}));
+f.tipo.forEach?.((r) =>
+  r.addEventListener('change', () => {
+    if (r.checked)
+      f.entidad.value = r.value === 'IRL' ? (f.entidad.value === op.eps ? '' : f.entidad.value) : f.entidad.value || op.eps || '';
+  }),
+);
 
 function revisarLocal() {
   const e = {};

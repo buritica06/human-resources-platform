@@ -56,11 +56,34 @@ async function cargar() {
     aviso = '';
     zona.querySelector('#validar')?.addEventListener('click', async (e) => {
       const boton = e.currentTarget;
-      if (!(await confirmar({ titulo: 'Validar incapacidad', mensaje: '¿Confirma que el certificado y los datos son correctos? Se le avisará al colaborador.', aceptar: 'Validar' }))) return;
+      if (
+        !(await confirmar({
+          titulo: 'Validar incapacidad',
+          mensaje: '¿Confirma que el certificado y los datos son correctos? Se le avisará al colaborador.',
+          aceptar: 'Validar',
+        }))
+      )
+        return;
       await conCarga(boton, () => accion('validar', { estadoEsperado: estadoActual }, 'Incapacidad validada.').catch(() => {}));
     });
-    zona.querySelector('#devolver')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Devolver incapacidad', ruta: 'devolver', obligatorio: true, boton: 'Devolver', ayuda: 'Diga qué debe corregir el colaborador; lo verá en la notificación.' }));
-    zona.querySelector('#anular')?.addEventListener('click', () => dialogoMotivo({ titulo: 'Anular incapacidad', ruta: 'anular', obligatorio: !propia, boton: 'Anular', ayuda: 'Por ejemplo: se subió un archivo equivocado.' }));
+    zona.querySelector('#devolver')?.addEventListener('click', () =>
+      dialogoMotivo({
+        titulo: 'Devolver incapacidad',
+        ruta: 'devolver',
+        obligatorio: true,
+        boton: 'Devolver',
+        ayuda: 'Diga qué debe corregir el colaborador; lo verá en la notificación.',
+      }),
+    );
+    zona.querySelector('#anular')?.addEventListener('click', () =>
+      dialogoMotivo({
+        titulo: 'Anular incapacidad',
+        ruta: 'anular',
+        obligatorio: !propia,
+        boton: 'Anular',
+        ayuda: 'Por ejemplo: se subió un archivo equivocado.',
+      }),
+    );
   } catch (err) {
     zona.innerHTML = htmlAviso('error', err.message);
   } finally {
@@ -106,7 +129,8 @@ function dialogoMotivo({ titulo: t, ruta, obligatorio, boton, ayuda }) {
         const datos = { ...(motivo ? { motivo } : {}), ...(ruta === 'devolver' ? { estadoEsperado: estadoActual } : {}) };
         await accion(ruta, datos, ruta === 'devolver' ? 'Incapacidad devuelta.' : 'Incapacidad anulada.', () => d.close());
       } catch (err) {
-        if (err.status === 409) d.close(); // la vista ya se recargó con el estado nuevo
+        if (err.status === 409)
+          d.close(); // la vista ya se recargó con el estado nuevo
         else if (err.campos?.motivo) mostrarErrores(f, { motivo: err.campos.motivo });
       }
     });

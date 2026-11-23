@@ -5,7 +5,17 @@ import { api } from '/static/js/api.js';
 import { montarShell } from '/static/js/shell.js';
 import { icono } from '/static/js/iconos.js';
 import {
-  cop, confirmar, conCarga, escapar, fecha, fechaHora, htmlAviso, limpiarErrores, mostrarAviso, mostrarErrores, toast,
+  cop,
+  confirmar,
+  conCarga,
+  escapar,
+  fecha,
+  fechaHora,
+  htmlAviso,
+  limpiarErrores,
+  mostrarAviso,
+  mostrarErrores,
+  toast,
 } from '/static/js/ui.js';
 
 const me = await montarShell();
@@ -29,9 +39,10 @@ async function cargar() {
     datos = await api(base);
     pintar();
   } catch (err) {
-    zona.innerHTML = err.codigo === 'SIN_EXPEDIENTE'
-      ? `<section class="tarjeta vacio">${icono('documento')}<h2>Aún no tiene expediente</h2><p>${escapar(err.message)}</p></section>`
-      : htmlAviso('error', err.message);
+    zona.innerHTML =
+      err.codigo === 'SIN_EXPEDIENTE'
+        ? `<section class="tarjeta vacio">${icono('documento')}<h2>Aún no tiene expediente</h2><p>${escapar(err.message)}</p></section>`
+        : htmlAviso('error', err.message);
   } finally {
     zona.removeAttribute('aria-busy');
   }
@@ -40,17 +51,23 @@ async function cargar() {
 // ---------- formato de valores ----------
 function opcionTexto(campo, valor) {
   const o = (campo.opciones ?? []).find((x) => (typeof x === 'object' ? x.valor === valor : x === valor));
-  return typeof o === 'object' ? o.texto : o ?? valor;
+  return typeof o === 'object' ? o.texto : (o ?? valor);
 }
 
 function mostrarValor(campo, valor) {
   if (valor === null || valor === undefined || valor === '') return '<span class="sin-dato">— <span class="sr-only">Sin dato</span></span>';
   switch (campo.tipo) {
-    case 'fecha': return escapar(fecha(valor));
-    case 'dinero': return escapar(cop(valor));
-    case 'sino': return valor ? 'Sí' : 'No';
-    case 'sede': case 'empleador': return escapar(opcionTexto(campo, valor));
-    default: return escapar(valor);
+    case 'fecha':
+      return escapar(fecha(valor));
+    case 'dinero':
+      return escapar(cop(valor));
+    case 'sino':
+      return valor ? 'Sí' : 'No';
+    case 'sede':
+    case 'empleador':
+      return escapar(opcionTexto(campo, valor));
+    default:
+      return escapar(valor);
   }
 }
 
@@ -59,10 +76,15 @@ function pintar() {
   const c = datos.colaborador;
   titulo.textContent = propio ? 'Mi expediente' : c.nombre;
   document.title = `${propio ? 'Mi expediente' : c.nombre} · Talento Humano`;
-  const iniciales = c.nombre.split(/\s+/).slice(0, 2).map((p) => p[0]).join('');
-  const estado = c.estado === 'ACTIVO'
-    ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
-    : `<span class="pildora pildora--neutro">${icono('cerrar')} Retirado</span>`;
+  const iniciales = c.nombre
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('');
+  const estado =
+    c.estado === 'ACTIVO'
+      ? `<span class="pildora pildora--exito">${icono('ok')} Activo</span>`
+      : `<span class="pildora pildora--neutro">${icono('cerrar')} Retirado</span>`;
   zona.innerHTML = `
     <section class="tarjeta ficha" aria-label="Resumen">
       <span class="avatar avatar--grande" aria-hidden="true">${escapar(iniciales)}</span>
@@ -74,8 +96,12 @@ function pintar() {
     </section>
     <section class="tarjeta">
       <div class="pestanas" role="tablist" aria-label="Secciones del expediente">
-        ${datos.pestanas.map((p, i) => `<button type="button" role="tab" id="tab-${p.clave}" aria-controls="panel-${p.clave}"
-            aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${escapar(p.titulo)}</button>`).join('')}
+        ${datos.pestanas
+          .map(
+            (p, i) => `<button type="button" role="tab" id="tab-${p.clave}" aria-controls="panel-${p.clave}"
+            aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${escapar(p.titulo)}</button>`,
+          )
+          .join('')}
       </div>
       ${datos.pestanas.map((p, i) => `<div role="tabpanel" id="panel-${p.clave}" aria-labelledby="tab-${p.clave}" tabindex="0" ${i === 0 ? '' : 'hidden'}></div>`).join('')}
     </section>`;
@@ -135,12 +161,14 @@ function pintarDatos() {
   panel.innerHTML = `${acciones}${ayuda}
     <form id="form-exp" novalidate>
       <div id="msg-exp" tabindex="-1" hidden></div>
-      ${datos.grupos.map((g) => {
-        const campos = datos.campos.filter((c) => c.grupo === g.clave);
-        if (!campos.length) return '';
-        return `<section class="grupo-datos" aria-labelledby="g-${g.clave}"><h3 id="g-${g.clave}">${escapar(g.titulo)}</h3>
+      ${datos.grupos
+        .map((g) => {
+          const campos = datos.campos.filter((c) => c.grupo === g.clave);
+          if (!campos.length) return '';
+          return `<section class="grupo-datos" aria-labelledby="g-${g.clave}"><h3 id="g-${g.clave}">${escapar(g.titulo)}</h3>
           <dl class="datos">${campos.map((c) => celdaCampo(c)).join('')}</dl></section>`;
-      }).join('')}
+        })
+        .join('')}
       <div class="formulario-acciones" id="acciones-form" hidden>
         <button type="submit" class="btn">Guardar cambios</button>
         <button type="button" class="btn btn--secundario" id="cancelar">Cancelar</button>
@@ -164,7 +192,10 @@ function celdaCampo(c) {
       dd += ` <button type="button" class="btn btn--chico btn--fantasma" id="ver-cuenta">${icono('ojo')} Mostrar</button>`;
     }
   }
-  const etiqueta = editando && c.editable ? `<label for="f-${c.clave}">${escapar(c.etiqueta)}${c.obligatorio ? ' <span class="obligatorio" aria-hidden="true">*</span>' : ''}</label>` : escapar(c.etiqueta);
+  const etiqueta =
+    editando && c.editable
+      ? `<label for="f-${c.clave}">${escapar(c.etiqueta)}${c.obligatorio ? ' <span class="obligatorio" aria-hidden="true">*</span>' : ''}</label>`
+      : escapar(c.etiqueta);
   return `<div class="dato${editando && c.editable ? ' dato--editable' : ''}"><dt>${etiqueta}</dt><dd>${dd}
     ${editando && c.editable ? `<span class="error-campo" id="f-${c.clave}-error"></span>` : ''}</dd></div>`;
 }
@@ -175,23 +206,30 @@ function entradaCampo(c, valor) {
   const v = valor ?? '';
   const opcion = (val, texto, sel) => `<option value="${escapar(val)}" ${sel ? 'selected' : ''}>${escapar(texto)}</option>`;
   switch (c.tipo) {
-    case 'fecha': return `<input type="date" ${comun} value="${escapar(v)}">`;
-    case 'dinero': return `<input inputmode="numeric" ${comun} value="${escapar(v)}" placeholder="Ej.: 1750905">`;
+    case 'fecha':
+      return `<input type="date" ${comun} value="${escapar(v)}">`;
+    case 'dinero':
+      return `<input inputmode="numeric" ${comun} value="${escapar(v)}" placeholder="Ej.: 1750905">`;
     case 'texto':
       if (c.clave === 'numero_cuenta') {
         // Nunca se precarga el número (llega enmascarado): se escribe uno nuevo solo para cambiarlo.
         return `<input type="text" inputmode="numeric" ${comun} value="" maxlength="20" placeholder="${escapar(v || 'Sin cuenta')} — escriba uno nuevo para cambiarlo">`;
       }
       return `<input type="text" ${comun} value="${escapar(v)}" maxlength="150">`;
-    case 'celular': case 'telefono': return `<input type="tel" inputmode="tel" autocomplete="tel" ${comun} value="${escapar(v)}" maxlength="15">`;
-    case 'sino': return `<select ${comun}>${opcion('', '— Sin dato —', v === '')}${opcion('SI', 'Sí', v === true)}${opcion('NO', 'No', v === false)}</select>`;
+    case 'celular':
+    case 'telefono':
+      return `<input type="tel" inputmode="tel" autocomplete="tel" ${comun} value="${escapar(v)}" maxlength="15">`;
+    case 'sino':
+      return `<select ${comun}>${opcion('', '— Sin dato —', v === '')}${opcion('SI', 'Sí', v === true)}${opcion('NO', 'No', v === false)}</select>`;
     case 'lista': {
       const ops = c.opciones.includes(v) || v === '' ? c.opciones : [v, ...c.opciones];
       return `<select ${comun}>${c.obligatorio ? '' : opcion('', '— Sin dato —', v === '')}${ops.map((o) => opcion(o, o, o === v)).join('')}</select>`;
     }
-    case 'sede': case 'empleador':
+    case 'sede':
+    case 'empleador':
       return `<select ${comun}>${c.opciones.map((o) => opcion(o.valor, o.texto, o.valor === v)).join('')}</select>`;
-    default: return `<input type="text" ${comun} value="${escapar(v)}" maxlength="150">`;
+    default:
+      return `<input type="text" ${comun} value="${escapar(v)}" maxlength="150">`;
   }
 }
 
@@ -213,8 +251,9 @@ function alternarEdicion(si) {
         const ops = todas.filter((o) => o.empleador === Number(emp.value));
         // Si la sede actual no es del empleador elegido, se pide elegir una (no se cambia en silencio).
         const valida = ops.some((o) => o.valor === actual);
-        sede.innerHTML = (valida ? '' : '<option value="" selected>— Elija la sede —</option>')
-          + ops.map((o) => `<option value="${o.valor}" ${o.valor === actual ? 'selected' : ''}>${escapar(o.texto)}</option>`).join('');
+        sede.innerHTML =
+          (valida ? '' : '<option value="" selected>— Elija la sede —</option>') +
+          ops.map((o) => `<option value="${o.valor}" ${o.valor === actual ? 'selected' : ''}>${escapar(o.texto)}</option>`).join('');
       };
       emp.addEventListener('change', filtrar);
       filtrar();
@@ -254,8 +293,11 @@ async function guardar(e) {
     mostrarAviso(msg, 'info', 'No hay cambios para guardar.');
     return;
   }
-  const nombres = Object.keys(cambios).map((k) => datos.campos.find((c) => c.clave === k).etiqueta).join(', ');
-  if (!(await confirmar({ titulo: 'Confirmar cambios', mensaje: `Se actualizará: ${nombres}. ¿Desea guardar?`, aceptar: 'Guardar' }))) return;
+  const nombres = Object.keys(cambios)
+    .map((k) => datos.campos.find((c) => c.clave === k).etiqueta)
+    .join(', ');
+  if (!(await confirmar({ titulo: 'Confirmar cambios', mensaje: `Se actualizará: ${nombres}. ¿Desea guardar?`, aceptar: 'Guardar' })))
+    return;
   await conCarga(form.querySelector('[type=submit]'), async () => {
     try {
       await api(base, { metodo: 'PATCH', datos: cambios });
@@ -264,7 +306,10 @@ async function guardar(e) {
       pintar();
       toast('Datos actualizados.');
     } catch (err) {
-      if (!Object.keys(err.campos ?? {}).length || !mostrarErrores(form, Object.fromEntries(Object.entries(err.campos).map(([k, m]) => [k, m])))) {
+      if (
+        !Object.keys(err.campos ?? {}).length ||
+        !mostrarErrores(form, Object.fromEntries(Object.entries(err.campos).map(([k, m]) => [k, m])))
+      ) {
         mostrarAviso(msg, 'error', err.message);
       }
     }
@@ -293,13 +338,17 @@ async function cargarHistorial() {
     }
     const ORIGEN = { COLABORADOR: 'El colaborador', ADMIN: 'Área contable', IMPORTACION: 'Archivo de nómina' };
     zonaH.innerHTML = `<table class="tabla"><thead><tr><th scope="col">Fecha</th><th scope="col">Dato</th><th scope="col">Antes</th><th scope="col">Después</th><th scope="col">Por</th></tr></thead><tbody>
-      ${r.cambios.map((h) => `<tr>
+      ${r.cambios
+        .map(
+          (h) => `<tr>
         <td data-etiqueta="Fecha">${escapar(fechaHora(h.fecha))}</td>
         <td data-etiqueta="Dato">${escapar(h.campo === '_alta' ? 'Expediente' : h.etiqueta)}</td>
         <td data-etiqueta="Antes">${escapar(h.anterior ?? '—')}</td>
         <td data-etiqueta="Después">${escapar(h.nuevo ?? '—')}</td>
         <td data-etiqueta="Por">${escapar(h.actor ?? '')}${h.actor ? '<br>' : ''}<span class="ayuda">${escapar(ORIGEN[h.origen] ?? h.origen)}</span></td>
-      </tr>`).join('')}</tbody></table>`;
+      </tr>`,
+        )
+        .join('')}</tbody></table>`;
   } catch (err) {
     zonaH.innerHTML = htmlAviso('error', err.message);
   }

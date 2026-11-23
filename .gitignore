@@ -25,3 +25,4 @@ backups/
 Thumbs.db
 *.log
 coverage/
+site/

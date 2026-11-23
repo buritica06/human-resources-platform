@@ -15,7 +15,11 @@ let op;
 let saldo;
 let pasos = [];
 try {
-  [op, saldo, { pasos }] = await Promise.all([api('/vacaciones/opciones'), api('/me/vacaciones/saldo'), api('/solicitudes/flujo/VACACIONES')]);
+  [op, saldo, { pasos }] = await Promise.all([
+    api('/vacaciones/opciones'),
+    api('/me/vacaciones/saldo'),
+    api('/solicitudes/flujo/VACACIONES'),
+  ]);
 } catch (err) {
   zona.innerHTML = htmlAviso('error', err.message);
   throw err;
@@ -33,7 +37,9 @@ const campo = (id, etiqueta, control, { ayuda = '', obligatorio = true } = {}) =
 const desc = (id, ayuda) => `aria-describedby="${ayuda ? `${id}-ayuda ` : ''}${id}-error"`;
 zona.innerHTML = `
   <section class="tarjeta" aria-labelledby="t-saldo"><h2 id="t-saldo">Su saldo</h2>${htmlSaldo(saldo)}</section>
-  ${saldo.registrado ? `<section class="tarjeta">
+  ${
+    saldo.registrado
+      ? `<section class="tarjeta">
     <div id="msg" tabindex="-1" hidden></div>
     <form id="f" novalidate>
       <div class="rejilla rejilla--2">
@@ -47,7 +53,9 @@ zona.innerHTML = `
         <button class="btn" type="submit">${icono('ok')} Enviar solicitud</button>
         <button class="btn btn--secundario" type="button" id="borrador">Guardar sin enviar</button>
       </div>
-    </form></section>` : ''}`;
+    </form></section>`
+      : ''
+  }`;
 
 const f = zona.querySelector('#f');
 if (f) {
@@ -56,7 +64,11 @@ if (f) {
   let plan = null;
   let turno = 0;
 
-  const datos = () => ({ fecha_inicio: f.fecha_inicio.value, dias: Number(f.dias.value), dias_compensar: Number(f.dias_compensar?.value || 0) });
+  const datos = () => ({
+    fecha_inicio: f.fecha_inicio.value,
+    dias: Number(f.dias.value),
+    dias_compensar: Number(f.dias_compensar?.value || 0),
+  });
 
   // marcar: al enviar se marcan los campos con error (aria-invalid) y se enfoca; mientras escribe,
   // solo se actualiza el resumen (para no interrumpir a los lectores de pantalla).
@@ -113,7 +125,8 @@ if (f) {
       if (!ok) return;
     }
     const fd = new FormData();
-    for (const [k, v] of Object.entries({ ...datos(), motivo: f.motivo.value, tipo: 'VACACIONES', enviar: String(enviar) })) fd.append(k, String(v));
+    for (const [k, v] of Object.entries({ ...datos(), motivo: f.motivo.value, tipo: 'VACACIONES', enviar: String(enviar) }))
+      fd.append(k, String(v));
     await conCarga(boton, async () => {
       try {
         const r = await api('/solicitudes', { metodo: 'POST', formulario: fd });

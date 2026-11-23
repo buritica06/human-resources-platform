@@ -27,11 +27,9 @@ export const CLAVE_MIN = 10;
 
 // Devuelve el mensaje de error en lenguaje claro, o null si la clave cumple.
 export function revisarPolitica(clave, { cedula } = {}) {
-  if (typeof clave !== 'string' || clave.length < CLAVE_MIN)
-    return `La contraseña debe tener al menos ${CLAVE_MIN} caracteres.`;
+  if (typeof clave !== 'string' || clave.length < CLAVE_MIN) return `La contraseña debe tener al menos ${CLAVE_MIN} caracteres.`;
   if (clave.length > 128) return 'La contraseña es demasiado larga (máximo 128 caracteres).';
-  if (!/[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(clave) || !/\d/.test(clave))
-    return 'La contraseña debe combinar letras y números.';
+  if (!/[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(clave) || !/\d/.test(clave)) return 'La contraseña debe combinar letras y números.';
   if (cedula && clave.includes(String(cedula))) return 'La contraseña no puede contener su número de cédula.';
   if (/^(.)\1+$/.test(clave)) return 'La contraseña no puede ser un solo carácter repetido.';
   return null;

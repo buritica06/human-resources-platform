@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+data/
+uploads/
+backups/
+site/
+package-lock.json
+*.md
+*.html
+*.css
+*.yaml
+*.yml

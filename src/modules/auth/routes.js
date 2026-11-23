@@ -20,7 +20,9 @@ export function montarRutasAuth(router, ctx) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       handler: (_req, res) =>
-        res.status(429).json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Demasiados intentos. Espere unos minutos e intente de nuevo.' } }),
+        res
+          .status(429)
+          .json({ error: { codigo: 'DEMASIADOS_INTENTOS', mensaje: 'Demasiados intentos. Espere unos minutos e intente de nuevo.' } }),
     });
 
   router.get('/auth/csrf', (req, res) => res.json({ csrf: ctx.sesiones.tokenCsrf(req, res) }));
@@ -60,10 +62,15 @@ export function montarRutasAuth(router, ctx) {
   });
 
   // Con límite: una sesión robada no puede probar la clave actual sin freno
-  router.post('/auth/cambiar-clave', autenticado({ onboarding: true }), limitar(ctx.limites.recuperar, { soloFallidos: true }), async (req, res) => {
-    await svc.cambiarClave(req, validar(v.esquemaCambiarClave, req.body));
-    res.json({ ok: true, mensaje: 'Contraseña actualizada.' });
-  });
+  router.post(
+    '/auth/cambiar-clave',
+    autenticado({ onboarding: true }),
+    limitar(ctx.limites.recuperar, { soloFallidos: true }),
+    async (req, res) => {
+      await svc.cambiarClave(req, validar(v.esquemaCambiarClave, req.body));
+      res.json({ ok: true, mensaje: 'Contraseña actualizada.' });
+    },
+  );
 
   router.post('/auth/correo', autenticado({ onboarding: true }), limitar(ctx.limites.recuperar), async (req, res) => {
     if (req.usuario.debeCambiarClave) {

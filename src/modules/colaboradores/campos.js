@@ -18,7 +18,15 @@ export const GRUPOS = [
 ];
 
 export const CAMPOS = [
-  { clave: 'nombre', etiqueta: 'Nombre completo (apellidos y nombres)', grupo: 'personales', tipo: 'texto', max: 150, obligatorio: true, mayusculas: true },
+  {
+    clave: 'nombre',
+    etiqueta: 'Nombre completo (apellidos y nombres)',
+    grupo: 'personales',
+    tipo: 'texto',
+    max: 150,
+    obligatorio: true,
+    mayusculas: true,
+  },
   { clave: 'cedula', etiqueta: 'Cédula', grupo: 'personales', tipo: 'texto', soloLectura: true },
   { clave: 'fecha_nacimiento', etiqueta: 'Fecha de nacimiento', grupo: 'personales', tipo: 'fecha' },
   { clave: 'sexo', etiqueta: 'Sexo', grupo: 'personales', tipo: 'lista', lista: 'LISTA_SEXO', max: 20 },
@@ -51,7 +59,17 @@ export const CAMPOS = [
 
   { clave: 'banco', etiqueta: 'Banco', grupo: 'pago', tipo: 'lista', lista: 'LISTA_BANCOS', max: 60, director: false },
   { clave: 'tipo_cuenta', etiqueta: 'Tipo de cuenta', grupo: 'pago', tipo: 'lista', lista: 'LISTA_TIPO_CUENTA', max: 20, director: false },
-  { clave: 'numero_cuenta', etiqueta: 'Número de cuenta', grupo: 'pago', tipo: 'texto', max: 20, patron: /^\d{4,20}$/, mensajePatron: 'Solo números (4 a 20 dígitos).', sensible: true, director: false },
+  {
+    clave: 'numero_cuenta',
+    etiqueta: 'Número de cuenta',
+    grupo: 'pago',
+    tipo: 'texto',
+    max: 20,
+    patron: /^\d{4,20}$/,
+    mensajePatron: 'Solo números (4 a 20 dígitos).',
+    sensible: true,
+    director: false,
+  },
 
   { clave: 'dia_descanso', etiqueta: 'Día de descanso pactado', grupo: 'jornada', tipo: 'lista', lista: 'LISTA_DIAS', max: 12 },
   { clave: 'esquema_horas', etiqueta: 'Esquema de horas', grupo: 'jornada', tipo: 'lista', lista: 'LISTA_ESQUEMAS', max: 20 },

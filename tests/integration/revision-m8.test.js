@@ -40,7 +40,10 @@ test('validación: enteros, rangos de nómina y campos auto-editables permitidos
   assert.match((await programar('HORA_NOCHE_INI', { valor: 99, desde: hoy })).body.error.campos.valor, /entre 0 y 23/);
   const r = await programar('CAMPOS_EDITABLES_COLABORADOR', { valor: ['celular', 'salario_base', 'numero_cuenta'], desde: hoy });
   assert.match(r.body.error.campos.valor, /salario_base, numero_cuenta/);
-  assert.match((await programar('LISTA_TIPOS_PERMISO_SENSIBLES', { valor: ['INVENTADO'], desde: hoy })).body.error.campos.valor, /No son tipos de permiso/);
+  assert.match(
+    (await programar('LISTA_TIPOS_PERMISO_SENSIBLES', { valor: ['INVENTADO'], desde: hoy })).body.error.campos.valor,
+    /No son tipos de permiso/,
+  );
 });
 
 test('no se dejan huecos: tras una versión con fin, la siguiente empieza el día después', async () => {
@@ -54,7 +57,9 @@ test('una versión que empieza hoy y se creó hoy se puede corregir (borrar)', a
   const r = await programar('PERMISO_MAX_DIAS', { valor: 4, desde: hoy });
   assert.equal(r.status, 201);
   const v = r.body.versiones.find((x) => x.desde === hoy);
-  const del = await admin.agente.delete(`/api/v1/parametros/versiones/${v.id}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf);
+  const del = await admin.agente
+    .delete(`/api/v1/parametros/versiones/${v.id}`)
+    .set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf);
   assert.equal(del.status, 200, JSON.stringify(del.body));
   env.ctx.params.invalidar();
   assert.equal(await env.ctx.params.valor('PERMISO_MAX_DIAS'), 3);
@@ -73,10 +78,25 @@ test('alerta de parámetros por vencer sin versión siguiente', async () => {
 });
 
 test('una incapacidad no se registra sobre una suspensión', async () => {
-  assert.equal((await admin.post(`/colaboradores/${idColab1}/suspensiones`, { fecha_inicio: sumarDias(hoy, -5), fecha_fin: sumarDias(hoy, -4), motivo: 'Suspensión de prueba' })).status, 201);
+  assert.equal(
+    (
+      await admin.post(`/colaboradores/${idColab1}/suspensiones`, {
+        fecha_inicio: sumarDias(hoy, -5),
+        fecha_fin: sumarDias(hoy, -4),
+        motivo: 'Suspensión de prueba',
+      })
+    ).status,
+    201,
+  );
   const t = (await colab1.get('/auth/csrf')).body.csrf;
-  const r = await colab1.agente.post('/api/v1/incapacidades').set('X-CSRF-Token', t)
-    .field('tipo', 'IGE').field('entidad', 'Sura').field('fecha_inicio', sumarDias(hoy, -4)).field('fecha_fin', sumarDias(hoy, -3)).attach('soporte', PDF, 'c.pdf');
+  const r = await colab1.agente
+    .post('/api/v1/incapacidades')
+    .set('X-CSRF-Token', t)
+    .field('tipo', 'IGE')
+    .field('entidad', 'Sura')
+    .field('fecha_inicio', sumarDias(hoy, -4))
+    .field('fecha_fin', sumarDias(hoy, -3))
+    .attach('soporte', PDF, 'c.pdf');
   assert.equal(r.status, 400);
   assert.match(r.body.error.campos.fecha_inicio, /suspensión/);
 });
@@ -84,11 +104,26 @@ test('una incapacidad no se registra sobre una suspensión', async () => {
 test('ausentismo: permisos de un día en horas, de varios días en días; licencia sensible reservada', async () => {
   const tk = async (c) => (await c.get('/auth/csrf')).body.csrf;
   const d1 = sumarDias(hoy, 3);
-  const p = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'PERMISO').field('subtipo', 'DILIGENCIA PERSONAL')
-    .field('fecha_inicio', d1).field('hora_inicio', '08:00').field('fecha_fin', d1).field('hora_fin', '09:30').field('motivo', 'Trámite personal');
+  const p = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'PERMISO')
+    .field('subtipo', 'DILIGENCIA PERSONAL')
+    .field('fecha_inicio', d1)
+    .field('hora_inicio', '08:00')
+    .field('fecha_fin', d1)
+    .field('hora_fin', '09:30')
+    .field('motivo', 'Trámite personal');
   assert.equal(p.status, 201, JSON.stringify(p.body));
-  const m = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', await tk(colab1)).field('tipo', 'LICENCIA').field('subtipo', 'MATERNIDAD')
-    .field('fecha_inicio', sumarDias(hoy, 10)).field('fecha_fin', sumarDias(hoy, 12)).field('motivo', 'Licencia de prueba').attach('soporte', PDF, 's.pdf');
+  const m = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', await tk(colab1))
+    .field('tipo', 'LICENCIA')
+    .field('subtipo', 'MATERNIDAD')
+    .field('fecha_inicio', sumarDias(hoy, 10))
+    .field('fecha_fin', sumarDias(hoy, 12))
+    .field('motivo', 'Licencia de prueba')
+    .attach('soporte', PDF, 's.pdf');
   assert.equal(m.status, 201, JSON.stringify(m.body));
   // Aprobación directa en la BD (el flujo ya se probó en otras pruebas)
   await env.ctx.db('solicitudes').whereIn('id', [p.body.id, m.body.id]).update({ estado: 'APROBADA', paso_actual: null });
@@ -109,7 +144,12 @@ test('auditoría: fechas inválidas o invertidas → 400; página máxima', asyn
 
 test('suspensiones: anular dos veces → 409; la consulta ajena queda auditada', async () => {
   const s = (await admin.get(`/colaboradores/${idColab1}/suspensiones`)).body.suspensiones[0];
-  assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER_SUSPENSIONES', entidad_id: String(idColab1) }).first());
+  assert.ok(
+    await env.ctx
+      .db('auditoria')
+      .where({ accion: 'VER_SUSPENSIONES', entidad_id: String(idColab1) })
+      .first(),
+  );
   assert.equal((await admin.post(`/suspensiones/${s.id}/anular`, { motivo: 'Corrección de fechas' })).status, 200);
   assert.equal((await admin.post(`/suspensiones/${s.id}/anular`, { motivo: 'Otra vez' })).status, 409);
 });

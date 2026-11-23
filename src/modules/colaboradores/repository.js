@@ -22,9 +22,7 @@ export function crearRepositorioColaboradores(db) {
       if (estado) consulta.where('c.estado', estado);
       if (q) {
         const t = `%${q.replace(/[%_\\]/g, (ch) => `\\${ch}`)}%`;
-        consulta.where((w) =>
-          w.whereRaw("c.cedula LIKE ? ESCAPE '\\'", [t]).orWhereRaw("c.nombre LIKE ? ESCAPE '\\'", [t.toUpperCase()]),
-        );
+        consulta.where((w) => w.whereRaw("c.cedula LIKE ? ESCAPE '\\'", [t]).orWhereRaw("c.nombre LIKE ? ESCAPE '\\'", [t.toUpperCase()]));
       }
       const [{ total }] = await consulta.clone().count({ total: '*' });
       const filas = await consulta
@@ -39,16 +37,24 @@ export function crearRepositorioColaboradores(db) {
       (await db('director_sedes').where({ usuario_id: usuarioId }).select('sede_id')).map((r) => r.sede_id),
 
     sedes: () =>
-      db('sedes as s').join('empleadores as e', 'e.id', 's.empleador_id').where('s.activa', true)
-        .select('s.id', 's.nombre', 's.empleador_id', 'e.razon_social as empleador').orderBy([{ column: 'e.id' }, { column: 's.orden' }]),
+      db('sedes as s')
+        .join('empleadores as e', 'e.id', 's.empleador_id')
+        .where('s.activa', true)
+        .select('s.id', 's.nombre', 's.empleador_id', 'e.razon_social as empleador')
+        .orderBy([{ column: 'e.id' }, { column: 's.orden' }]),
     empleadores: () => db('empleadores').select('id', 'clave', 'razon_social').orderBy('id'),
 
     async insertar(trx, datos) {
       const t = ahora();
-      const [fila] = await trx('colaboradores').insert({ ...datos, creado_en: t, actualizado_en: t }).returning('id');
+      const [fila] = await trx('colaboradores')
+        .insert({ ...datos, creado_en: t, actualizado_en: t })
+        .returning('id');
       return typeof fila === 'object' ? fila.id : fila;
     },
-    actualizar: (trx, id, cambios) => trx('colaboradores').where({ id }).update({ ...cambios, actualizado_en: ahora() }),
+    actualizar: (trx, id, cambios) =>
+      trx('colaboradores')
+        .where({ id })
+        .update({ ...cambios, actualizado_en: ahora() }),
 
     registrarCambios: (trx, filas) => (filas.length ? trx('expediente_cambios').insert(filas) : null),
 

@@ -113,12 +113,21 @@ export function crearApp(ctx) {
   app.use((err, req, res, _next) => {
     let e = err;
     if (err instanceof multer.MulterError) {
-      e = new ErrorApp(400, 'ARCHIVO_INVALIDO', err.code === 'LIMIT_FILE_SIZE' ? 'El archivo supera el tamaño máximo permitido.' : 'No se pudo recibir el archivo.');
+      e = new ErrorApp(
+        400,
+        'ARCHIVO_INVALIDO',
+        err.code === 'LIMIT_FILE_SIZE' ? 'El archivo supera el tamaño máximo permitido.' : 'No se pudo recibir el archivo.',
+      );
     } else if (err?.type === 'entity.parse.failed' || err?.type === 'entity.too.large') {
       e = new ErrorApp(400, 'DATOS_INVALIDOS', 'La solicitud no tiene un formato válido.');
     }
     if (!(e instanceof ErrorApp)) {
-      log.error('Error no controlado', { ruta: req.path, metodo: req.method, error: err?.message, stack: cfg.produccion ? undefined : err?.stack });
+      log.error('Error no controlado', {
+        ruta: req.path,
+        metodo: req.method,
+        error: err?.message,
+        stack: cfg.produccion ? undefined : err?.stack,
+      });
       e = new ErrorApp(500, 'ERROR_INTERNO', 'Ocurrió un error inesperado. Intente de nuevo en unos minutos.');
     }
     res.status(e.status).json({ error: { codigo: e.codigo, mensaje: e.message, ...(e.campos ? { campos: e.campos } : {}) } });

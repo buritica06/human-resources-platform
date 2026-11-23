@@ -8,10 +8,33 @@ import ExcelJS from 'exceljs';
 const DIR = path.resolve(import.meta.dirname, '..', 'tests', 'fixtures');
 
 const ENCABEZADOS = [
-  'CÉDULA', 'NOMBRE', 'EMPLEADOR', 'SEDE', 'CARGO', 'TIPO CONTRATO', 'FECHA INGRESO', 'FECHA FIN CONTRATO',
-  'SALARIO BASE', 'AUX. TRANSP. (SI/NO)', 'EPS', 'AFP', 'CESANTÍAS', 'CAJA', 'RIESGO ARL', 'BANCO', 'TIPO CUENTA',
-  'N° CUENTA', 'ESTADO', 'FECHA RETIRO', 'MOTIVO RETIRO', 'CELULAR', 'LISTA (no editar)',
-  'DÍA DE DESCANSO (dominical pactado)', 'ESQUEMA DE HORAS', 'LACTANCIA (SI/NO) ½ h diaria pagada como H.E.D.', 'FIN LACTANCIA',
+  'CÉDULA',
+  'NOMBRE',
+  'EMPLEADOR',
+  'SEDE',
+  'CARGO',
+  'TIPO CONTRATO',
+  'FECHA INGRESO',
+  'FECHA FIN CONTRATO',
+  'SALARIO BASE',
+  'AUX. TRANSP. (SI/NO)',
+  'EPS',
+  'AFP',
+  'CESANTÍAS',
+  'CAJA',
+  'RIESGO ARL',
+  'BANCO',
+  'TIPO CUENTA',
+  'N° CUENTA',
+  'ESTADO',
+  'FECHA RETIRO',
+  'MOTIVO RETIRO',
+  'CELULAR',
+  'LISTA (no editar)',
+  'DÍA DE DESCANSO (dominical pactado)',
+  'ESQUEMA DE HORAS',
+  'LACTANCIA (SI/NO) ½ h diaria pagada como H.E.D.',
+  'FIN LACTANCIA',
 ];
 
 // [cédula, nombre, empleador, sede, cargo, ingreso, salario, estado]
@@ -36,13 +59,25 @@ function hojaParametros(libro) {
   h.getCell('N4').value = 'C.C. / NIT';
   h.getCell('P4').value = 'EMPLEADOR';
   h.getCell('Q4').value = 'SEDE (título en la nómina, en este orden)';
-  const emp = [['EMP_A', 'EMPLEADOR DEMO A'], ['EMP_B', 'EMPLEADOR DEMO B'], ['EMP_C', 'EMPLEADOR DEMO C'], ['EMP_D', 'EMPLEADOR DEMO D']];
+  const emp = [
+    ['EMP_A', 'EMPLEADOR DEMO A'],
+    ['EMP_B', 'EMPLEADOR DEMO B'],
+    ['EMP_C', 'EMPLEADOR DEMO C'],
+    ['EMP_D', 'EMPLEADOR DEMO D'],
+  ];
   emp.forEach(([k, n], i) => {
     h.getCell(`K${6 + i}`).value = k;
     h.getCell(`M${6 + i}`).value = n;
     h.getCell(`N${6 + i}`).value = 900000001 + i;
   });
-  const sedes = [['EMP_A', 'SEDE NORTE'], ['EMP_A', 'SEDE SUR'], ['EMP_B', 'SEDE RIO'], ['EMP_B', 'SEDE PUERTO'], ['EMP_C', 'SEDE CAMPO'], ['EMP_D', 'SEDE NUEVA']];
+  const sedes = [
+    ['EMP_A', 'SEDE NORTE'],
+    ['EMP_A', 'SEDE SUR'],
+    ['EMP_B', 'SEDE RIO'],
+    ['EMP_B', 'SEDE PUERTO'],
+    ['EMP_C', 'SEDE CAMPO'],
+    ['EMP_D', 'SEDE NUEVA'],
+  ];
   sedes.forEach(([e, s], i) => {
     h.getCell(`P${6 + i}`).value = e;
     h.getCell(`Q${6 + i}`).value = s;
@@ -120,7 +155,11 @@ export async function generar() {
   hp.getCell('M4').value = 'NOMBRE COMPLETO (liquidaciones)';
   hp.getCell('P4').value = 'EMPLEADOR';
   hp.getCell('Q4').value = 'SEDE (título en la nómina, en este orden)';
-  [['EMP_A', 'EMPLEADOR DEMO A'], ['EMP_A', 'EMPLEADOR DEMO A'], ['X'.repeat(40), 'CLAVE LARGA']].forEach(([k, n], i) => {
+  [
+    ['EMP_A', 'EMPLEADOR DEMO A'],
+    ['EMP_A', 'EMPLEADOR DEMO A'],
+    ['X'.repeat(40), 'CLAVE LARGA'],
+  ].forEach(([k, n], i) => {
     hp.getCell(`K${6 + i}`).value = k;
     hp.getCell(`M${6 + i}`).value = n;
   });
@@ -135,8 +174,32 @@ export async function generar() {
   // antes de "ESTADO", sin columna CAJA) y celdas vacías que NO deben borrar datos existentes.
   const va = new ExcelJS.Workbook();
   const hv = va.addWorksheet('EMPLEADOS');
-  hv.getRow(4).values = ['CÉDULA', 'NOMBRE', 'EMPLEADOR', 'SEDE', 'ESTADO CIVIL', 'ESTADO', 'TIPO DE CONTRATO', 'Nº CUENTA', 'SALARIO BASE', 'RIESGO ARL', 'EPS'];
-  hv.getRow(5).values = [2000000001, 'ACOSTA BELTRAN CAMILO ANDRES', 'EMP_A', 'SEDE NORTE', '', '', 'FIJO 1 AÑO', '', '', 'RIESGO MUY ALTO', ''];
+  hv.getRow(4).values = [
+    'CÉDULA',
+    'NOMBRE',
+    'EMPLEADOR',
+    'SEDE',
+    'ESTADO CIVIL',
+    'ESTADO',
+    'TIPO DE CONTRATO',
+    'Nº CUENTA',
+    'SALARIO BASE',
+    'RIESGO ARL',
+    'EPS',
+  ];
+  hv.getRow(5).values = [
+    2000000001,
+    'ACOSTA BELTRAN CAMILO ANDRES',
+    'EMP_A',
+    'SEDE NORTE',
+    '',
+    '',
+    'FIJO 1 AÑO',
+    '',
+    '',
+    'RIESGO MUY ALTO',
+    '',
+  ];
   await va.xlsx.writeFile(path.join(DIR, 'empleados-variantes.xlsx'));
 
   const sinHoja = new ExcelJS.Workbook();

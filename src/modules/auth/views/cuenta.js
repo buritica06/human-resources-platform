@@ -16,6 +16,9 @@ const zonaCorreo = document.getElementById('zona-correo');
 formularioCorreo(zonaCorreo, {
   textoBoton: 'Cambiar correo',
   alEnviar: (correo) => {
-    zonaCorreo.innerHTML = htmlAviso('info', `Le enviamos un enlace a ${correo}. El cambio se aplicará cuando lo abra. Mientras tanto seguimos usando su correo actual.`);
+    zonaCorreo.innerHTML = htmlAviso(
+      'info',
+      `Le enviamos un enlace a ${correo}. El cambio se aplicará cuando lo abra. Mientras tanto seguimos usando su correo actual.`,
+    );
   },
 });

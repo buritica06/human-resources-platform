@@ -34,7 +34,10 @@ test('correos de incapacidad: genéricos, sin nombre, fechas, diagnóstico ni mo
   env.ctx.mailer.enviados.length = 0;
   const r = await registrar(colab1, { fecha_inicio: sumarDias(hoy, -40), fecha_fin: sumarDias(hoy, -39) });
   assert.equal(r.status, 201, JSON.stringify(r.body));
-  await admin.post(`/incapacidades/${r.body.id}/devolver`, { motivo: `Falta la firma del médico tratante de ${SECRETO}`, estadoEsperado: 'REGISTRADA' });
+  await admin.post(`/incapacidades/${r.body.id}/devolver`, {
+    motivo: `Falta la firma del médico tratante de ${SECRETO}`,
+    estadoEsperado: 'REGISTRADA',
+  });
   assert.ok(env.ctx.mailer.enviados.length >= 2);
   for (const m of env.ctx.mailer.enviados) {
     const texto = `${m.asunto} ${m.texto}`;
@@ -54,8 +57,13 @@ test('el PDF inválido se informa junto con los demás errores (un solo intento)
 test('una solicitud en trámite no se puede aprobar si luego se registró una incapacidad en esas fechas', async () => {
   const d = primerHabilDesde(sumarDias(hoy, 20), { festivos: new Map(FESTIVOS), sabadoHabil: true });
   const t = (await colab1.get('/auth/csrf')).body.csrf;
-  const s = await colab1.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', t)
-    .field('tipo', 'VACACIONES').field('fecha_inicio', d).field('dias', '2').field('dias_compensar', '0');
+  const s = await colab1.agente
+    .post('/api/v1/solicitudes')
+    .set('X-CSRF-Token', t)
+    .field('tipo', 'VACACIONES')
+    .field('fecha_inicio', d)
+    .field('dias', '2')
+    .field('dias_compensar', '0');
   assert.equal(s.status, 201, JSON.stringify(s.body));
   const inc = await registrar(colab1, { fecha_inicio: d, fecha_fin: d });
   assert.equal(inc.status, 201, JSON.stringify(inc.body));
@@ -67,7 +75,13 @@ test('una solicitud en trámite no se puede aprobar si luego se registró una in
 test('prórroga: mismo tipo; anulada no cuenta para cruces ni la ve el director', async () => {
   const base = await registrar(colab1, { fecha_inicio: sumarDias(hoy, -30), fecha_fin: sumarDias(hoy, -28) });
   assert.equal(base.status, 201);
-  const p = await registrar(colab1, { tipo: 'IRL', entidad: 'ARL Demo', fecha_inicio: sumarDias(hoy, -27), fecha_fin: sumarDias(hoy, -26), prorroga_de: base.body.id });
+  const p = await registrar(colab1, {
+    tipo: 'IRL',
+    entidad: 'ARL Demo',
+    fecha_inicio: sumarDias(hoy, -27),
+    fecha_fin: sumarDias(hoy, -26),
+    prorroga_de: base.body.id,
+  });
   assert.match(p.body.error.campos.tipo, /mismo tipo/);
   // El admin anula una ajena: motivo obligatorio
   assert.equal((await admin.post(`/incapacidades/${base.body.id}/anular`, {})).status, 400);

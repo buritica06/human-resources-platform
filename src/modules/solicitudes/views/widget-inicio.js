@@ -6,7 +6,10 @@ import { escapar } from '/static/js/ui.js';
 import { pildoraEstado, cuando } from '/static/js/estados.js';
 
 export async function montar(contenedor, me) {
-  const [{ tipos }, mias] = await Promise.all([api('/solicitudes/tipos'), api('/me/solicitudes?estado=EN_CURSO').catch(() => ({ solicitudes: [] }))]);
+  const [{ tipos }, mias] = await Promise.all([
+    api('/solicitudes/tipos'),
+    api('/me/solicitudes?estado=EN_CURSO').catch(() => ({ solicitudes: [] })),
+  ]);
   const tarjeta = document.createElement('section');
   tarjeta.className = 'tarjeta';
   tarjeta.setAttribute('aria-labelledby', 'w-solicitudes');
@@ -14,10 +17,18 @@ export async function montar(contenedor, me) {
   tarjeta.innerHTML = `<h2 id="w-solicitudes">Solicitudes</h2>
     ${!mias.sinExpediente && tipos.length ? `<div class="acciones-grandes">${tipos.map((t) => `<a class="accion-grande" href="${escapar(t.rutaNueva)}">${icono(t.icono)} ${escapar(t.accion)}</a>`).join('')}</div>` : ''}
     <h3 class="subtitulo">En curso</h3>
-    ${enCurso.length ? `<ul class="lista-compacta">${enCurso.slice(0, 4).map((s) => `<li>
+    ${
+      enCurso.length
+        ? `<ul class="lista-compacta">${enCurso
+            .slice(0, 4)
+            .map(
+              (s) => `<li>
         <a href="/solicitudes/ver?id=${s.id}">${escapar(s.tipoEtiqueta)}: ${escapar(s.subtipo ?? '')}</a>
-        <span class="ayuda">${escapar(cuando(s))}</span> ${pildoraEstado(s.estado, s.estadoEtiqueta)}</li>`).join('')}</ul>`
-      : '<p class="ayuda">No tiene solicitudes en trámite.</p>'}`;
+        <span class="ayuda">${escapar(cuando(s))}</span> ${pildoraEstado(s.estado, s.estadoEtiqueta)}</li>`,
+            )
+            .join('')}</ul>`
+        : '<p class="ayuda">No tiene solicitudes en trámite.</p>'
+    }`;
   contenedor.prepend(tarjeta);
 
   if (['DIRECTOR', 'ADMIN'].includes(me.usuario.rol)) {

@@ -114,8 +114,12 @@ export function crearServicioColaboradores(ctx) {
     return [
       { clave: 'datos', titulo: 'Datos', activa: true },
       ...[
-        ['nomina', 'Nómina'], ['permisos', 'Permisos'], ['vacaciones', 'Vacaciones'],
-        ['incapacidades', 'Incapacidades'], ['licencias', 'Licencias'], ['documentos', 'Documentos'],
+        ['nomina', 'Nómina'],
+        ['permisos', 'Permisos'],
+        ['vacaciones', 'Vacaciones'],
+        ['incapacidades', 'Incapacidades'],
+        ['licencias', 'Licencias'],
+        ['documentos', 'Documentos'],
       ].map(([clave, titulo]) => ({ clave, titulo, activa: aportadas.has(clave), script: aportadas.get(clave)?.script ?? null })),
     ];
   }
@@ -127,7 +131,14 @@ export function crearServicioColaboradores(ctx) {
     const hist = [];
     const update = {};
     const t = ahora();
-    const fila = (campo, a, n) => ({ campo, valor_anterior: textoHist(campo, a, v), valor_nuevo: textoHist(campo, n, v), origen, actor_id: actorId, creado_en: t });
+    const fila = (campo, a, n) => ({
+      campo,
+      valor_anterior: textoHist(campo, a, v),
+      valor_nuevo: textoHist(campo, n, v),
+      origen,
+      actor_id: actorId,
+      creado_en: t,
+    });
     for (const [clave, nuevo] of Object.entries(limpios)) {
       if (clave === 'numero_cuenta') {
         const actual = descifrarCuenta(c);
@@ -156,7 +167,10 @@ export function crearServicioColaboradores(ctx) {
       const { update, hist } = diferencias(actual, limpios, origen, req.usuario.id, v);
       if (!hist.length) return [];
       await repo.actualizar(trx, c.id, update);
-      await repo.registrarCambios(trx, hist.map((h) => ({ ...h, colaborador_id: c.id })));
+      await repo.registrarCambios(
+        trx,
+        hist.map((h) => ({ ...h, colaborador_id: c.id })),
+      );
       return hist.map((h) => h.campo);
     });
     if (campos.length) await auditar(req, { accion: 'EDITAR', entidad: 'colaborador', entidadId: c.id, detalle: { origen, campos } });
@@ -180,8 +194,9 @@ export function crearServicioColaboradores(ctx) {
     const cruzados = reglasCruzadas(resultante, v);
     // Se exige toda regla que involucre CUALQUIER campo que cambia (p. ej. mover la fecha de
     // ingreso después de la de retiro). Las inconsistencias ya existentes en otros datos no bloquean.
-    const relevantes = Object.fromEntries(Object.entries(cruzados).filter(([regla]) =>
-      (CAMPOS_REGLA[regla] ?? [regla]).some((campo) => campo in limpios)));
+    const relevantes = Object.fromEntries(
+      Object.entries(cruzados).filter(([regla]) => (CAMPOS_REGLA[regla] ?? [regla]).some((campo) => campo in limpios)),
+    );
     if (Object.keys(relevantes).length) throw invalido('Revise los datos marcados.', relevantes);
     return aplicarCambios(req, c, limpios, origen, v);
   }
@@ -201,8 +216,12 @@ export function crearServicioColaboradores(ctx) {
     const negados = Object.keys(cuerpo).filter((k) => !permitidos.has(k));
     if (negados.length) {
       await auditar(req, { accion: 'EDICION_DENEGADA', entidad: 'colaborador', entidadId: c.id, detalle: { campos: negados } });
-      throw new ErrorApp(403, 'CAMPO_NO_EDITABLE', 'Algunos datos solo los puede cambiar el área contable.',
-        Object.fromEntries(negados.map((k) => [k, 'Solo el área contable puede cambiar este dato.'])));
+      throw new ErrorApp(
+        403,
+        'CAMPO_NO_EDITABLE',
+        'Algunos datos solo los puede cambiar el área contable.',
+        Object.fromEntries(negados.map((k) => [k, 'Solo el área contable puede cambiar este dato.'])),
+      );
     }
     const cambiados = await validarYAplicar(req, c, cuerpo, 'COLABORADOR');
     return { cambiados, colaborador: presentar(await repo.porId(c.id), 'PROPIO') };
@@ -219,10 +238,29 @@ export function crearServicioColaboradores(ctx) {
     const a = await alcance(req);
     const { total, filas } = await repo.listar(filtros, a);
     // Ley 1581: queda registro de quién consultó la lista y con qué filtros
-    await auditar(req, { accion: 'BUSCAR', entidad: 'colaborador', detalle: { q: filtros.q ?? null, sede: filtros.sede ?? null, estado: filtros.estado ?? null, pagina: filtros.pagina, resultados: total } });
+    await auditar(req, {
+      accion: 'BUSCAR',
+      entidad: 'colaborador',
+      detalle: {
+        q: filtros.q ?? null,
+        sede: filtros.sede ?? null,
+        estado: filtros.estado ?? null,
+        pagina: filtros.pagina,
+        resultados: total,
+      },
+    });
     return {
-      total, pagina: filtros.pagina, porPagina: POR_PAGINA,
-      colaboradores: filas.map((f) => ({ id: f.id, cedula: f.cedula, nombre: f.nombre, cargo: f.cargo, estado: f.estado, sede: f.sede_nombre })),
+      total,
+      pagina: filtros.pagina,
+      porPagina: POR_PAGINA,
+      colaboradores: filas.map((f) => ({
+        id: f.id,
+        cedula: f.cedula,
+        nombre: f.nombre,
+        cargo: f.cargo,
+        estado: f.estado,
+        sede: f.sede_nombre,
+      })),
     };
   }
 
@@ -273,7 +311,19 @@ export function crearServicioColaboradores(ctx) {
   }
 
   return {
-    repo, contextoValidacion, diferencias, editablesColaborador, presentar,
-    miExpediente, actualizarMio, miHistorial, listar, detalle, actualizar, historial, revelarCuenta, opciones,
+    repo,
+    contextoValidacion,
+    diferencias,
+    editablesColaborador,
+    presentar,
+    miExpediente,
+    actualizarMio,
+    miHistorial,
+    listar,
+    detalle,
+    actualizar,
+    historial,
+    revelarCuenta,
+    opciones,
   };
 }

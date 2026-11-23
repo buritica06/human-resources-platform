@@ -27,13 +27,20 @@ async function cargar() {
         ${enCurso ? `<p class="ayuda">${enCurso} solicitud(es) en trámite.</p>` : ''}
       </section>
       <section class="tarjeta" aria-labelledby="t-hist"><h2 id="t-hist">Historial</h2>
-      ${r.solicitudes.length ? `<ul class="lista-volantes">${r.solicitudes.map((s) => `<li class="item-volante">
+      ${
+        r.solicitudes.length
+          ? `<ul class="lista-volantes">${r.solicitudes
+              .map(
+                (s) => `<li class="item-volante">
           <div><div class="item-volante__periodo">${escapar(s.subtipo ?? s.tipoEtiqueta)}</div>
             <div class="ayuda">${escapar(cuando(s))} · solicitada ${escapar(fechaHora(s.creadoEn))}</div></div>
           ${pildoraEstado(s.estado, s.estadoEtiqueta)}
           <a class="btn btn--chico btn--secundario" href="/solicitudes/ver?id=${s.id}">Ver detalle<span class="sr-only"> de ${escapar(s.subtipo ?? '')} ${escapar(cuando(s))}</span></a>
-        </li>`).join('')}</ul>`
-        : `<div class="vacio">${icono('reloj')}<h3>Aún no tiene solicitudes</h3><p>Use el botón de arriba para hacer la primera. Verá aquí cómo avanza.</p></div>`}
+        </li>`,
+              )
+              .join('')}</ul>`
+          : `<div class="vacio">${icono('reloj')}<h3>Aún no tiene solicitudes</h3><p>Use el botón de arriba para hacer la primera. Verá aquí cómo avanza.</p></div>`
+      }
       </section>`;
     if (cabecera) {
       // Un fallo de la tarjeta de arriba no debe ocultar la lista

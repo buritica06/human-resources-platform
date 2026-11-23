@@ -1,9 +1,49 @@
 // Números y fechas en letras (español de Colombia) para los certificados.
-const UNIDADES = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ',
-  'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE', 'VEINTE',
-  'VEINTIUNO', 'VEINTIDÓS', 'VEINTITRÉS', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISÉIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'];
+const UNIDADES = [
+  '',
+  'UNO',
+  'DOS',
+  'TRES',
+  'CUATRO',
+  'CINCO',
+  'SEIS',
+  'SIETE',
+  'OCHO',
+  'NUEVE',
+  'DIEZ',
+  'ONCE',
+  'DOCE',
+  'TRECE',
+  'CATORCE',
+  'QUINCE',
+  'DIECISÉIS',
+  'DIECISIETE',
+  'DIECIOCHO',
+  'DIECINUEVE',
+  'VEINTE',
+  'VEINTIUNO',
+  'VEINTIDÓS',
+  'VEINTITRÉS',
+  'VEINTICUATRO',
+  'VEINTICINCO',
+  'VEINTISÉIS',
+  'VEINTISIETE',
+  'VEINTIOCHO',
+  'VEINTINUEVE',
+];
 const DECENAS = ['', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
-const CENTENAS = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+const CENTENAS = [
+  '',
+  'CIENTO',
+  'DOSCIENTOS',
+  'TRESCIENTOS',
+  'CUATROCIENTOS',
+  'QUINIENTOS',
+  'SEISCIENTOS',
+  'SETECIENTOS',
+  'OCHOCIENTOS',
+  'NOVECIENTOS',
+];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 // 0–999. apocope: "UN" en vez de "UNO" delante de MIL/MILLONES/PESOS

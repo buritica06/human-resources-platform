@@ -24,8 +24,38 @@ export function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacac
     h.getCell(`A${r}`).value = t.sede;
     h.mergeCells(`A${r}:L${r}`);
     r += 1;
-    const enc = ['CEDULA', 'EMPLEADO', 'DIAS LAB', 'SALARIO BASE', 'DEVENGADOS ', '', '', '', '', 'DEDUCCIONES', '', '', 'NETO NOMINA', 'SALUD', 'PENSION', 'FIRMAS'];
-    const sub = ['', '', '', '', 'SALARIO', 'RECARGO NOCTURNO', 'AUXILIO DE TRANSP.', 'HORAS EXTRAS, DOM-FES', subI, 'SALUD', 'PENSION', 'PRESTAMO'];
+    const enc = [
+      'CEDULA',
+      'EMPLEADO',
+      'DIAS LAB',
+      'SALARIO BASE',
+      'DEVENGADOS ',
+      '',
+      '',
+      '',
+      '',
+      'DEDUCCIONES',
+      '',
+      '',
+      'NETO NOMINA',
+      'SALUD',
+      'PENSION',
+      'FIRMAS',
+    ];
+    const sub = [
+      '',
+      '',
+      '',
+      '',
+      'SALARIO',
+      'RECARGO NOCTURNO',
+      'AUXILIO DE TRANSP.',
+      'HORAS EXTRAS, DOM-FES',
+      subI,
+      'SALUD',
+      'PENSION',
+      'PRESTAMO',
+    ];
     h.getRow(r).values = enc;
     h.getRow(r + 1).values = sub;
     h.mergeCells(r, 5, r, 8); // DEVENGADOS
@@ -61,7 +91,20 @@ export function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacac
   if (vacaciones.length) {
     h.getCell(`A${r}`).value = 'VACACIONES';
     r++;
-    h.getRow(r).values = ['CEDULA', 'EMPLEADO', 'DIAS LAB', 'SALARIO BASE', 'SALARIO', '', 'AUXILIO DE TRANSP.', '', '', 'SALUD', 'PENSION', 'NETO'];
+    h.getRow(r).values = [
+      'CEDULA',
+      'EMPLEADO',
+      'DIAS LAB',
+      'SALARIO BASE',
+      'SALARIO',
+      '',
+      'AUXILIO DE TRANSP.',
+      '',
+      '',
+      'SALUD',
+      'PENSION',
+      'NETO',
+    ];
     r++;
     for (const v of vacaciones) h.getRow(r++).values = v;
     r += 2;
@@ -69,7 +112,17 @@ export function hojaNomina(libro, nombre, { inicio, fin, tablas, ext = [], vacac
   if (ext.length) {
     h.getCell(`A${r}`).value = 'LIQUIDACION DE EXTRAS';
     r += 4;
-    h.getRow(r).values = ['CEDULA', 'EMPLEADO', 'SALARIO BASE', 'RECARGOS NOC', 'TOTAL HORAS EXTRAS', 'JORNADAS EXTRAS', 'TOTAL JORNADAS EXTRAS', 'NETO', 'FIRMAS'];
+    h.getRow(r).values = [
+      'CEDULA',
+      'EMPLEADO',
+      'SALARIO BASE',
+      'RECARGOS NOC',
+      'TOTAL HORAS EXTRAS',
+      'JORNADAS EXTRAS',
+      'TOTAL JORNADAS EXTRAS',
+      'NETO',
+      'FIRMAS',
+    ];
     r++;
     for (const e of ext) h.getRow(r++).values = e;
     h.getCell(`B${r}`).value = 'TOTAL';
@@ -83,7 +136,19 @@ export function horasResumen(libro, quincena, filas) {
   const h = libro.addWorksheet('HORAS RESUMEN');
   h.getCell('B2').value = 'Quincena:';
   h.getCell('C2').value = quincena;
-  h.getRow(5).values = ['CÉDULA', 'EMPLEADO', 'EMPLEADOR - ESQUEMA', 'SALARIO', 'VALOR HORA', 'R.N. (h)', 'DOM/FEST (h)', 'H.E.D. (h)', 'H.E.N. (h)', 'H.E.D. DOM/FEST (h)', 'H.E.N. DOM/FEST (h)'];
+  h.getRow(5).values = [
+    'CÉDULA',
+    'EMPLEADO',
+    'EMPLEADOR - ESQUEMA',
+    'SALARIO',
+    'VALOR HORA',
+    'R.N. (h)',
+    'DOM/FEST (h)',
+    'H.E.D. (h)',
+    'H.E.N. (h)',
+    'H.E.D. DOM/FEST (h)',
+    'H.E.N. DOM/FEST (h)',
+  ];
   filas.forEach((f, i) => (h.getRow(6 + i).values = f));
 }
 
@@ -97,20 +162,38 @@ export async function generar() {
 
   // 1) Quincena válida (NOV 1-15)
   hojaNomina(libro, 'NOMINA NOV 1-15', {
-    inicio: '2026-11-01', fin: '2026-11-15',
+    inicio: '2026-11-01',
+    fin: '2026-11-15',
     tablas: [
       {
-        empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE',
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
         filas: [
           // colab1: con recargo, extras, préstamo y observación; aux con medio peso
-          [1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 20005, 124547.5, 53571, 0, -37900, -37900, -100000, undefined, 'PRUEBA OBSERVACION'],
+          [
+            1000000003,
+            'PEREZ GOMEZ ANA MARIA',
+            15,
+            1750905,
+            875452.5,
+            20005,
+            124547.5,
+            53571,
+            0,
+            -37900,
+            -37900,
+            -100000,
+            undefined,
+            'PRUEBA OBSERVACION',
+          ],
           [1000000002, 'DIRECTOR DEMO NORTE', 15, 3000000, 1500000, 0, 0, 0, 0, -60000, -60000, 0],
           // cédula guardada como texto con puntos (como ocurre en el original)
           ['1.000.000.001', 'ADMIN DEMO CONTABLE', 15, 3500000, 1750000, 0, 0, 0, 0, -70000, -70000, 0],
         ],
       },
       {
-        empleador: EMP_B, sede: 'COMPRAVENTA SEDE RIO',
+        empleador: EMP_B,
+        sede: 'COMPRAVENTA SEDE RIO',
         filas: [
           // colab2: incapacidad (días descontados)
           [1000000004, 'RAMIREZ DIAZ LUIS CARLOS', 10, 1750905, 583635, 0, 83031.67, 0, 291817.5, -35000, -35000, 0],
@@ -124,41 +207,72 @@ export async function generar() {
 
   // 2) Quincena con una cédula sin expediente (OCT 16-31)
   hojaNomina(libro, 'NOMINA OCT 16-31', {
-    inicio: '2026-10-16', fin: '2026-10-31',
-    tablas: [{
-      empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE',
-      filas: [
-        [1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0],
-        [3000000099, 'RETIRADO DEMO ANTIGUO', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0],
-      ],
-    }],
+    inicio: '2026-10-16',
+    fin: '2026-10-31',
+    tablas: [
+      {
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
+        filas: [
+          [1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0],
+          [3000000099, 'RETIRADO DEMO ANTIGUO', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0],
+        ],
+      },
+    ],
   });
 
   // 3) Descuadre (OCT 1-15): el neto no coincide
   hojaNomina(libro, 'NOMINA OCT 1-15', {
-    inicio: '2026-10-01', fin: '2026-10-15',
-    tablas: [{
-      empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE',
-      filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0, 999999]],
-    }],
+    inicio: '2026-10-01',
+    fin: '2026-10-15',
+    tablas: [
+      {
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
+        filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0, 999999]],
+      },
+    ],
   });
 
   // 4) Encabezado no reconocido (SEP 16-30)
   hojaNomina(libro, 'NOMINA SEP 16-30', {
-    inicio: '2026-09-16', fin: '2026-09-30', subI: 'BONIFICACION',
-    tablas: [{ empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE', filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0]] }],
+    inicio: '2026-09-16',
+    fin: '2026-09-30',
+    subI: 'BONIFICACION',
+    tablas: [
+      {
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
+        filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0]],
+      },
+    ],
   });
 
   // 5) Sin fechas en S1/T1 (SEP 1-15)
   hojaNomina(libro, 'NOMINA SEP 1-15', {
-    inicio: '2026-09-01', fin: '2026-09-15', sinFechas: true,
-    tablas: [{ empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE', filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0]] }],
+    inicio: '2026-09-01',
+    fin: '2026-09-15',
+    sinFechas: true,
+    tablas: [
+      {
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
+        filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 15, 1750905, 875452.5, 0, 124547.5, 0, 0, -35000, -35000, 0]],
+      },
+    ],
   });
 
   // 6) Se cruza con NOV 1-15 (NOV 10-20)
   hojaNomina(libro, 'NOMINA NOV 10-20', {
-    inicio: '2026-11-10', fin: '2026-11-20',
-    tablas: [{ empleador: EMP_A, sede: 'COMPRAVENTA SEDE NORTE', filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 11, 1750905, 642000, 0, 91000, 0, 0, -25700, -25700, 0]] }],
+    inicio: '2026-11-10',
+    fin: '2026-11-20',
+    tablas: [
+      {
+        empleador: EMP_A,
+        sede: 'COMPRAVENTA SEDE NORTE',
+        filas: [[1000000003, 'PEREZ GOMEZ ANA MARIA', 11, 1750905, 642000, 0, 91000, 0, 0, -25700, -25700, 0]],
+      },
+    ],
   });
 
   await libro.xlsx.writeFile(path.join(DIR, 'nomina-ficticia.xlsx'));

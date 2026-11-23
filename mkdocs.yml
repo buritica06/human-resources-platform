@@ -1,0 +1,72 @@
+site_name: Plataforma de Talento Humano
+site_description: Documentación técnica, arquitectura C4, API REST, seguridad y manuales de la Plataforma de Talento Humano.
+site_url: https://buritica06.github.io/human-resources-platform/
+repo_url: https://github.com/buritica06/human-resources-platform
+repo_name: buritica06/human-resources-platform
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Inicio: index.md
+  - Arquitectura:
+      - Modelo C4: architecture/c4-model.md
+      - Flujos del Sistema y CI/CD: architecture/flujos.md
+      - Modelo de Datos: architecture/modelo-datos.md
+      - Auditoría Técnica Inicial: architecture/auditoria-inicial.md
+      - ADRs:
+          - ADR-0001 Monolito Modular: architecture/adrs/0001-monolito-modular.md
+          - ADR-0002 Sesiones en BD y CSRF: architecture/adrs/0002-sesiones-bd-csrf.md
+          - ADR-0003 Cifrado AES-256-GCM: architecture/adrs/0003-cifrado-aes-256-gcm.md
+          - ADR-0004 Motor de Solicitudes: architecture/adrs/0004-motor-solicitudes-configurable.md
+  - API REST:
+      - Referencia /api/v1: api/rest-api.md
+  - Desarrollo:
+      - Guía de Instalación: development/instalacion.md
+      - Manual del Desarrollador: development/manual-desarrollador.md
+  - Despliegue:
+      - Producción, Docker y PostgreSQL: deployment/despliegue.md
+  - Seguridad:
+      - OWASP ASVS Nivel 1: security/owasp-asvs.md
+      - Revisión OWASP Top 10: security/owasp-top-10.md
+  - Manuales de Usuario:
+      - Colaborador: user-manual/colaborador.md
+      - Director Administrativo: user-manual/director.md
+      - Área Contable (Admin): user-manual/admincontable.md
+  - Producto y Requerimientos:
+      - Roadmap: requirements/roadmap.md
+      - Análisis Inicial: requirements/analisis.md
+      - Plan de Implementación: requirements/plan.md

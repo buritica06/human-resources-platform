@@ -9,10 +9,13 @@ const FIRMA_PDF = Buffer.from('%PDF-');
 // Devuelve el mensaje de error en lenguaje claro, o null si el PDF es aceptable.
 export function revisarPdf(buffer, maxMb) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) return 'El archivo está vacío.';
-  if (buffer.length > maxMb * 1024 * 1024) return `El archivo supera ${maxMb} MB. Reduzca su tamaño (por ejemplo, escaneando en blanco y negro).`;
+  if (buffer.length > maxMb * 1024 * 1024)
+    return `El archivo supera ${maxMb} MB. Reduzca su tamaño (por ejemplo, escaneando en blanco y negro).`;
   // El encabezado %PDF- debe estar en el byte 0 (sin nada antes: evita archivos "políglotas")
-  if (!buffer.subarray(0, FIRMA_PDF.length).equals(FIRMA_PDF)) return 'El archivo no es un PDF válido. Adjunte un PDF (no una foto ni un documento de Word renombrado).';
-  if (buffer.subarray(Math.max(0, buffer.length - 2048)).indexOf('%%EOF') < 0) return 'El PDF está incompleto o dañado. Vuelva a generarlo.';
+  if (!buffer.subarray(0, FIRMA_PDF.length).equals(FIRMA_PDF))
+    return 'El archivo no es un PDF válido. Adjunte un PDF (no una foto ni un documento de Word renombrado).';
+  if (buffer.subarray(Math.max(0, buffer.length - 2048)).indexOf('%%EOF') < 0)
+    return 'El PDF está incompleto o dañado. Vuelva a generarlo.';
   // Contenido activo: un soporte no debe ejecutar nada al abrirse. Los nombres PDF admiten
   // escapes "#xx" (p. ej. /J#61vaScript): se normalizan antes de buscar.
   // LÍMITE CONOCIDO: no se descomprimen los flujos de objetos (ObjStm); por eso además el
@@ -37,12 +40,22 @@ export function crearDocumentos(ctx) {
       if (error) throw invalido(error, { soporte: error });
       const clave = await almacenamiento.guardar(buffer, 'pdf');
       try {
-        const [fila] = await trx('documentos').insert({
-          colaborador_id: colaboradorId, categoria, storage_key: clave,
-          nombre_original: String(nombreOriginal ?? 'documento.pdf').replace(/[^\p{L}\p{N} ._-]/gu, '_').slice(0, 200),
-          mime: 'application/pdf', tamano: buffer.length, sha256: crypto.createHash('sha256').update(buffer).digest('hex'),
-          sensible, subido_por: req.usuario.id, creado_en: ahora(),
-        }).returning('id');
+        const [fila] = await trx('documentos')
+          .insert({
+            colaborador_id: colaboradorId,
+            categoria,
+            storage_key: clave,
+            nombre_original: String(nombreOriginal ?? 'documento.pdf')
+              .replace(/[^\p{L}\p{N} ._-]/gu, '_')
+              .slice(0, 200),
+            mime: 'application/pdf',
+            tamano: buffer.length,
+            sha256: crypto.createHash('sha256').update(buffer).digest('hex'),
+            sensible,
+            subido_por: req.usuario.id,
+            creado_en: ahora(),
+          })
+          .returning('id');
         return { id: typeof fila === 'object' ? fila.id : fila, clave };
       } catch (e) {
         await almacenamiento.eliminar(clave); // no deja archivos huérfanos si falla la BD

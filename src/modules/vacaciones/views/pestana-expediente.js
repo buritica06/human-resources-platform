@@ -8,7 +8,9 @@ import { montar as montarSolicitudes } from '/m/solicitudes/pestana-expediente.j
 
 export async function montar(panel, { propio, id, clave }) {
   try {
-    const r = propio ? { saldo: await api('/me/vacaciones/saldo'), cortes: [], puedeRegistrar: false } : await api(`/colaboradores/${id}/vacaciones`);
+    const r = propio
+      ? { saldo: await api('/me/vacaciones/saldo'), cortes: [], puedeRegistrar: false }
+      : await api(`/colaboradores/${id}/vacaciones`);
     panel.innerHTML = `<h3 class="subtitulo">Saldo</h3><div id="v-saldo">${htmlSaldo(r.saldo, { propio })}</div>
       ${r.puedeRegistrar || r.cortes.length ? '<h3 class="subtitulo">Saldos al corte registrados</h3><div id="v-cortes"></div>' : ''}
       ${r.puedeRegistrar ? formulario() : ''}
@@ -26,11 +28,15 @@ function pintarCortes(panel, cortes) {
   if (!div) return;
   div.innerHTML = cortes.length
     ? `<table class="tabla"><thead><tr><th scope="col">Fecha de corte</th><th scope="col">Días</th><th scope="col">Observación</th><th scope="col">Registrado</th></tr></thead>
-      <tbody>${cortes.map((c, i) => `<tr>
+      <tbody>${cortes
+        .map(
+          (c, i) => `<tr>
         <td data-etiqueta="Fecha de corte">${escapar(fecha(c.fechaCorte))}${i === 0 ? ' <span class="pildora pildora--exito">vigente</span>' : ''}</td>
         <td data-etiqueta="Días">${dias(c.dias)}</td>
         <td data-etiqueta="Observación">${escapar(c.observacion)}</td>
-        <td data-etiqueta="Registrado">${escapar(fechaHora(c.registradoEn))}${c.registradoPor ? ` · ${escapar(c.registradoPor)}` : ''}</td></tr>`).join('')}</tbody></table>`
+        <td data-etiqueta="Registrado">${escapar(fechaHora(c.registradoEn))}${c.registradoPor ? ` · ${escapar(c.registradoPor)}` : ''}</td></tr>`,
+        )
+        .join('')}</tbody></table>`
     : '<p class="ayuda">Aún no hay saldos registrados. Sin uno, el colaborador no puede solicitar vacaciones.</p>';
 }
 
@@ -53,7 +59,11 @@ function activarFormulario(panel, id) {
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     limpiarErrores(f);
-    const datos = { fecha_corte: f.fecha_corte.value, dias: f.dias.value === '' ? NaN : Number(f.dias.value), observacion: f.observacion.value.trim() };
+    const datos = {
+      fecha_corte: f.fecha_corte.value,
+      dias: f.dias.value === '' ? NaN : Number(f.dias.value),
+      observacion: f.observacion.value.trim(),
+    };
     const err = {};
     if (!datos.fecha_corte) err.fecha_corte = 'Escriba la fecha de corte.';
     if (!Number.isFinite(datos.dias)) err.dias = 'Escriba los días (puede tener decimales).';

@@ -1,0 +1,2 @@
+eslint src scripts tests seeds
+prettier --check "src/**/*.js" "tests/**/*.js" "scripts/**/*.js" "seeds/**/*.js" "migrations/**/*.js"

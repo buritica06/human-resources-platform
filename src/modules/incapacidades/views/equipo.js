@@ -12,10 +12,13 @@ const esAdmin = me.usuario.rol === 'ADMIN';
 let estado = esAdmin ? 'REGISTRADA' : '';
 
 zona.innerHTML = `<section class="tarjeta">
-  ${esAdmin ? `<form class="filtros filtros--simple" role="search"><div class="campo"><label for="estado">Estado</label>
+  ${
+    esAdmin
+      ? `<form class="filtros filtros--simple" role="search"><div class="campo"><label for="estado">Estado</label>
     <select class="entrada" id="estado"><option value="REGISTRADA">En revisión</option><option value="VALIDADA">Validadas</option>
     <option value="DEVUELTA">Devueltas</option><option value="ANULADA">Anuladas</option><option value="">Todas</option></select></div></form>`
-    : `<p class="ayuda">${icono('candado')} Por protección de datos de salud solo se muestran las fechas.</p>`}
+      : `<p class="ayuda">${icono('candado')} Por protección de datos de salud solo se muestran las fechas.</p>`
+  }
   <p class="ayuda" id="conteo" aria-live="polite"></p>
   <div id="lista" aria-busy="true"></div></section>`;
 zona.removeAttribute('aria-busy');
@@ -26,7 +29,8 @@ async function cargar() {
   try {
     const r = await api(`/incapacidades${estado ? `?estado=${estado}` : ''}`);
     conteo.textContent = `${r.incapacidades.length} incapacidad(es).`;
-    lista.innerHTML = r.incapacidades.length ? tabla(r.incapacidades, { soloFechas: r.soloFechas, conColaborador: true })
+    lista.innerHTML = r.incapacidades.length
+      ? tabla(r.incapacidades, { soloFechas: r.soloFechas, conColaborador: true })
       : `<div class="vacio">${icono('ok')}<h3>Sin incapacidades</h3><p>${esAdmin && estado === 'REGISTRADA' ? 'No hay incapacidades por revisar.' : 'No hay registros.'}</p></div>`;
   } catch (err) {
     lista.innerHTML = htmlAviso('error', err.message);

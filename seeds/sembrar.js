@@ -17,7 +17,13 @@ export async function sembrarBase(db) {
     const existe = await db('parametros').where({ clave, vigente_desde: desde }).first();
     if (!existe) {
       await db('parametros').insert({
-        clave, valor: JSON.stringify(valor), tipo, vigente_desde: desde, vigente_hasta: hasta, descripcion, actualizado_en: t,
+        clave,
+        valor: JSON.stringify(valor),
+        tipo,
+        vigente_desde: desde,
+        vigente_hasta: hasta,
+        descripcion,
+        actualizado_en: t,
       });
     }
   }
@@ -39,8 +45,23 @@ export async function sembrarBase(db) {
 // colab2 no (sirve para probar el alcance).
 export const EXPEDIENTES_DEMO = [
   { cedula: '1000000001', sede: 'SEDE CENTRO', cargo: 'CONTADORA', salario_base: 3500000, fecha_ingreso: '2019-02-01', saldoVacaciones: 6 },
-  { cedula: '1000000002', sede: 'SEDE NORTE', cargo: 'DIRECTOR ADMINISTRATIVO', salario_base: 3000000, fecha_ingreso: '2020-06-15', saldoVacaciones: 10 },
-  { cedula: '1000000003', sede: 'SEDE NORTE', cargo: 'AUXILIAR', salario_base: 1750905, fecha_ingreso: '2023-03-01', cuenta: '12345678901', saldoVacaciones: 8.5 },
+  {
+    cedula: '1000000002',
+    sede: 'SEDE NORTE',
+    cargo: 'DIRECTOR ADMINISTRATIVO',
+    salario_base: 3000000,
+    fecha_ingreso: '2020-06-15',
+    saldoVacaciones: 10,
+  },
+  {
+    cedula: '1000000003',
+    sede: 'SEDE NORTE',
+    cargo: 'AUXILIAR',
+    salario_base: 1750905,
+    fecha_ingreso: '2023-03-01',
+    cuenta: '12345678901',
+    saldoVacaciones: 8.5,
+  },
   { cedula: '1000000004', sede: 'SEDE RIO', cargo: 'AUXILIAR', salario_base: 1750905, fecha_ingreso: '2024-08-20', saldoVacaciones: 3 },
 ];
 
@@ -51,12 +72,28 @@ export async function sembrarExpedientesDemo(db, { cifrador } = {}) {
     const u = await db('usuarios').where({ cedula: e.cedula }).first();
     const s = await db('sedes').where({ nombre: e.sede }).first();
     await db('colaboradores').insert({
-      cedula: e.cedula, nombre: u?.nombre ?? 'DEMO', empleador_id: s.empleador_id, sede_id: s.id, cargo: e.cargo,
-      tipo_contrato: 'INDEFINIDO', fecha_ingreso: e.fecha_ingreso, salario_base: e.salario_base, aux_transporte: e.salario_base <= 3501810,
-      eps: 'Sura', afp: 'Porvenir', arl_riesgo: 'I', banco: 'BANCOLOMBIA', tipo_cuenta: 'AHORRO',
+      cedula: e.cedula,
+      nombre: u?.nombre ?? 'DEMO',
+      empleador_id: s.empleador_id,
+      sede_id: s.id,
+      cargo: e.cargo,
+      tipo_contrato: 'INDEFINIDO',
+      fecha_ingreso: e.fecha_ingreso,
+      salario_base: e.salario_base,
+      aux_transporte: e.salario_base <= 3501810,
+      eps: 'Sura',
+      afp: 'Porvenir',
+      arl_riesgo: 'I',
+      banco: 'BANCOLOMBIA',
+      tipo_cuenta: 'AHORRO',
       numero_cuenta_cifrado: e.cuenta && cifrador ? cifrador.cifrar(e.cuenta) : null,
-      estado: 'ACTIVO', celular: `300${e.cedula.slice(-7)}`, ciudad_residencia: 'CIUDAD DEMO',
-      dia_descanso: 'DOMINGO', esquema_horas: 'SEMANA COMPLETA', creado_en: t, actualizado_en: t,
+      estado: 'ACTIVO',
+      celular: `300${e.cedula.slice(-7)}`,
+      ciudad_residencia: 'CIUDAD DEMO',
+      dia_descanso: 'DOMINGO',
+      esquema_horas: 'SEMANA COMPLETA',
+      creado_en: t,
+      actualizado_en: t,
     });
   }
   // Saldo de vacaciones al corte (M4), ficticio
@@ -64,7 +101,13 @@ export async function sembrarExpedientesDemo(db, { cifrador } = {}) {
     for (const e of EXPEDIENTES_DEMO) {
       const c = await db('colaboradores').where({ cedula: e.cedula }).first();
       if (!c || (await db('saldos_vacaciones').where({ colaborador_id: c.id }).first())) continue;
-      await db('saldos_vacaciones').insert({ colaborador_id: c.id, fecha_corte: '2026-01-01', dias_al_corte: e.saldoVacaciones, observacion: 'Saldo ficticio de demostración', registrado_en: t });
+      await db('saldos_vacaciones').insert({
+        colaborador_id: c.id,
+        fecha_corte: '2026-01-01',
+        dias_al_corte: e.saldoVacaciones,
+        observacion: 'Saldo ficticio de demostración',
+        registrado_en: t,
+      });
     }
   }
 }
@@ -87,10 +130,15 @@ export async function sembrarDemo(db, { clave, cifrador }) {
     let fila = await db('usuarios').where({ cedula: u.cedula }).first();
     if (!fila) {
       await db('usuarios').insert({
-        cedula: u.cedula, nombre: u.nombre, rol: u.rol, password_hash: hash,
+        cedula: u.cedula,
+        nombre: u.nombre,
+        rol: u.rol,
+        password_hash: hash,
         debe_cambiar_clave: false,
-        correo: `usuario${u.cedula.slice(-2)}@example.com`, correo_verificado_en: t,
-        creado_en: t, actualizado_en: t,
+        correo: `usuario${u.cedula.slice(-2)}@example.com`,
+        correo_verificado_en: t,
+        creado_en: t,
+        actualizado_en: t,
       });
       fila = await db('usuarios').where({ cedula: u.cedula }).first();
       for (const nombreSede of u.sedes ?? []) {

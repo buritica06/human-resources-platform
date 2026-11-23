@@ -62,7 +62,10 @@ describe('carga y validación', () => {
   test('cédula sin expediente: bloquea; confirmada una por una crea el expediente básico (RETIRADO)', async () => {
     let r = await cargar('NOMINA OCT 16-31');
     assert.equal(r.body.ok, false);
-    assert.deepEqual(r.body.faltantes.map((f) => f.cedula), ['3000000099']);
+    assert.deepEqual(
+      r.body.faltantes.map((f) => f.cedula),
+      ['3000000099'],
+    );
     assert.equal(await contar('periodos_nomina'), 0);
     r = await cargar('NOMINA OCT 16-31', { crearCedulas: '3000000099' });
     assert.equal(r.body.ok, true, JSON.stringify(r.body.errores));
@@ -80,7 +83,10 @@ describe('carga y validación', () => {
     const r = await cargar('NOMINA NOV 1-15');
     assert.equal(r.body.ok, true, JSON.stringify(r.body.errores));
     assert.equal(r.body.colaboradores, 4, 'incluye la cédula guardada como texto con puntos');
-    assert.ok(r.body.advertencias.some((a) => /no es de nómina ni de extras/.test(a.mensaje)), 'la tabla de vacaciones se avisa');
+    assert.ok(
+      r.body.advertencias.some((a) => /no es de nómina ni de extras/.test(a.mensaje)),
+      'la tabla de vacaciones se avisa',
+    );
     periodoNov = r.body.periodoId;
     const p = await env.ctx.db('periodos_nomina').where({ id: periodoNov }).first();
     assert.equal(p.estado, 'BORRADOR');
@@ -91,11 +97,30 @@ describe('carga y validación', () => {
     assert.equal(v.empleador, 'EMPLEADOR DEMO A');
     assert.equal(v.empleador_documento, '900000001');
     const lineas = await env.ctx.db('volante_lineas').where({ volante_id: v.id }).orderBy('orden');
-    assert.deepEqual(lineas.map((l) => l.concepto), ['SALARIO', 'RECARGO_NOCTURNO', 'AUX_TRANSPORTE', 'HORAS_EXTRAS', 'SALUD', 'PENSION', 'PRESTAMO', 'RECARGO_NOC_APARTE', 'JORNADAS_EXTRA']);
+    assert.deepEqual(
+      lineas.map((l) => l.concepto),
+      [
+        'SALARIO',
+        'RECARGO_NOCTURNO',
+        'AUX_TRANSPORTE',
+        'HORAS_EXTRAS',
+        'SALUD',
+        'PENSION',
+        'PRESTAMO',
+        'RECARGO_NOC_APARTE',
+        'JORNADAS_EXTRA',
+      ],
+    );
     assert.ok(!lineas.some((l) => l.concepto === 'INCAPACIDAD'), 'no muestra conceptos en cero');
     assert.equal(Number(lineas.find((l) => l.concepto === 'AUX_TRANSPORTE').valor), 124547.5);
     const hx = lineas.find((l) => l.concepto === 'HORAS_EXTRAS');
-    assert.deepEqual(JSON.parse(hx.detalle).map((d) => [d.etiqueta, d.cantidad]), [['Dominical / festivo', 2], ['Hora extra diurna', 4.5]]);
+    assert.deepEqual(
+      JSON.parse(hx.detalle).map((d) => [d.etiqueta, d.cantidad]),
+      [
+        ['Dominical / festivo', 2],
+        ['Hora extra diurna', 4.5],
+      ],
+    );
     assert.equal(Number(lineas.find((l) => l.concepto === 'RECARGO_NOCTURNO').cantidad), 3.5);
   });
 
@@ -112,7 +137,14 @@ describe('carga y validación', () => {
     assert.equal(await env.ctx.db('periodos_nomina').where({ id: periodoNov }).first(), undefined);
     periodoNov = r.body.periodoId;
     volanteColab1 = (await env.ctx.db('volantes').where({ periodo_id: periodoNov, cedula: CED.colab1 }).first()).id;
-    assert.equal(await env.ctx.db('periodos_nomina').where({ fecha_inicio: '2026-11-01' }).count({ n: '*' }).then((x) => Number(x[0].n)), 1);
+    assert.equal(
+      await env.ctx
+        .db('periodos_nomina')
+        .where({ fecha_inicio: '2026-11-01' })
+        .count({ n: '*' })
+        .then((x) => Number(x[0].n)),
+      1,
+    );
   });
 });
 
@@ -139,7 +171,12 @@ describe('publicación y consulta', () => {
     assert.equal(r.status, 200);
     assert.equal(r.body.estado, 'PUBLICADO');
     assert.equal((await admin.post(`/nomina/periodos/${periodoNov}/publicar`, {})).status, 409);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'PUBLICAR', entidad_id: String(periodoNov) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'PUBLICAR', entidad_id: String(periodoNov) })
+        .first(),
+    );
   });
 
   test('el colaborador ve su volante detallado y su historial por año', async () => {
@@ -150,12 +187,27 @@ describe('publicación y consulta', () => {
     assert.equal(v.status, 200);
     assert.equal(v.body.neto, 897776);
     assert.equal(v.body.salarioBase, 1750905);
-    assert.deepEqual(v.body.devengados.map((l) => l.concepto), ['SALARIO', 'RECARGO_NOCTURNO', 'AUX_TRANSPORTE', 'HORAS_EXTRAS']);
-    assert.deepEqual(v.body.deducciones.map((l) => [l.concepto, l.valor]), [['SALUD', 37900], ['PENSION', 37900], ['PRESTAMO', 100000]]);
+    assert.deepEqual(
+      v.body.devengados.map((l) => l.concepto),
+      ['SALARIO', 'RECARGO_NOCTURNO', 'AUX_TRANSPORTE', 'HORAS_EXTRAS'],
+    );
+    assert.deepEqual(
+      v.body.deducciones.map((l) => [l.concepto, l.valor]),
+      [
+        ['SALUD', 37900],
+        ['PENSION', 37900],
+        ['PRESTAMO', 100000],
+      ],
+    );
     assert.equal(v.body.adicionales.length, 2);
     assert.equal(v.body.observacion, 'PRUEBA OBSERVACION');
     assert.equal((await colab1.get('/me/volantes/ultimo')).body.volante.id, volanteColab1);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER', entidad: 'volante', entidad_id: String(volanteColab1) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'VER', entidad: 'volante', entidad_id: String(volanteColab1) })
+        .first(),
+    );
   });
 
   test('un colaborador no ve el volante de otro (404) y el director no ve volantes', async () => {
@@ -173,17 +225,25 @@ describe('publicación y consulta', () => {
   });
 
   test('PDF: es un PDF válido, con los mismos valores y auditado', async () => {
-    const r = await colab1.agente.get(`/api/v1/volantes/${volanteColab1}/pdf?descargar=1`).buffer(true).parse((res, cb) => {
-      const partes = [];
-      res.on('data', (d) => partes.push(d));
-      res.on('end', () => cb(null, Buffer.concat(partes)));
-    });
+    const r = await colab1.agente
+      .get(`/api/v1/volantes/${volanteColab1}/pdf?descargar=1`)
+      .buffer(true)
+      .parse((res, cb) => {
+        const partes = [];
+        res.on('data', (d) => partes.push(d));
+        res.on('end', () => cb(null, Buffer.concat(partes)));
+      });
     assert.equal(r.status, 200);
     assert.equal(r.headers['content-type'], 'application/pdf');
     assert.match(r.headers['content-disposition'], /attachment; filename="volante-2026-11-01-2026-11-15\.pdf"/);
     assert.equal(r.body.subarray(0, 5).toString(), '%PDF-');
     assert.ok(r.body.length > 2000);
-    assert.ok(await env.ctx.db('auditoria').where({ accion: 'DESCARGAR', entidad_id: String(volanteColab1) }).first());
+    assert.ok(
+      await env.ctx
+        .db('auditoria')
+        .where({ accion: 'DESCARGAR', entidad_id: String(volanteColab1) })
+        .first(),
+    );
   });
 
   test('pestaña Nómina del expediente para el admin (incluye borradores)', async () => {
@@ -216,7 +276,11 @@ describe('revisión M2: expedientes básicos, carreras y propio volante del dire
     assert.ok(await env.ctx.db('colaboradores').where({ cedula: '3000000099', creado_por_periodo_id: oct.id }).first());
     const t = (await admin.get('/auth/csrf')).body.csrf;
     assert.equal((await admin.agente.delete(`/api/v1/nomina/periodos/${oct.id}`).set('X-CSRF-Token', t)).status, 204);
-    assert.equal(await env.ctx.db('colaboradores').where({ cedula: '3000000099' }).first(), undefined, 'el expediente básico se borra con su borrador');
+    assert.equal(
+      await env.ctx.db('colaboradores').where({ cedula: '3000000099' }).first(),
+      undefined,
+      'el expediente básico se borra con su borrador',
+    );
     // Una cédula no confirmada sigue bloqueando
     const r = await cargar('NOMINA OCT 16-31', { crearCedulas: '1234567890' });
     assert.equal(r.body.ok, false);
@@ -240,7 +304,11 @@ describe('anular y eliminar', () => {
   test('un borrador se elimina (no se anula); un publicado se anula (no se elimina)', async () => {
     const oct = (await env.ctx.db('periodos_nomina').where({ fecha_inicio: '2026-10-16' }).first()).id;
     assert.equal((await admin.post(`/nomina/periodos/${oct}/anular`, { motivo: 'no aplica aquí' })).status, 409);
-    assert.equal((await admin.agente.delete(`/api/v1/nomina/periodos/${periodoNov}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf)).status, 409);
+    assert.equal(
+      (await admin.agente.delete(`/api/v1/nomina/periodos/${periodoNov}`).set('X-CSRF-Token', (await admin.get('/auth/csrf')).body.csrf))
+        .status,
+      409,
+    );
     const t = (await admin.get('/auth/csrf')).body.csrf;
     assert.equal((await admin.agente.delete(`/api/v1/nomina/periodos/${oct}`).set('X-CSRF-Token', t)).status, 204);
     assert.equal(await contar('volantes'), 4, 'se borran los volantes del borrador');

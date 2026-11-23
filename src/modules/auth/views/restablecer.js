@@ -1,8 +1,14 @@
 import { api } from '/static/js/api.js';
 import { pintarIconos } from '/static/js/iconos.js';
 import {
-  activarRequisitosClave, activarVerClave, conCarga, datosFormulario, htmlAviso,
-  limpiarErrores, mostrarAviso, mostrarErrores,
+  activarRequisitosClave,
+  activarVerClave,
+  conCarga,
+  datosFormulario,
+  htmlAviso,
+  limpiarErrores,
+  mostrarAviso,
+  mostrarErrores,
 } from '/static/js/ui.js';
 
 pintarIconos();
@@ -16,8 +22,9 @@ const token = new URLSearchParams(location.search).get('token') ?? '';
 history.replaceState(null, '', '/restablecer');
 if (token.length < 20) {
   form.hidden = true;
-  mensaje.innerHTML = htmlAviso('error', 'El enlace está incompleto. Ábralo de nuevo desde el correo o solicite otro.')
-    + '<a class="btn" href="/recuperar">Solicitar otro enlace</a>';
+  mensaje.innerHTML =
+    htmlAviso('error', 'El enlace está incompleto. Ábralo de nuevo desde el correo o solicite otro.') +
+    '<a class="btn" href="/recuperar">Solicitar otro enlace</a>';
   mensaje.hidden = false;
 }
 

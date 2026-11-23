@@ -32,19 +32,24 @@ async function pedir(c, campos = {}) {
   for (const [k, v] of Object.entries({ tipo: 'VACACIONES', fecha_inicio: habil(10), dias: '3', ...campos })) r = r.field(k, String(v));
   return r;
 }
-const corte = (id, datos) => admin.post(`/colaboradores/${id}/vacaciones/corte`, { observacion: 'Saldo de prueba de la revisión', ...datos });
+const corte = (id, datos) =>
+  admin.post(`/colaboradores/${id}/vacaciones/corte`, { observacion: 'Saldo de prueba de la revisión', ...datos });
 
 test('saldos con dos decimales que no son exactos en binario (1,15 · 4,35 · 0,57) se aceptan', async () => {
   for (const dias of [1.15, 4.35, 0.57, 2.3, '12,35']) {
     const r = await corte(idColab1, { fecha_corte: '2026-02-01', dias });
     assert.equal(r.status, 201, `${dias}: ${JSON.stringify(r.body)}`);
   }
-  assert.equal((await env.ctx.db('saldos_vacaciones').where({ colaborador_id: idColab1 }).orderBy('id', 'desc').first()).dias_al_corte, 12.35);
+  assert.equal(
+    (await env.ctx.db('saldos_vacaciones').where({ colaborador_id: idColab1 }).orderBy('id', 'desc').first()).dias_al_corte,
+    12.35,
+  );
   assert.equal((await corte(idColab1, { fecha_corte: '2026-02-01', dias: 1.155 })).status, 400, 'tres decimales');
 });
 
 test('días vacíos, nulos o booleanos se rechazan (no se registran como 0)', async () => {
-  for (const dias of ['', null, true, 'abc']) assert.equal((await corte(idColab1, { fecha_corte: '2026-02-01', dias })).status, 400, String(dias));
+  for (const dias of ['', null, true, 'abc'])
+    assert.equal((await corte(idColab1, { fecha_corte: '2026-02-01', dias })).status, 400, String(dias));
 });
 
 test('un corte con fecha anterior al vigente se rechaza (no tendría efecto)', async () => {
@@ -55,13 +60,22 @@ test('un corte con fecha anterior al vigente se rechaza (no tendría efecto)', a
 
 test('el admincontable que registra su propio saldo queda marcado como autorregistro', async () => {
   assert.equal((await corte(idAdmin, { fecha_corte: '2026-03-01', dias: 5 })).status, 201);
-  const a = await env.ctx.db('auditoria').where({ accion: 'REGISTRAR_SALDO_VACACIONES', entidad_id: String(idAdmin) }).orderBy('id', 'desc').first();
+  const a = await env.ctx
+    .db('auditoria')
+    .where({ accion: 'REGISTRAR_SALDO_VACACIONES', entidad_id: String(idAdmin) })
+    .orderBy('id', 'desc')
+    .first();
   assert.match(a.detalle, /autoregistro/);
 });
 
 test('consultar el saldo de otro colaborador queda auditado', async () => {
   assert.equal((await director.get(`/colaboradores/${idColab1}/vacaciones`)).status, 200);
-  assert.ok(await env.ctx.db('auditoria').where({ accion: 'VER_VACACIONES', entidad_id: String(idColab1) }).first());
+  assert.ok(
+    await env.ctx
+      .db('auditoria')
+      .where({ accion: 'VER_VACACIONES', entidad_id: String(idColab1) })
+      .first(),
+  );
 });
 
 test('la simulación ya avisa si se cruza con otra ausencia', async () => {
@@ -101,13 +115,19 @@ test('un borrador de alguien que se retiró no se puede enviar', async () => {
 });
 
 test('un parámetro mal configurado no desactiva las validaciones (falla con error)', async () => {
-  await env.ctx.db('parametros').where({ clave: 'VAC_COMPENSACION_MAX_PCT' }).update({ valor: JSON.stringify('50%') });
+  await env.ctx
+    .db('parametros')
+    .where({ clave: 'VAC_COMPENSACION_MAX_PCT' })
+    .update({ valor: JSON.stringify('50%') });
   env.ctx.params.invalidar();
   try {
     const r = await colab1.post('/vacaciones/simular', { fecha_inicio: habil(10), dias: 1, dias_compensar: 50 });
     assert.equal(r.status, 500);
   } finally {
-    await env.ctx.db('parametros').where({ clave: 'VAC_COMPENSACION_MAX_PCT' }).update({ valor: JSON.stringify(50) });
+    await env.ctx
+      .db('parametros')
+      .where({ clave: 'VAC_COMPENSACION_MAX_PCT' })
+      .update({ valor: JSON.stringify(50) });
     env.ctx.params.invalidar();
   }
 });

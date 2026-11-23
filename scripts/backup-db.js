@@ -30,5 +30,9 @@ if (cfg.db.client === 'pg') {
 console.log(`Copia creada: ${destino}`);
 
 // Rotación: conserva las N más recientes
-const copias = fs.readdirSync(dir).filter((f) => /^th-.*\.(sqlite|dump)$/.test(f)).sort().reverse();
+const copias = fs
+  .readdirSync(dir)
+  .filter((f) => /^th-.*\.(sqlite|dump)$/.test(f))
+  .sort()
+  .reverse();
 for (const viejo of copias.slice(conservar)) fs.rmSync(path.join(dir, viejo));

@@ -62,14 +62,16 @@ function pasoHojas(hojas) {
   const pendientes = hojas.filter((h) => h.estadoEnPlataforma !== 'PUBLICADO' && h.inicio);
   zona.innerHTML = `<form id="f-hojas" novalidate>
     <fieldset class="campo"><legend class="etiqueta">Elija la(s) quincena(s) a cargar</legend>
-      <ul class="opciones-hojas">${hojas.map((h, i) => {
-        const deshabilitada = h.estadoEnPlataforma === 'PUBLICADO';
-        return `<li><label><input type="checkbox" name="hoja" value="${escapar(h.nombre)}" ${deshabilitada ? 'disabled' : ''} ${i === 0 && !deshabilitada ? 'checked' : ''}>
+      <ul class="opciones-hojas">${hojas
+        .map((h, i) => {
+          const deshabilitada = h.estadoEnPlataforma === 'PUBLICADO';
+          return `<li><label><input type="checkbox" name="hoja" value="${escapar(h.nombre)}" ${deshabilitada ? 'disabled' : ''} ${i === 0 && !deshabilitada ? 'checked' : ''}>
           <span>${escapar(h.nombre)}</span>
           <span class="ayuda">${h.inicio ? `Del ${escapar(periodoTexto(h.inicio, h.fin))}` : 'Sin fechas en S1/T1'}</span>
           ${h.estadoEnPlataforma ? pildoraEstado(h.estadoEnPlataforma) : ''}
           ${h.estadoEnPlataforma === 'BORRADOR' ? '<span class="ayuda">(se reemplaza)</span>' : ''}</label></li>`;
-      }).join('')}</ul>
+        })
+        .join('')}</ul>
       <span class="error-campo" id="hoja-error"></span>
     </fieldset>
     <div class="formulario-acciones">
@@ -110,7 +112,8 @@ async function cargarHoja(hoja, res, crearCedulas) {
   try {
     const r = await api('/nomina/cargas', { metodo: 'POST', formulario: fd });
     const adv = r.advertencias?.length
-      ? `<details><summary>${r.advertencias.length} advertencia(s) (no impiden cargar)</summary><ul>${r.advertencias.map((a) => `<li>${a.fila ? `Fila ${a.fila}: ` : ''}${escapar(a.mensaje)}</li>`).join('')}</ul></details>` : '';
+      ? `<details><summary>${r.advertencias.length} advertencia(s) (no impiden cargar)</summary><ul>${r.advertencias.map((a) => `<li>${a.fila ? `Fila ${a.fila}: ` : ''}${escapar(a.mensaje)}</li>`).join('')}</ul></details>`
+      : '';
     if (r.ok) {
       bloque.innerHTML = `<h3>${escapar(hoja)}</h3>${htmlAviso('exito', `Guardada como borrador: ${r.colaboradores} colaborador(es), neto total ${copExacto(r.totales.neto)}${r.totales.adicional ? ` + ${copExacto(r.totales.adicional)} en pagos adicionales` : ''}. Aún no es visible para los colaboradores.`)}
         ${r.faltantes?.length ? htmlAviso('info', `Se crearon ${r.faltantes.length} expediente(s) básico(s) como RETIRADO.`) : ''}
@@ -120,12 +123,16 @@ async function cargarHoja(hoja, res, crearCedulas) {
     const soloFaltantes = r.faltantes?.length && r.errores.length === r.faltantes.length;
     bloque.innerHTML = `<h3>${escapar(hoja)}</h3>${htmlAviso('error', `No se guardó nada: hay ${r.errores.length} problema(s). Corrija el Excel y vuelva a cargarlo.`)}
       <ul>${r.errores.map((x) => `<li>${x.fila ? `Fila ${x.fila}: ` : ''}${escapar(x.mensaje)}</li>`).join('')}</ul>
-      ${soloFaltantes ? `<form class="aviso aviso--info" data-crear novalidate>${icono('info')}<div>
+      ${
+        soloFaltantes
+          ? `<form class="aviso aviso--info" data-crear novalidate>${icono('info')}<div>
         <p>Si son colaboradores <strong>que ya se retiraron</strong> y no están en la hoja EMPLEADOS, la plataforma puede crearles un expediente básico (estado RETIRADO) para conservar su historial de volantes. Si alguna cédula está mal escrita, <strong>no la marque</strong>: corrija el Excel.</p>
         <fieldset class="campo"><legend class="etiqueta">Confirme uno por uno</legend>
           ${r.faltantes.map((x, i) => `<label><input type="checkbox" name="ced" value="${escapar(x.cedula)}" id="fal-${i}"> ${escapar(x.nombre)} — C.C. ${escapar(x.cedula)} (fila ${x.fila})</label>`).join('<br>')}
           <span class="error-campo" id="ced-error"></span></fieldset>
-        <button type="submit" class="btn btn--secundario">Crear los expedientes marcados y cargar</button></div></form>` : ''}
+        <button type="submit" class="btn btn--secundario">Crear los expedientes marcados y cargar</button></div></form>`
+          : ''
+      }
       ${adv}`;
     bloque.querySelector('[data-crear]')?.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -133,7 +140,9 @@ async function cargarHoja(hoja, res, crearCedulas) {
       const marcadas = [...form.querySelectorAll('input[name=ced]:checked')].map((c) => c.value);
       limpiarErrores(form);
       if (marcadas.length !== r.faltantes.length) {
-        return mostrarErrores(form, { ced: 'Para cargar esta quincena todas las cédulas deben tener expediente: marque las que son retirados o corrija el Excel.' });
+        return mostrarErrores(form, {
+          ced: 'Para cargar esta quincena todas las cédulas deben tener expediente: marque las que son retirados o corrija el Excel.',
+        });
       }
       await conCarga(form.querySelector('[type=submit]'), async () => {
         bloque.remove();
@@ -156,14 +165,18 @@ async function listarPeriodos() {
       return;
     }
     periodosZona.innerHTML = `<table class="tabla"><thead><tr><th scope="col">Quincena</th><th scope="col">Periodo</th><th scope="col">Estado</th><th scope="col" class="num">Colaboradores</th><th scope="col" class="num">Neto total</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-      <tbody>${periodos.map((p) => `<tr>
+      <tbody>${periodos
+        .map(
+          (p) => `<tr>
         <td data-etiqueta="Quincena">${escapar(p.hoja)}</td>
         <td data-etiqueta="Periodo">${escapar(periodoTexto(p.inicio, p.fin))}</td>
         <td data-etiqueta="Estado">${pildoraEstado(p.estado)}</td>
         <td data-etiqueta="Colaboradores" class="num">${p.colaboradores}</td>
         <td data-etiqueta="Neto total" class="num">${copExacto(p.totalNeto)}</td>
         <td class="acciones"><a class="btn btn--chico ${p.estado === 'BORRADOR' ? '' : 'btn--secundario'}" href="/nomina/periodo?id=${p.id}">${p.estado === 'BORRADOR' ? 'Revisar y publicar' : 'Ver'}<span class="sr-only"> ${escapar(p.hoja)}</span></a></td>
-      </tr>`).join('')}</tbody></table>`;
+      </tr>`,
+        )
+        .join('')}</tbody></table>`;
   } catch (err) {
     periodosZona.innerHTML = htmlAviso('error', err.message);
   } finally {

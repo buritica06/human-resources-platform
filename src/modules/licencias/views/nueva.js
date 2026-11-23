@@ -22,7 +22,8 @@ const campo = (id, etiqueta, control, { ayuda = '', obligatorio = true } = {}) =
   <span class="error-campo" id="${id}-error"></span></div>`;
 const desc = (id) => `aria-describedby="${id}-ayuda ${id}-error"`;
 const unidad = (t) => (t.unidad === 'habiles' ? 'hábiles' : 'calendario');
-const reglaTexto = (t) => `${t.diasMax ? `Máximo ${t.diasMax} días ${unidad(t)}.` : `Se cuentan días ${unidad(t)}.`} ${t.remunerada ? 'Remunerada.' : 'No remunerada: esos días no se pagan ni cuentan para causar vacaciones.'}${t.sensible ? ' El soporte es dato de salud: su director no lo verá.' : ''}`;
+const reglaTexto = (t) =>
+  `${t.diasMax ? `Máximo ${t.diasMax} días ${unidad(t)}.` : `Se cuentan días ${unidad(t)}.`} ${t.remunerada ? 'Remunerada.' : 'No remunerada: esos días no se pagan ni cuentan para causar vacaciones.'}${t.sensible ? ' El soporte es dato de salud: su director no lo verá.' : ''}`;
 
 zona.innerHTML = `<section class="tarjeta">
   <div id="msg" tabindex="-1" hidden></div>
@@ -53,7 +54,9 @@ let turno = 0;
 function pintarTipo() {
   const t = tipoActual();
   zona.querySelector('#subtipo-ayuda').textContent = t ? reglaTexto(t) : '';
-  zona.querySelector('#soporte-req').innerHTML = t?.soporteObligatorio ? '<span class="obligatorio" aria-hidden="true">*</span><span class="sr-only">(obligatorio)</span>' : '(opcional)';
+  zona.querySelector('#soporte-req').innerHTML = t?.soporteObligatorio
+    ? '<span class="obligatorio" aria-hidden="true">*</span><span class="sr-only">(obligatorio)</span>'
+    : '(opcional)';
   f.soporte.required = !!t?.soporteObligatorio;
 }
 
@@ -65,7 +68,10 @@ async function calcular() {
     return;
   }
   try {
-    const r = await api('/licencias/calcular', { metodo: 'POST', datos: { subtipo: f.subtipo.value, fecha_inicio: f.fecha_inicio.value, fecha_fin: f.fecha_fin.value } });
+    const r = await api('/licencias/calcular', {
+      metodo: 'POST',
+      datos: { subtipo: f.subtipo.value, fecha_inicio: f.fecha_inicio.value, fecha_fin: f.fecha_fin.value },
+    });
     if (mio !== turno) return;
     resultado = r;
     calculo.textContent = `${r.dias} día(s) ${r.unidad === 'habiles' ? 'hábiles' : 'calendario'} de licencia${r.remunerada ? '' : ' no remunerada'}.`;
@@ -114,7 +120,11 @@ async function enviarFormulario(enviar, boton) {
     clearTimeout(espera);
     await calcular();
     const dias = resultado ? ` (${resultado.dias} día(s) ${resultado.unidad === 'habiles' ? 'hábiles' : 'calendario'})` : '';
-    const ok = await confirmar({ titulo: 'Enviar solicitud de licencia', mensaje: `Va a pedir licencia de ${f.subtipo.value.toLowerCase()} del ${fecha(f.fecha_inicio.value)} al ${fecha(f.fecha_fin.value)}${dias}. Pasará por: ${pasos.join(' → ') || 'aprobación'}. ¿Enviar?`, aceptar: 'Enviar' });
+    const ok = await confirmar({
+      titulo: 'Enviar solicitud de licencia',
+      mensaje: `Va a pedir licencia de ${f.subtipo.value.toLowerCase()} del ${fecha(f.fecha_inicio.value)} al ${fecha(f.fecha_fin.value)}${dias}. Pasará por: ${pasos.join(' → ') || 'aprobación'}. ¿Enviar?`,
+      aceptar: 'Enviar',
+    });
     if (!ok) return;
   }
   const fd = new FormData(f);

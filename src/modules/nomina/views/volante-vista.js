@@ -2,17 +2,22 @@
 import { icono } from '/static/js/iconos.js';
 import { copExacto, escapar, periodoTexto } from '/static/js/ui.js';
 
-const cantidad = (l) => (l.cantidad === null || l.cantidad === undefined ? '' : `${String(l.cantidad).replace('.', ',')} ${escapar(l.unidad ?? '')}`);
+const cantidad = (l) =>
+  l.cantidad === null || l.cantidad === undefined ? '' : `${String(l.cantidad).replace('.', ',')} ${escapar(l.unidad ?? '')}`;
 
 function tablaConceptos(titulo, lineas, total, etiquetaTotal) {
   if (!lineas.length) return '';
   return `<section class="grupo-datos" aria-label="${escapar(titulo)}"><h3>${escapar(titulo)}</h3>
     <table class="tabla tabla--volante"><thead><tr><th scope="col">Concepto</th><th scope="col" class="num">Cantidad</th><th scope="col" class="num">Valor</th></tr></thead>
-    <tbody>${lineas.map((l) => `<tr>
+    <tbody>${lineas
+      .map(
+        (l) => `<tr>
         <td data-etiqueta="Concepto">${escapar(l.etiqueta)}
           ${l.detalle?.length ? `<ul class="desglose">${l.detalle.map((d) => `<li>${escapar(d.etiqueta)}: ${cantidad(d)}</li>`).join('')}</ul>` : ''}</td>
         <td data-etiqueta="Cantidad" class="num">${cantidad(l) || '<span class="sr-only">Sin cantidad</span>'}</td>
-        <td data-etiqueta="Valor" class="num">${copExacto(l.valor)}</td></tr>`).join('')}</tbody>
+        <td data-etiqueta="Valor" class="num">${copExacto(l.valor)}</td></tr>`,
+      )
+      .join('')}</tbody>
     <tfoot><tr><th scope="row" colspan="2">${escapar(etiquetaTotal)}</th><td class="num" data-etiqueta="${escapar(etiquetaTotal)}"><strong>${copExacto(total)}</strong></td></tr></tfoot></table></section>`;
 }
 

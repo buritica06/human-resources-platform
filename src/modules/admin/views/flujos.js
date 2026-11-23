@@ -18,18 +18,34 @@ try {
   const { tipos } = await api('/solicitudes/tipos');
   const flujos = await Promise.all(tipos.map((t) => api(`/flujos/${t.tipo}`)));
   zona.innerHTML = `${htmlAviso('info', 'Cambiar un flujo no afecta las solicitudes que ya están en trámite. Si una sede no tiene director, ese paso se omite automáticamente.')}
-    ${tipos.map((t, i) => `<section class="tarjeta" aria-labelledby="t-${t.tipo}">
+    ${tipos
+      .map(
+        (t, i) => `<section class="tarjeta" aria-labelledby="t-${t.tipo}">
       <h2 id="t-${t.tipo}" tabindex="-1">${icono(t.icono)} ${escapar(t.etiqueta)} <span class="ayuda">(versión ${flujos[i].version})</span></h2>
       <form data-tipo="${t.tipo}" novalidate><fieldset class="campo"><legend>¿Quién aprueba?</legend><div class="opciones-hojas">
-        ${Object.entries(OPCIONES).map(([k, o]) => `<label><input type="radio" name="flujo" value="${k}" ${claveDe(flujos[i].pasos) === k ? 'checked' : ''}><span>${escapar(o.texto)}</span></label>`).join('')}
+        ${Object.entries(OPCIONES)
+          .map(
+            ([k, o]) =>
+              `<label><input type="radio" name="flujo" value="${k}" ${claveDe(flujos[i].pasos) === k ? 'checked' : ''}><span>${escapar(o.texto)}</span></label>`,
+          )
+          .join('')}
       </div></fieldset>
       <div class="formulario-acciones"><button class="btn" type="submit">${icono('ok')} Guardar flujo de ${escapar(t.etiqueta.toLowerCase())}</button></div></form>
-    </section>`).join('')}`;
+    </section>`,
+      )
+      .join('')}`;
   zona.addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target;
     const o = OPCIONES[f.flujo.value];
-    if (!(await confirmar({ titulo: 'Guardar flujo', mensaje: `Las nuevas solicitudes las aprobará: ${o.texto.toLowerCase()}. ¿Guardar?`, aceptar: 'Guardar' }))) return;
+    if (
+      !(await confirmar({
+        titulo: 'Guardar flujo',
+        mensaje: `Las nuevas solicitudes las aprobará: ${o.texto.toLowerCase()}. ¿Guardar?`,
+        aceptar: 'Guardar',
+      }))
+    )
+      return;
     await conCarga(f.querySelector('[type=submit]'), async () => {
       try {
         const r = await api(`/flujos/${f.dataset.tipo}`, { metodo: 'PUT', datos: { pasos: o.pasos } });

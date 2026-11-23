@@ -1,87 +1,134 @@
-# Plataforma de Talento Humano – Masinero Compraventas
+# Human Resources Platform — Plataforma de Talento Humano
 
-Aplicación web (primero móvil) para que los colaboradores consulten su información laboral y hagan solicitudes, y para que el área contable administre usuarios, nómina y aprobaciones.
+![Version](https://img.shields.io/badge/version-1.0.0-6A1B9A)
+![Node](https://img.shields.io/badge/node-%3E%3D20.12-339933)
+![Architecture](https://img.shields.io/badge/architecture-Modular%20Monolith-1F5FAD)
+![Security](https://img.shields.io/badge/security-OWASP%20ASVS%20L1-1B7A3D)
+![Coverage](https://img.shields.io/badge/coverage-%3E%3D95%25-1B7A3D)
+![License](https://img.shields.io/badge/license-Proprietary-5A6070)
 
-> **Versión 1.0** — los nueve módulos están terminados y probados:
-> - M0 Autenticación
-> - M1 Expediente
-> - M2 Nómina y volantes
-> - M3 Permisos y aprobaciones
-> - M4 Vacaciones
-> - M5 Incapacidades
-> - M6 Licencias
-> - M7 Certificados
-> - M8 Panel del admincontable
->
-> Antes de producción hay tareas pendientes; ver [docs/despliegue.md](docs/despliegue.md) y la sección "Antes de producción" del [CHANGELOG](CHANGELOG.md). Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
+Plataforma web corporativa (*mobile-first* y accesible) para la gestión integral de **Talento Humano**, autoservicio del colaborador, flujos de aprobación configurables, volantes de nómina, vacaciones, incapacidades con protección de datos de salud (Ley 1581), licencias, certificados laborales verificables y panel de administración contable.
 
-## Requisitos
-- Node.js 20.12 o superior (probado con Node 24)
-- No necesita base de datos instalada en local: usa SQLite (un archivo en `data/`).
+---
 
-## Instalación local (4 comandos)
+## Tabla de Contenidos
+
+- [Módulos Funcionales](#módulos-funcionales)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Arquitectura](#arquitectura)
+- [Inicio Rápido](#inicio-rápido)
+- [Comandos Disponibles](#comandos-disponibles)
+- [Calidad, Testing y Seguridad](#calidad-testing-y-seguridad)
+- [Estándares de Desarrollo](#estándares-de-desarrollo)
+- [Documentación](#documentación)
+
+---
+
+## Módulos Funcionales
+
+Todos los módulos se activan dinámicamente mediante `MODULES_ENABLED` en `.env`:
+
+| Módulo | Código | Capacidades Principales |
+|---|---|---|
+| **M0 – Autenticación y Usuarios** | `auth`, `usuarios` | Login por cédula, `argon2id`, bloqueo por intentos, primer ingreso obligatorio, verificación de correo, recuperación, carga masiva Excel, gestión de roles y sedes |
+| **M1 – Expediente** | `colaboradores` | Ficha completa del colaborador, edición controlada por parámetro, historial de cambios, cifrado AES-256-GCM de cuenta bancaria e importación desde nómina |
+| **M2 – Nómina y Volantes** | `nomina` | Lector validado de hojas `NOMINA *` y `HORAS RESUMEN`, flujo Borrador → Publicado / Anulado, vista previa, volantes detallados y PDF corporativo |
+| **M3 – Permisos y Motor de Flujo** | `solicitudes`, `permisos`, `notificaciones` | Motor de aprobación versionado (`director → admincontable`), validación de cruces de fechas, soportes PDF seguros, notificaciones en tiempo real (SSE) y correo |
+| **M4 – Vacaciones** | `vacaciones` | Cálculo exacto (`DAYS360` + `WORKDAY.INTL` + festivos), saldo al corte, simulador en vivo y compensación en dinero con topes parametrizables |
+| **M5 – Incapacidades** | `incapacidades` | Registro IGE/IRL, diagnóstico cifrado AES-256-GCM, PDF sensible, visibilidad restringida (el director solo ve fechas) y auditoría de lecturas |
+| **M6 – Licencias** | `licencias` | Maternidad, paternidad, luto, calamidad doméstica y no remuneradas parametrizables sobre el motor común, con descuento de días laborados en vacaciones |
+| **M7 – Certificados Laborales** | `certificados` | Generación instantánea en PDF con o sin salario (números en letras `es-CO`), snapshot inmutable con huella SHA-256 y verificación pública `/verificar` sin PII |
+| **M8 – Panel Admincontable** | `admin` | Resumen operativo, alertas de vencimientos, parámetros con vigencia futura, festivos, editor de flujos, suspensiones, ausentismo (+CSV seguro) y auditoría |
+
+---
+
+## Stack Tecnológico
+
+- **Backend:** Node.js `>=20.12` (ES Modules), Express `5.x`, Knex `3.x`, Zod `4.x`, Argon2id, Helmet, Multer, ExcelJS, PDFKit, Nodemailer.
+- **Base de Datos:** SQLite (`better-sqlite3`, WAL mode) en desarrollo local · PostgreSQL 15–17 (`pg`) en producción.
+- **Frontend:** HTML5 semántico, CSS3 con tokens de diseño propios y Vanilla ES Modules (*zero-framework*).
+- **Calidad y DevOps:** ESLint, Prettier, Husky, Commitlint, SonarQube, Docker multietapa, Kubernetes, Terraform, GitHub Actions, CodeQL, Dependabot y MkDocs Material.
+
+---
+
+## Arquitectura
+
+El sistema implementa un **Monolito Modular** con inyección de dependencias (`crearContexto`), registro desacoplado de módulos (`src/core/modules.js`) y capas claras por dominio (`routes` → `service` → `repository` + `validators` + `views`).
+
+Consulta los diagramas completos del **Modelo C4** y flujos en [docs/architecture/c4-model.md](docs/architecture/c4-model.md) y [docs/architecture/flujos.md](docs/architecture/flujos.md).
+
+---
+
+## Inicio Rápido
+
 ```powershell
+# 1. Instalar dependencias
 npm install
-copy .env.example .env      # opcional: sin .env se usan los valores por defecto de desarrollo
-npm run setup               # crea la base de datos, carga parámetros, festivos y datos ficticios
-npm run dev                 # http://localhost:3000
+
+# 2. Configurar variables de entorno (opcional en desarrollo local)
+copy .env.example .env
+
+# 3. Ejecutar migraciones y semillas ficticias
+npm run setup
+
+# 4. Iniciar servidor de desarrollo (http://localhost:3000)
+npm run dev
 ```
 
-### Usuarios de prueba (ficticios, solo en desarrollo)
-| Cédula | Rol |
+### Usuarios Ficticios de Desarrollo
+
+| Cédula | Rol | Contraseña por defecto |
+|---|---|---|
+| `1000000001` | `ADMIN` (Admincontable) | `Demo2026clave` |
+| `1000000002` | `DIRECTOR` (Sedes Norte y Sur) | `Demo2026clave` |
+| `1000000003` | `COLABORADOR` | `Demo2026clave` |
+| `1000000004` | `COLABORADOR` | `Demo2026clave` |
+
+> En `NODE_ENV=production` **nunca** se crean usuarios de demostración. Utilice `npm run crear-admin -- <cedula> "<NOMBRE>"`.
+
+---
+
+## Comandos Disponibles
+
+| Comando | Descripción |
 |---|---|
-| 1000000001 | Admincontable |
-| 1000000002 | Director administrativo (sedes Norte y Sur) |
-| 1000000003 | Colaborador |
-| 1000000004 | Colaborador |
+| `npm run dev` | Servidor de desarrollo con recarga automática (`src/`) |
+| `npm start` | Servidor en modo producción |
+| `npm run setup` | Ejecuta migraciones Knex y semillas iniciales |
+| `npm test` | Ejecuta la suite completa (unitarias, integración y E2E) en SQLite |
+| `npm run test:coverage` | Ejecuta pruebas con reporte LCOV y umbral mínimo obligatorio del **80%** |
+| `npm run test:pg` | Ejecuta la suite completa contra PostgreSQL (`TEST_DATABASE_URL`) |
+| `npm run lint` | Análisis estático con ESLint |
+| `npm run format` / `format:check` | Formateo y verificación con Prettier |
+| `npm run backup` | Copia de seguridad en caliente (SQLite / `pg_dump`) con rotación |
+| `npm run crear-admin -- <cedula> "<NOMBRE>"` | Crea el primer administrador en producción |
 
-Cada uno tiene un saldo de vacaciones ficticio al 01/01/2026 para probar M4. El admincontable registra los saldos reales al corte desde el expediente (pestaña Vacaciones).
+---
 
-Contraseña de todos: `Demo2026clave` (se puede cambiar con la variable `SEED_PASSWORD` antes de `npm run setup`). En producción **no** se crean estos usuarios.
+## Calidad, Testing y Seguridad
 
-### Correos en desarrollo
-No se envían: cada correo se guarda como `.eml` en `data/correos/` y el enlace (verificación, recuperación) aparece en la consola del servidor.
+- **Cobertura automatizada:** > 95% en líneas y funciones, > 84% en ramas (umbral mínimo CI: **80%**).
+- **Seguridad OWASP ASVS Nivel 1 & Top 10:** ver [docs/security/owasp-asvs.md](docs/security/owasp-asvs.md) y [docs/security/owasp-top-10.md](docs/security/owasp-top-10.md).
+- **Protección de datos (Ley 1581):** nunca se versionan archivos `.env`, bases de datos ni libros Excel reales (validado automáticamente por `tests/unit/repositorio.test.js`).
 
-## Comandos
-| Comando | Qué hace |
-|---|---|
-| `npm run dev` | Servidor con recarga automática (vigila solo `src/`) |
-| `npm start` | Servidor sin recarga (producción) |
-| `npm run setup` | Migraciones + datos iniciales |
-| `npm run migrate` | Solo migraciones |
-| `npm test` | Pruebas unitarias e integración (`node:test`) con SQLite |
-| `npm run test:pg` | Las mismas pruebas contra PostgreSQL (requiere `TEST_DATABASE_URL`) |
-| `npm run lint` | ESLint |
-| `npm run fixtures` | Regenera los Excel **ficticios** de `tests/fixtures/` (empleados y nómina) |
-| `npm run backup` | Copia de seguridad de la base de datos con rotación |
-| `npm run crear-admin -- <cedula> "<NOMBRE>"` | Crea el primer admincontable (producción) |
+---
 
-## Estructura
-```
-src/core/          núcleo: configuración, BD, sesión, CSRF, roles, auditoría, correo, parámetros
-src/modules/<m>/   un módulo por carpeta: routes, service, repository, validators, views
-src/public/        sistema de diseño (css/) y utilidades de interfaz (js/)
-migrations/        migraciones Knex (SQLite y PostgreSQL)
-seeds/             parámetros del archivo de nómina, festivos y datos FICTICIOS
-tests/             unit/, integration/, fixtures/ (Excel ficticio)
-docs/              análisis, plan, modelo de datos, API, despliegue y guías de uso (docs/guias)
-Dockerfile, docker-compose.yml   despliegue opcional con PostgreSQL
-```
-Los módulos se activan con `MODULES_ENABLED` en `.env`. Cada módulo se registra en `src/core/modules.js` y aporta sus rutas de API, páginas y entradas de menú sin tocar los demás.
+## Estándares de Desarrollo
 
-## Datos personales
-- El archivo de nómina real **no** se copia al repositorio (`.gitignore` excluye `*.xls*`, y una prueba automática falla si aparece un Excel que no sea ficticio).
-- Las pruebas y semillas usan datos inventados con la misma estructura.
-- Los logs enmascaran cédulas y correos.
+- **Ramas:** `main`, `develop`, `feature/*`, `bugfix/*`, `hotfix/*`, `release/*`.
+- **Commits:** **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `build:`, `ci:`) validados por Husky + Commitlint.
+- **Pull Requests:** Obligatorios hacia `main` y `develop`, con revisión de pares y validaciones automáticas en CI. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Aviso: carpeta dentro de OneDrive
-OneDrive modifica archivos de `node_modules` mientras sincroniza (lo comprobamos: reiniciaba el servidor de desarrollo una y otra vez). `npm run dev` ya vigila solo `src/`, pero se recomienda **mover el proyecto fuera de OneDrive** o excluir `node_modules/`, `data/` y `backups/` de la sincronización: una base SQLite sincronizada puede corromperse.
+---
 
 ## Documentación
-- [docs/analisis.md](docs/analisis.md) – inventario de insumos, preguntas y supuestos
-- [docs/plan.md](docs/plan.md) – arquitectura, plan por fases y criterios de aceptación
-- [docs/modelo-datos.md](docs/modelo-datos.md) – tablas actuales
-- [docs/api.md](docs/api.md) – endpoints disponibles
-- [docs/despliegue.md](docs/despliegue.md) – producción, Docker, pruebas con PostgreSQL y copias de seguridad
-- [docs/seguridad-asvs.md](docs/seguridad-asvs.md) – checklist de seguridad OWASP ASVS nivel 1
-- Guías de uso: [colaborador](docs/guias/colaborador.md) · [director](docs/guias/director.md) · [área contable](docs/guias/admincontable.md)
+
+- **Portal de Documentación (GitHub Pages):** `https://buritica06.github.io/human-resources-platform/`
+- [Guía de Instalación](docs/development/instalacion.md)
+- [Manual para Desarrolladores](docs/development/manual-desarrollador.md)
+- [Arquitectura C4](docs/architecture/c4-model.md) · [Flujos del Sistema](docs/architecture/flujos.md) · [Modelo de Datos](docs/architecture/modelo-datos.md)
+- [ADRs (Architecture Decision Records)](docs/architecture/adrs/0001-monolito-modular.md)
+- [Referencia API REST](docs/api/rest-api.md)
+- [Guía de Despliegue](docs/deployment/despliegue.md)
+- [Manuales de Usuario](docs/user-manual/colaborador.md) (Colaborador · Director · Admincontable)
+- [Roadmap del Producto](docs/requirements/roadmap.md) · [Changelog](CHANGELOG.md)

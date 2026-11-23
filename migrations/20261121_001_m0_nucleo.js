@@ -105,10 +105,7 @@ export async function up(knex) {
 }
 
 export async function down(knex) {
-  for (const tabla of [
-    'auditoria', 'festivos', 'parametros', 'tokens', 'sesiones',
-    'director_sedes', 'usuarios', 'sedes', 'empleadores',
-  ]) {
+  for (const tabla of ['auditoria', 'festivos', 'parametros', 'tokens', 'sesiones', 'director_sedes', 'usuarios', 'sedes', 'empleadores']) {
     await knex.schema.dropTableIfExists(tabla);
   }
 }

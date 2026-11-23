@@ -28,7 +28,13 @@ test('parámetros: devuelve el valor vigente según la fecha (Ley 2466 gradual)'
 
 test('festivos 2026–2027 cargados (18 por año)', async () => {
   const filas = await env.ctx.db('festivos').select('anio').count({ n: '*' }).groupBy('anio');
-  assert.deepEqual(filas.map((f) => [f.anio, Number(f.n)]), [[2026, 18], [2027, 18]]);
+  assert.deepEqual(
+    filas.map((f) => [f.anio, Number(f.n)]),
+    [
+      [2026, 18],
+      [2027, 18],
+    ],
+  );
 });
 
 test('lector EMPLEADOS: libro ficticio válido', async () => {

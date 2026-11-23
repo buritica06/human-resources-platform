@@ -30,7 +30,14 @@ after(() => env.cerrar());
 async function pedir(c, campos = {}, archivo = null) {
   const t = (await c.get('/auth/csrf')).body.csrf;
   let r = c.agente.post('/api/v1/solicitudes').set('X-CSRF-Token', t);
-  const datos = { tipo: 'LICENCIA', subtipo: 'CALAMIDAD DOMÉSTICA', fecha_inicio: sumarDias(hoy, 10), fecha_fin: sumarDias(hoy, 11), motivo: 'Inundación en la vivienda', ...campos };
+  const datos = {
+    tipo: 'LICENCIA',
+    subtipo: 'CALAMIDAD DOMÉSTICA',
+    fecha_inicio: sumarDias(hoy, 10),
+    fecha_fin: sumarDias(hoy, 11),
+    motivo: 'Inundación en la vivienda',
+    ...campos,
+  };
   for (const [k, v] of Object.entries(datos)) if (v !== undefined) r = r.field(k, String(v));
   if (archivo) r = r.attach('soporte', archivo, 'soporte.pdf');
   return r;
@@ -64,7 +71,11 @@ describe('validaciones por tipo (parámetro LISTA_TIPOS_LICENCIA)', () => {
   test('maternidad: días calendario, máximo 126; soporte sensible (el director no lo ve)', async () => {
     let r = await colab1.post('/licencias/calcular', { subtipo: 'MATERNIDAD', fecha_inicio: hoy, fecha_fin: sumarDias(hoy, 126) });
     assert.match(r.body.error.campos.fecha_fin, /máximo 126/);
-    r = await pedir(colab1, { subtipo: 'MATERNIDAD', fecha_inicio: sumarDias(hoy, 2), fecha_fin: sumarDias(hoy, 127), motivo: 'Licencia de maternidad' }, PDF);
+    r = await pedir(
+      colab1,
+      { subtipo: 'MATERNIDAD', fecha_inicio: sumarDias(hoy, 2), fecha_fin: sumarDias(hoy, 127), motivo: 'Licencia de maternidad' },
+      PDF,
+    );
     assert.equal(r.status, 201, JSON.stringify(r.body));
     assert.deepEqual([r.body.datos.dias, r.body.datos.unidad, r.body.datos.remunerada], [126, 'calendario', true]);
     assert.equal((await director.get(`/documentos/${r.body.documentoId}`)).status, 404, 'soporte sensible');
@@ -73,7 +84,12 @@ describe('validaciones por tipo (parámetro LISTA_TIPOS_LICENCIA)', () => {
   });
 
   test('tipo inexistente, fechas invertidas o muy antiguas → errores por campo', async () => {
-    const r = await pedir(colab1, { subtipo: 'VACACIONES PAGAS', fecha_inicio: sumarDias(hoy, 5), fecha_fin: sumarDias(hoy, 4), motivo: 'x' });
+    const r = await pedir(colab1, {
+      subtipo: 'VACACIONES PAGAS',
+      fecha_inicio: sumarDias(hoy, 5),
+      fecha_fin: sumarDias(hoy, 4),
+      motivo: 'x',
+    });
     assert.equal(r.status, 400);
     assert.ok(r.body.error.campos.subtipo && r.body.error.campos.motivo);
     const r2 = await pedir(colab1, { fecha_inicio: sumarDias(hoy, -40), fecha_fin: sumarDias(hoy, -39) });
@@ -125,10 +141,14 @@ describe('efecto en vacaciones', () => {
     const n = dias360(fi, ff) + 1; // misma base que el total de días laborados
     assert.equal(despues.diasNoLaborados, n);
     assert.equal(despues.diasLaborados, antes.diasLaborados - n);
-    assert.equal(despues.causadosDesdeCorte, Math.round(((antes.diasLaborados - n) * 15) / 360 * 100) / 100);
+    assert.equal(despues.causadosDesdeCorte, Math.round((((antes.diasLaborados - n) * 15) / 360) * 100) / 100);
   });
 
   test('una licencia remunerada (calamidad) no resta días', async () => {
-    assert.equal((await colab1.get('/me/vacaciones/saldo')).body.diasNoLaborados, dias360(sumarDias(hoy, -20), sumarDias(hoy, -11)) + 1, 'solo cuenta la no remunerada');
+    assert.equal(
+      (await colab1.get('/me/vacaciones/saldo')).body.diasNoLaborados,
+      dias360(sumarDias(hoy, -20), sumarDias(hoy, -11)) + 1,
+      'solo cuenta la no remunerada',
+    );
   });
 });

@@ -49,8 +49,10 @@ function mapearColumnas(columnas) {
   for (const exactas of [true, false]) {
     for (const [texto, col] of columnas) {
       if (Object.values(mapa).includes(col)) continue;
-      const def = COLUMNAS.find(([campo, alias, soloExacto]) =>
-        !(campo in mapa) && alias.some((a) => (exactas ? texto === normalizar(a) : !soloExacto && texto.startsWith(normalizar(a)))));
+      const def = COLUMNAS.find(
+        ([campo, alias, soloExacto]) =>
+          !(campo in mapa) && alias.some((a) => (exactas ? texto === normalizar(a) : !soloExacto && texto.startsWith(normalizar(a)))),
+      );
       if (def) mapa[def[0]] = col;
     }
   }
@@ -83,17 +85,30 @@ function leerOrganizacion(libro) {
     if (clave && cNombre) {
       if (clave.length > MAX_CLAVE) {
         errores.push({ fila: r, mensaje: `PARAMETROS: la clave de empleador "${clave.slice(0, 40)}" supera ${MAX_CLAVE} caracteres.` });
-      } else if (!empleadores.some((e) => e.clave === clave)) { // las repetidas se ignoran
+      } else if (!empleadores.some((e) => e.clave === clave)) {
+        // las repetidas se ignoran
         empleadores.push({
           clave,
-          razon_social: String(valorCelda(f.getCell(cNombre))).replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 150) || clave,
-          documento: cDoc ? String(valorCelda(f.getCell(cDoc))).replace(/\D/g, '').slice(0, 20) || null : null,
+          razon_social:
+            String(valorCelda(f.getCell(cNombre)))
+              .replace(/\s+/g, ' ')
+              .trim()
+              .toUpperCase()
+              .slice(0, 150) || clave,
+          documento: cDoc
+            ? String(valorCelda(f.getCell(cDoc)))
+                .replace(/\D/g, '')
+                .slice(0, 20) || null
+            : null,
         });
       }
     }
     if (cEmpSede && cSede) {
       const emp = normalizar(valorCelda(f.getCell(cEmpSede)));
-      const sede = String(valorCelda(f.getCell(cSede))).replace(/\s+/g, ' ').trim().toUpperCase();
+      const sede = String(valorCelda(f.getCell(cSede)))
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
       if (emp && sede) {
         if (sede.length > 120) errores.push({ fila: r, mensaje: 'PARAMETROS: nombre de sede demasiado largo (máx. 120).' });
         else if (!sedes.some((s) => s.empleador === emp && s.nombre === sede)) sedes.push({ fila: r, empleador: emp, nombre: sede });
@@ -118,7 +133,10 @@ export function crearImportador(ctx, svc) {
     const errores = [...org.errores];
     const advertencias = [];
     if (faltantes.length) {
-      advertencias.push({ fila: enc.fila, mensaje: `No se encontraron estas columnas (esos datos no se importan): ${faltantes.map((c) => POR_CLAVE[c]?.etiqueta ?? c.replace('_', '')).join(', ')}.` });
+      advertencias.push({
+        fila: enc.fila,
+        mensaje: `No se encontraron estas columnas (esos datos no se importan): ${faltantes.map((c) => POR_CLAVE[c]?.etiqueta ?? c.replace('_', '')).join(', ')}.`,
+      });
     }
 
     // Organización: la de la BD (sedes activas) más la que trae el libro
@@ -162,14 +180,24 @@ export function crearImportador(ctx, svc) {
           reg.cedula = ced;
           continue;
         }
-        if (campo === '_empleador') { reg._empleador = normalizar(bruto); continue; }
-        if (campo === '_sede') { reg._sede = String(bruto).replace(/\s+/g, ' ').trim().toUpperCase(); continue; }
+        if (campo === '_empleador') {
+          reg._empleador = normalizar(bruto);
+          continue;
+        }
+        if (campo === '_sede') {
+          reg._sede = String(bruto).replace(/\s+/g, ' ').trim().toUpperCase();
+          continue;
+        }
         if (POR_CLAVE[campo]?.tipo === 'fecha') {
           const fch = fechaCelda(bruto);
-          if (fch === undefined) { malos.push([campo, 'Fecha no reconocida.']); continue; }
+          if (fch === undefined) {
+            malos.push([campo, 'Fecha no reconocida.']);
+            continue;
+          }
           bruto = fch;
         }
-        if (campo === 'numero_cuenta' && bruto !== '') bruto = typeof bruto === 'number' ? String(Math.trunc(bruto)) : String(bruto).replace(/[\s.-]/g, '');
+        if (campo === 'numero_cuenta' && bruto !== '')
+          bruto = typeof bruto === 'number' ? String(Math.trunc(bruto)) : String(bruto).replace(/[\s.-]/g, '');
         // Celda vacía: no se envía el campo (en un expediente existente NO borra el dato guardado).
         // El estado vacío de un expediente nuevo se asume ACTIVO más abajo.
         if (bruto === '' || bruto === null) continue;
@@ -190,8 +218,10 @@ export function crearImportador(ctx, svc) {
         else reg[campo] = res.valor;
       }
       if (!reg.nombre && !malos.some(([c]) => c === 'nombre')) malos.push(['nombre', 'Este dato es obligatorio.']);
-      if (!reg._empleador || !empleadorConocido(reg._empleador)) malos.push(['_empleador', `Empleador "${reg._empleador || ''}" no existe.`]);
-      else if (!reg._sede || !sedeConocida(reg._empleador, reg._sede)) malos.push(['_sede', `Sede "${reg._sede || ''}" no existe para ese empleador.`]);
+      if (!reg._empleador || !empleadorConocido(reg._empleador))
+        malos.push(['_empleador', `Empleador "${reg._empleador || ''}" no existe.`]);
+      else if (!reg._sede || !sedeConocida(reg._empleador, reg._sede))
+        malos.push(['_sede', `Sede "${reg._sede || ''}" no existe para ese empleador.`]);
 
       const criticos = malos.filter(([c]) => CRITICOS.has(c));
       if (criticos.length) {
@@ -216,7 +246,14 @@ export function crearImportador(ctx, svc) {
     };
 
     // Comparación con lo existente
-    const existentes = new Map((await db('colaboradores').whereIn('cedula', filas.map((f) => f.cedula))).map((c) => [c.cedula, c]));
+    const existentes = new Map(
+      (
+        await db('colaboradores').whereIn(
+          'cedula',
+          filas.map((f) => f.cedula),
+        )
+      ).map((c) => [c.cedula, c]),
+    );
     const nuevos = [];
     const actualizados = [];
     let sinCambios = 0;
@@ -230,12 +267,14 @@ export function crearImportador(ctx, svc) {
         continue;
       }
       // Datos que el colaborador mantiene él mismo: el Excel solo los llena si están vacíos
-      for (const k of Object.keys(datos)) if (editables.has(k) && actual[k] !== null && actual[k] !== undefined && actual[k] !== '') delete datos[k];
+      for (const k of Object.keys(datos))
+        if (editables.has(k) && actual[k] !== null && actual[k] !== undefined && actual[k] !== '') delete datos[k];
       const org = idsOrg(_empleador, _sede);
       const { hist } = svc.diferencias(actual, { ...datos, ...(org ?? {}) }, 'IMPORTACION', null, v);
       const campos = hist.map((x) => x.campo);
       if (!org) campos.push('sede_id'); // pasa a una sede que se crea con esta importación
-      if (campos.length) actualizados.push({ fila, cedula, nombre: datos.nombre ?? actual.nombre, id: actual.id, _empleador, _sede, datos, campos });
+      if (campos.length)
+        actualizados.push({ fila, cedula, nombre: datos.nombre ?? actual.nombre, id: actual.id, _empleador, _sede, datos, campos });
       else sinCambios++;
     }
     return { org: { empleadoresNuevos, sedesNuevas }, nuevos, actualizados, sinCambios, errores, advertencias, v, huella: sha256(buffer) };
@@ -266,7 +305,8 @@ export function crearImportador(ctx, svc) {
         await trx('sedes').insert({ empleador_id: emp.get(s.empleador).id, nombre: s.nombre, orden: ++orden });
       }
       const sedes = await trx('sedes').where({ activa: true }).select('id', 'empleador_id', 'nombre');
-      const idSede = (empClave, nombre) => sedes.find((s) => s.empleador_id === emp.get(empClave).id && normalizar(s.nombre) === normalizar(nombre)).id;
+      const idSede = (empClave, nombre) =>
+        sedes.find((s) => s.empleador_id === emp.get(empClave).id && normalizar(s.nombre) === normalizar(nombre)).id;
       // Contexto con la organización actualizada (para textos del historial)
       const v = { ...a.v, sedes: new Map(sedes.map((s) => [s.id, s])), empleadores: new Map([...emp.values()].map((e) => [e.id, e])) };
 
@@ -274,9 +314,19 @@ export function crearImportador(ctx, svc) {
       for (const n of a.nuevos) {
         const datos = { ...n.datos, empleador_id: emp.get(n._empleador).id, sede_id: idSede(n._empleador, n._sede) };
         const { update } = svc.diferencias({}, datos, 'IMPORTACION', req.usuario.id, v);
-        const [fila] = await trx('colaboradores').insert({ cedula: n.cedula, ...update, estado: update.estado ?? 'ACTIVO', creado_en: t, actualizado_en: t }).returning('id');
+        const [fila] = await trx('colaboradores')
+          .insert({ cedula: n.cedula, ...update, estado: update.estado ?? 'ACTIVO', creado_en: t, actualizado_en: t })
+          .returning('id');
         const id = typeof fila === 'object' ? fila.id : fila;
-        await trx('expediente_cambios').insert({ colaborador_id: id, campo: '_alta', valor_anterior: null, valor_nuevo: 'Expediente creado desde el archivo de nómina', origen: 'IMPORTACION', actor_id: req.usuario.id, creado_en: t });
+        await trx('expediente_cambios').insert({
+          colaborador_id: id,
+          campo: '_alta',
+          valor_anterior: null,
+          valor_nuevo: 'Expediente creado desde el archivo de nómina',
+          origen: 'IMPORTACION',
+          actor_id: req.usuario.id,
+          creado_en: t,
+        });
         creados++;
       }
       // 3) Actualizados
@@ -285,12 +335,18 @@ export function crearImportador(ctx, svc) {
         const datos = { ...u.datos, empleador_id: emp.get(u._empleador).id, sede_id: idSede(u._empleador, u._sede) };
         const { update, hist } = svc.diferencias(actual, datos, 'IMPORTACION', req.usuario.id, v);
         if (!hist.length) continue;
-        await trx('colaboradores').where({ id: u.id }).update({ ...update, actualizado_en: t });
+        await trx('colaboradores')
+          .where({ id: u.id })
+          .update({ ...update, actualizado_en: t });
         await trx('expediente_cambios').insert(hist.map((h) => ({ ...h, colaborador_id: u.id })));
         actualizados++;
       }
     });
-    await auditar(req, { accion: 'IMPORTAR_EXPEDIENTES', entidad: 'colaborador', detalle: { creados, actualizados, empleadoresNuevos: a.org.empleadoresNuevos.length, sedesNuevas: a.org.sedesNuevas.length } });
+    await auditar(req, {
+      accion: 'IMPORTAR_EXPEDIENTES',
+      entidad: 'colaborador',
+      detalle: { creados, actualizados, empleadoresNuevos: a.org.empleadoresNuevos.length, sedesNuevas: a.org.sedesNuevas.length },
+    });
     return { ...resumen(a, true), creados, actualizadosAplicados: actualizados };
   }
 
@@ -301,7 +357,12 @@ export function crearImportador(ctx, svc) {
       empleadoresNuevos: a.org.empleadoresNuevos.map((e) => e.clave),
       sedesNuevas: a.org.sedesNuevas.map((s) => `${s.nombre} (${s.empleador})`),
       nuevos: a.nuevos.map((n) => ({ fila: n.fila, cedula: n.cedula, nombre: n.nombre })),
-      actualizar: a.actualizados.map((x) => ({ fila: x.fila, cedula: x.cedula, nombre: x.nombre, campos: [...new Set(x.campos)].map((c) => POR_CLAVE[c]?.etiqueta ?? c) })),
+      actualizar: a.actualizados.map((x) => ({
+        fila: x.fila,
+        cedula: x.cedula,
+        nombre: x.nombre,
+        campos: [...new Set(x.campos)].map((c) => POR_CLAVE[c]?.etiqueta ?? c),
+      })),
       sinCambios: a.sinCambios,
       errores: a.errores,
       advertencias: a.advertencias,

@@ -12,17 +12,19 @@ export function crearServicioSolicitudes(ctx) {
     const handler = ctx.tiposSolicitud.get(tipo);
     if (!handler) throw noEncontrado('Ese tipo de solicitud no está disponible.');
     const colaborador = await motor.colaboradorDe(req);
-    if (!colaborador) throw new ErrorApp(404, 'SIN_EXPEDIENTE', 'Su cuenta no tiene expediente de colaborador; no puede hacer solicitudes.');
+    if (!colaborador)
+      throw new ErrorApp(404, 'SIN_EXPEDIENTE', 'Su cuenta no tiene expediente de colaborador; no puede hacer solicitudes.');
     if (colaborador.estado !== 'ACTIVO') throw invalido('Su expediente está como retirado; no puede hacer solicitudes.');
     const campos = await handler.validar(ctx, { colaborador, body });
     // Puede depender del subtipo (p. ej. licencias): función o booleano
-    const obligatorio = typeof handler.soporteObligatorio === 'function' ? await handler.soporteObligatorio(ctx, campos) : handler.soporteObligatorio;
+    const obligatorio =
+      typeof handler.soporteObligatorio === 'function' ? await handler.soporteObligatorio(ctx, campos) : handler.soporteObligatorio;
     if (obligatorio && !archivo) throw invalido('Adjunte el soporte en PDF.', { soporte: 'Adjunte el soporte en PDF.' });
 
     // Sensible = dato de salud (Ley 1581): solo lo ven el colaborador y el admincontable.
     // Se calcula ANTES de la transacción (consulta parámetros con otra conexión).
-    const sensible = typeof handler.documentoSensible === 'function'
-      ? !!(await handler.documentoSensible(ctx, campos)) : !!handler.documentoSensible;
+    const sensible =
+      typeof handler.documentoSensible === 'function' ? !!(await handler.documentoSensible(ctx, campos)) : !!handler.documentoSensible;
     const maxMb = Number(await ctx.params.valor('UPLOAD_MAX_MB'));
     const previo = enviar && handler.prepararEnvio ? await handler.prepararEnvio(ctx, campos) : null;
     let archivoGuardado = null;
@@ -33,22 +35,45 @@ export function crearServicioSolicitudes(ctx) {
         let documentoId = null;
         if (archivo) {
           const doc = await documentos.guardar(trx, req, {
-            buffer: archivo.buffer, nombreOriginal: archivo.originalname, colaboradorId: colaborador.id,
-            categoria: handler.categoriaDocumento, sensible, maxMb,
+            buffer: archivo.buffer,
+            nombreOriginal: archivo.originalname,
+            colaboradorId: colaborador.id,
+            categoria: handler.categoriaDocumento,
+            sensible,
+            maxMb,
           });
           archivoGuardado = doc.clave;
           documentoId = doc.id;
         }
         const t = ahora();
-        const [fila] = await trx('solicitudes').insert({
-          tipo, colaborador_id: colaborador.id, estado: 'BORRADOR', documento_id: documentoId,
-          subtipo: campos.subtipo ?? null, fecha_inicio: campos.fecha_inicio, hora_inicio: campos.hora_inicio ?? null,
-          fecha_fin: campos.fecha_fin, hora_fin: campos.hora_fin ?? null, dias_habiles: campos.dias_habiles ?? null,
-          dias_compensar: campos.dias_compensar ?? null, motivo: campos.motivo ?? null,
-          datos: campos.datos ? JSON.stringify(campos.datos) : null, creado_en: t, actualizado_en: t,
-        }).returning('id');
+        const [fila] = await trx('solicitudes')
+          .insert({
+            tipo,
+            colaborador_id: colaborador.id,
+            estado: 'BORRADOR',
+            documento_id: documentoId,
+            subtipo: campos.subtipo ?? null,
+            fecha_inicio: campos.fecha_inicio,
+            hora_inicio: campos.hora_inicio ?? null,
+            fecha_fin: campos.fecha_fin,
+            hora_fin: campos.hora_fin ?? null,
+            dias_habiles: campos.dias_habiles ?? null,
+            dias_compensar: campos.dias_compensar ?? null,
+            motivo: campos.motivo ?? null,
+            datos: campos.datos ? JSON.stringify(campos.datos) : null,
+            creado_en: t,
+            actualizado_en: t,
+          })
+          .returning('id');
         id = typeof fila === 'object' ? fila.id : fila;
-        await trx('solicitud_eventos').insert({ solicitud_id: id, actor_id: req.usuario.id, accion: 'CREAR', estado_desde: null, estado_hasta: 'BORRADOR', creado_en: t });
+        await trx('solicitud_eventos').insert({
+          solicitud_id: id,
+          actor_id: req.usuario.id,
+          accion: 'CREAR',
+          estado_desde: null,
+          estado_hasta: 'BORRADOR',
+          creado_en: t,
+        });
         if (enviar) enviada = await motor.enviar(req, id, { trx, previo });
       });
     } catch (e) {

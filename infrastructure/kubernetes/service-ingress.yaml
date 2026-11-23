@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hr-platform
+  labels:
+    app: hr-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: hr-platform
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hr-platform-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  DB_CLIENT: "pg"
+  MAIL_TRANSPORT: "smtp"
+  STORAGE_DRIVER: "local"
+  STORAGE_DIR: "/app/uploads"
+  TRUST_PROXY: "1"
+  MODULES_ENABLED: "auth,usuarios,colaboradores,nomina,notificaciones,solicitudes,permisos,vacaciones,incapacidades,licencias,certificados,admin"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hr-platform
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+spec:
+  tls:
+    - hosts:
+        - th.empresa.example.com
+      secretName: hr-platform-tls
+  rules:
+    - host: th.empresa.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hr-platform
+                port:
+                  name: http

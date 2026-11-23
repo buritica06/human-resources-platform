@@ -3,8 +3,14 @@
 import { api } from '/static/js/api.js';
 import { pintarIconos } from '/static/js/iconos.js';
 import {
-  activarRequisitosClave, activarVerClave, conCarga, datosFormulario, escapar,
-  limpiarErrores, mostrarAviso, mostrarErrores,
+  activarRequisitosClave,
+  activarVerClave,
+  conCarga,
+  datosFormulario,
+  escapar,
+  limpiarErrores,
+  mostrarAviso,
+  mostrarErrores,
 } from '/static/js/ui.js';
 
 function campoClave(id, etiqueta, autocompletar, extra = '') {
@@ -26,13 +32,18 @@ export function formularioClave(contenedor, { etiquetaActual = 'Contraseña actu
     <div id="msg-clave" tabindex="-1" hidden></div>
     <form id="form-clave" novalidate>
       ${campoClave('actual', etiquetaActual, 'current-password')}
-      ${campoClave('nueva', 'Nueva contraseña', 'new-password', `
+      ${campoClave(
+        'nueva',
+        'Nueva contraseña',
+        'new-password',
+        `
         <ul class="lista-requisitos" id="nueva-req" aria-label="Requisitos">
           <li data-regla="largo">Mínimo 10 caracteres</li>
           <li data-regla="letras">Al menos una letra</li>
           <li data-regla="numeros">Al menos un número</li>
           <li>Que no contenga su cédula</li>
-        </ul>`)}
+        </ul>`,
+      )}
       ${campoClave('confirmacion', 'Confirme la nueva contraseña', 'new-password')}
       <div class="formulario-acciones"><button class="btn" type="submit">${escapar(textoBoton)}</button></div>
     </form>`;
