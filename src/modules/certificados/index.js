@@ -62,7 +62,8 @@ export default {
     );
     router.get('/certificados/:id/pdf', sesion, async (req, res) => {
       const k = await svc.cargar(req, validar(esquemaId, req.params).id);
-      const pdf = await pdfCertificado(k, { appUrl: ctx.cfg.appUrl });
+      const recursos = await svc.recursosPdf(k.contenido.claveEmpleador);
+      const pdf = await pdfCertificado(k, { appUrl: ctx.cfg.appUrl, ...recursos });
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `${req.query.descargar === '1' ? 'attachment' : 'inline'}; filename="certificado-laboral-${k.codigo}.pdf"`,

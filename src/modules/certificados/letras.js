@@ -95,3 +95,16 @@ export function pesosALetras(valor) {
 
 // "22 de noviembre de 2026"
 export const fechaLarga = (iso) => `${Number(iso.slice(8, 10))} de ${MESES[Number(iso.slice(5, 7)) - 1]} de ${iso.slice(0, 4)}`;
+
+// "a los cinco (05) días del mes de agosto (08) de dos mil veintiséis (2026)"
+export function fechaConstancia(iso) {
+  const dia = Number(iso.slice(8, 10));
+  const mes = Number(iso.slice(5, 7));
+  const anio = Number(iso.slice(0, 4));
+  const diaLetras = enteroALetras(dia, { apocope: dia === 1 }).toLowerCase();
+  const anioLetras = enteroALetras(anio).toLowerCase();
+  const dd = String(dia).padStart(2, '0');
+  const mm = String(mes).padStart(2, '0');
+  const prefijo = dia === 1 ? 'al primer (01) día' : `a los ${diaLetras} (${dd}) días`;
+  return `${prefijo} del mes de ${MESES[mes - 1]} (${mm}) de ${anioLetras} (${anio})`;
+}
