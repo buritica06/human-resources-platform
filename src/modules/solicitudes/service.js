@@ -67,7 +67,12 @@ export function crearServicioSolicitudes(ctx) {
     if (doc) {
       const c = await db('colaboradores').where({ id: doc.colaborador_id }).first();
       if (req.usuario.rol === 'ADMIN' || c?.cedula === req.usuario.cedula) permitido = true;
-      else if (req.usuario.rol === 'DIRECTOR' && !doc.sensible) permitido = (await motor.sedesDirector(req.usuario.id)).includes(c?.sede_id);
+      else if (req.usuario.rol === 'DIRECTOR' && !doc.sensible) {
+        // Solo si es el soporte de una solicitud que el director puede ver (no borradores ni otros documentos)
+        const s = await db('solicitudes').where({ documento_id: doc.id }).first('id');
+        const sol = s ? await motor.cargar(s.id) : null;
+        permitido = !!sol && (await motor.puedeVer(req, sol));
+      }
     }
     if (!permitido) {
       await auditar(req, { accion: 'ACCESO_DENEGADO', entidad: 'documento', entidadId: id });

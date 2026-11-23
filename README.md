@@ -2,7 +2,18 @@
 
 Aplicación web (primero móvil) para que los colaboradores consulten su información laboral y hagan solicitudes, y para que el área contable administre usuarios, nómina y aprobaciones.
 
-> Estado: **M0 – Autenticación**, **M1 – Expediente**, **M2 – Nómina y volantes**, **M3 – Permisos y aprobaciones**, **M4 – Vacaciones**, **M5 – Incapacidades**, **M6 – Licencias**, **M7 – Certificados** y **M8 – Panel del admincontable** terminados. Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
+> **Versión 1.0** — los nueve módulos están terminados y probados:
+> - M0 Autenticación
+> - M1 Expediente
+> - M2 Nómina y volantes
+> - M3 Permisos y aprobaciones
+> - M4 Vacaciones
+> - M5 Incapacidades
+> - M6 Licencias
+> - M7 Certificados
+> - M8 Panel del admincontable
+>
+> Antes de producción hay tareas pendientes; ver [docs/despliegue.md](docs/despliegue.md) y la sección "Antes de producción" del [CHANGELOG](CHANGELOG.md). Ver [CHANGELOG.md](CHANGELOG.md) y el plan en [docs/plan.md](docs/plan.md).
 
 ## Requisitos
 - Node.js 20.12 o superior (probado con Node 24)
@@ -38,7 +49,8 @@ No se envían: cada correo se guarda como `.eml` en `data/correos/` y el enlace 
 | `npm start` | Servidor sin recarga (producción) |
 | `npm run setup` | Migraciones + datos iniciales |
 | `npm run migrate` | Solo migraciones |
-| `npm test` | Pruebas unitarias e integración (`node:test`) |
+| `npm test` | Pruebas unitarias e integración (`node:test`) con SQLite |
+| `npm run test:pg` | Las mismas pruebas contra PostgreSQL (requiere `TEST_DATABASE_URL`) |
 | `npm run lint` | ESLint |
 | `npm run fixtures` | Regenera los Excel **ficticios** de `tests/fixtures/` (empleados y nómina) |
 | `npm run backup` | Copia de seguridad de la base de datos con rotación |
@@ -52,7 +64,8 @@ src/public/        sistema de diseño (css/) y utilidades de interfaz (js/)
 migrations/        migraciones Knex (SQLite y PostgreSQL)
 seeds/             parámetros del archivo de nómina, festivos y datos FICTICIOS
 tests/             unit/, integration/, fixtures/ (Excel ficticio)
-docs/              análisis, plan, modelo de datos, API
+docs/              análisis, plan, modelo de datos, API, despliegue y guías de uso (docs/guias)
+Dockerfile, docker-compose.yml   despliegue opcional con PostgreSQL
 ```
 Los módulos se activan con `MODULES_ENABLED` en `.env`. Cada módulo se registra en `src/core/modules.js` y aporta sus rutas de API, páginas y entradas de menú sin tocar los demás.
 
@@ -69,4 +82,6 @@ OneDrive modifica archivos de `node_modules` mientras sincroniza (lo comprobamos
 - [docs/plan.md](docs/plan.md) – arquitectura, plan por fases y criterios de aceptación
 - [docs/modelo-datos.md](docs/modelo-datos.md) – tablas actuales
 - [docs/api.md](docs/api.md) – endpoints disponibles
-- [docs/despliegue.md](docs/despliegue.md) – producción y copias de seguridad
+- [docs/despliegue.md](docs/despliegue.md) – producción, Docker, pruebas con PostgreSQL y copias de seguridad
+- [docs/seguridad-asvs.md](docs/seguridad-asvs.md) – checklist de seguridad OWASP ASVS nivel 1
+- Guías de uso: [colaborador](docs/guias/colaborador.md) · [director](docs/guias/director.md) · [área contable](docs/guias/admincontable.md)

@@ -1,4 +1,4 @@
-# Despliegue (borrador M0 – se completa en la fase de cierre)
+# Despliegue y operación (versión 1.0)
 
 ## Variables obligatorias en producción
 | Variable | Valor |
@@ -49,3 +49,29 @@ El contador vive en memoria: es por proceso y se reinicia al reiniciar el servid
 - **Caché de parámetros:** cada proceso guarda los parámetros 30 segundos. Con varias instancias, un cambio programado para hoy puede tardar hasta 30 segundos en verse en todas.
 - **Anular aprobadas:** no hay límite de tiempo. Anular unas vacaciones ya pagadas en nómina, o días compensados en dinero, devuelve los días al saldo, así que el área contable debe ajustar la nómina por su cuenta.
 - **Pendiente antes de producción:** programar el SMMLV y el auxilio de transporte de 2027; el panel lo alerta.
+## Docker (opcional)
+
+`Dockerfile` y `docker-compose.yml` levantan la app con PostgreSQL 17:
+1. Cree `.env` desde `.env.example`. Defina `DATA_ENCRYPTION_KEY`, `APP_URL` (https), `MAIL_TRANSPORT=smtp` con sus `SMTP_*` y `POSTGRES_PASSWORD`.
+2. Arránquelo con `docker compose up -d`. La app migra la base al arrancar y corre como usuario sin privilegios.
+3. Cree el primer usuario: `docker compose exec app node scripts/crear-admin.js <cédula> "<NOMBRE>"`.
+4. La app escucha solo en `127.0.0.1:3000`: publíquela con un proxy HTTPS (Nginx, Caddy) y `TRUST_PROXY=1`.
+5. Los volúmenes `datos_pg`, `archivos` y `respaldos` guardan la base, los PDF y las copias. Respáldelos fuera del servidor.
+6. **Copias con Docker:** la imagen de la app no trae `pg_dump`. Use el contenedor de la base: `docker compose exec db pg_dump -U talento_humano -Fc talento_humano > respaldo.dump`. Copie también el volumen `archivos`, que tiene los PDF.
+7. **Contraseña de PostgreSQL:** use solo letras y números en `POSTGRES_PASSWORD`. Caracteres como `@ : / #` romperían la URL de conexión que arma el compose.
+
+> En el equipo de desarrollo no estaba instalado Docker, así que **la imagen no se construyó ni se probó todavía**. Antes de producción, constrúyala y corra el humo: ingreso, carga de nómina ficticia y una solicitud completa.
+
+## Pruebas contra PostgreSQL
+
+La suite completa puede correr contra PostgreSQL. Cada entorno de prueba crea y borra su propio esquema:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgres://usuario:clave@localhost:5432/th_pruebas"
+npm run test:pg
+```
+
+- La base debe existir y el usuario debe poder crear esquemas.
+- Por seguridad, el script se niega si el nombre contiene "prod".
+
+> En el equipo de desarrollo no había PostgreSQL, así que **esta corrida está pendiente**. El código ya contempla las diferencias (bloqueos `FOR UPDATE`, decimales como texto, `RETURNING`), pero hay que confirmarlo corriendo `npm run test:pg` una vez antes de producción.

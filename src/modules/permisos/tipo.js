@@ -56,7 +56,9 @@ export const tipoPermiso = {
     }
     if (Object.keys(e).length) throw invalido('Revise los datos marcados.', e);
     const horas = Math.round(((Date.parse(`${ff}T${hf}:00Z`) - Date.parse(`${fi}T${hi}:00Z`)) / 3_600_000) * 100) / 100;
-    return { subtipo, fecha_inicio: fi, hora_inicio: hi, fecha_fin: ff, hora_fin: hf, motivo, datos: { horas } };
+    // sensible (p. ej. CITA MÉDICA): el director no ve el motivo ni el soporte
+    const sensible = (await ctx.params.valor('LISTA_TIPOS_PERMISO_SENSIBLES')).some((t) => t.toUpperCase() === subtipo.toUpperCase());
+    return { subtipo, fecha_inicio: fi, hora_inicio: hi, fecha_fin: ff, hora_fin: hf, motivo, datos: { horas, sensible } };
   },
 
   resumen(s) {

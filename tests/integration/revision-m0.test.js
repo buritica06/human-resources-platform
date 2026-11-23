@@ -61,6 +61,13 @@ describe('hallazgo 4 – configuración de producción', () => {
     }
   });
 
+  test('en producción: APP_URL debe ser https pública y la base PostgreSQL', () => {
+    const base = { env: 'production', produccion: true, claveCifrado: 'b'.repeat(64), correo: { transporte: 'smtp' } };
+    assert.throws(() => cargarConfig({ ...base, appUrl: 'http://localhost:3000' }), /https/);
+    assert.throws(() => cargarConfig({ ...base, appUrl: 'https://th.example.com', db: { client: 'sqlite' } }), /PostgreSQL/);
+    assert.ok(cargarConfig({ ...base, appUrl: 'https://th.example.com', db: { client: 'pg', url: 'postgres://x' } }));
+  });
+
   test('en producción: cookie __Host-, Secure, HttpOnly y cabecera HSTS', async () => {
     const prod = await crearEntorno({
       config: {

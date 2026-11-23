@@ -252,10 +252,15 @@ export function crearServicioNomina(ctx) {
       // Los expedientes básicos que creó esta carga se eliminan si ya no tienen volantes
       // ni otros cambios (no deja "basura" por una cédula mal digitada).
       const creados = await trx('colaboradores').where({ creado_por_periodo_id: id }).select('id');
+      // Tablas de otros módulos que pueden apuntar al expediente (si existen): si hay algo, se conserva
+      const relacionadas = ['volantes', 'solicitudes', 'documentos', 'incapacidades', 'saldos_vacaciones', 'certificados', 'suspensiones'];
+      const existentes = [];
+      for (const tabla of relacionadas) if (await trx.schema.hasTable(tabla)) existentes.push(tabla);
       for (const { id: cid } of creados) {
-        const tieneVolantes = await trx('volantes').where({ colaborador_id: cid }).first('id');
+        let referenciado = false;
+        for (const tabla of existentes) if (!referenciado && (await trx(tabla).where({ colaborador_id: cid }).first('colaborador_id'))) referenciado = true;
         const otrosCambios = await trx('expediente_cambios').where({ colaborador_id: cid }).whereNot({ campo: '_alta' }).first('id');
-        if (!tieneVolantes && !otrosCambios) {
+        if (!referenciado && !otrosCambios) {
           await trx('colaboradores').where({ id: cid }).del();
           expedientesBorrados++;
         } else {

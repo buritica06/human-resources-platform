@@ -30,7 +30,7 @@ export function crearReportes(ctx) {
       db('periodos_nomina').whereNot({ estado: 'ANULADO' }).orderBy('fecha_inicio', 'desc').first('id', 'nombre_hoja', 'estado', 'fecha_inicio', 'fecha_fin', 'colaboradores'),
       contar(db('colaboradores as c').where({ 'c.estado': 'ACTIVO' }).whereNotExists(db('saldos_vacaciones as s').whereRaw('s.colaborador_id = c.id'))),
       contar(db('usuarios').where({ activo: true }).whereNull('correo_verificado_en')),
-      contar(db('colaboradores').where({ estado: 'ACTIVO' }).where('tipo_contrato', 'like', '%FIJO%').whereBetween('fecha_fin_contrato', [hoy, sumarDias(hoy, 30)])),
+      contar(db('colaboradores').where({ estado: 'ACTIVO' }).whereRaw('upper(tipo_contrato) like ?', ['%FIJO%']).whereBetween('fecha_fin_contrato', [hoy, sumarDias(hoy, 30)])),
       contar(db('festivos').where({ anio: anioSig })),
     ]);
     const params = await ctx.params.listar();

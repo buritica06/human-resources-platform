@@ -10,6 +10,9 @@ export function crearDb(cfgDb) {
     return knexFactory({
       client: 'pg',
       connection: cfgDb.url,
+      compileSqlOnError: false, // los mensajes de error no incluyen los valores (datos personales)
+      // schema: opcional (las pruebas con PostgreSQL usan un esquema temporal por entorno)
+      ...(cfgDb.schema ? { searchPath: [cfgDb.schema] } : {}),
       pool: { min: 0, max: 10 },
     });
   }
@@ -17,6 +20,7 @@ export function crearDb(cfgDb) {
   return knexFactory({
     client: 'better-sqlite3',
     connection: { filename: cfgDb.filename },
+    compileSqlOnError: false,
     useNullAsDefault: true,
     pool: {
       min: 1,

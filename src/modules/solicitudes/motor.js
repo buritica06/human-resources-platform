@@ -259,7 +259,7 @@ export function crearMotor(ctx) {
       if (esPg()) await trx('colaboradores').where({ id: s.colaborador_id }).forUpdate().first('id');
       await handler.revalidarAlAprobar?.(ctx, s, trx, previo);
       // Mientras estaba en trámite pudo registrarse otra ausencia (p. ej. una incapacidad)
-      await validarSinCruce(trx, s);
+      await validarSinCruce(trx, s, { generico: req.usuario.rol !== 'ADMIN' && s.cedula !== req.usuario.cedula });
       const siguiente = s.paso_actual + 1;
       const final = siguiente >= s.flujo.pasos.length;
       const nota = auto ? ['Autoaprobación del área contable', comentario].filter(Boolean).join(': ') : comentario;
@@ -341,7 +341,9 @@ export function crearMotor(ctx) {
     const fin = x.hora_fin ? Date.parse(`${x.fecha_fin}T${x.hora_fin}:00Z`) : Date.parse(`${x.fecha_fin}T00:00:00Z`) + 86_400_000;
     return [ini, fin];
   };
-  async function validarSinCruce(trx, s) {
+  // generico: quien actúa no es el dueño ni el área contable (p. ej. el director al aprobar): no se
+  // le dice qué ausencia es (podría ser una suspensión o una incapacidad).
+  async function validarSinCruce(trx, s, { generico = false } = {}) {
     const [a1, a2] = rango(s);
     const otras = await trx('solicitudes').where({ colaborador_id: s.colaborador_id }).whereNot({ id: s.id ?? -1 })
       .whereNotIn('estado', SIN_EFECTO)
@@ -356,13 +358,17 @@ export function crearMotor(ctx) {
     // Otras ausencias que registran otros módulos (p. ej. incapacidades): días completos
     for (const buscar of ctx.ausenciasExtra ?? []) {
       const [o] = await buscar(trx, s.colaborador_id, s.fecha_inicio, s.fecha_fin);
+      if (o && generico) throw invalido('Las fechas se cruzan con otra ausencia registrada del colaborador. Rechace la solicitud o consulte al área contable.');
       if (o) throw invalido(`Se cruza con ${o.etiqueta} (${o.fecha_inicio}${o.fecha_inicio !== o.fecha_fin ? ` a ${o.fecha_fin}` : ''}).`, { fecha_inicio: `Las fechas se cruzan con ${o.etiqueta}.` });
     }
   }
 
   // ---------- consulta ----------
-  function presentar(s) {
+  // req: si quien mira es un director y la solicitud no es suya, en las de tipo sensible (dato de
+  // salud: maternidad, cita médica…) el motivo se reserva. Vale para detalle, bandeja y expediente.
+  function presentar(s, req = null) {
     const tipo = ctx.tiposSolicitud.get(s.tipo);
+    const reservado = req?.usuario.rol === 'DIRECTOR' && s.cedula !== req.usuario.cedula && !!s.datos?.sensible;
     return {
       id: s.id, tipo: s.tipo, tipoEtiqueta: tipo?.etiqueta ?? s.tipo, subtipo: s.subtipo,
       estado: s.estado, estadoEtiqueta: etiquetaEstado(s), final: FINALES.includes(s.estado),
@@ -370,7 +376,7 @@ export function crearMotor(ctx) {
       fechaInicio: s.fecha_inicio, horaInicio: s.hora_inicio, fechaFin: s.fecha_fin, horaFin: s.hora_fin,
       diasHabiles: s.dias_habiles === null || s.dias_habiles === undefined ? null : Number(s.dias_habiles),
       diasCompensar: s.dias_compensar === null || s.dias_compensar === undefined ? null : Number(s.dias_compensar),
-      motivo: s.motivo, documentoId: s.documento_id, datos: s.datos,
+      motivo: reservado ? '(Reservado: dato de salud)' : s.motivo, documentoId: s.documento_id, datos: s.datos,
       resumen: tipo?.resumen?.(s) ?? null,
       creadoEn: s.creado_en, enviadoEn: s.enviado_en, resueltoEn: s.resuelto_en,
     };
@@ -396,8 +402,7 @@ export function crearMotor(ctx) {
     const esDirectorAjeno = req.usuario.rol === 'DIRECTOR' && !propia;
     let documentoVisible = !!s.documento_id;
     if (documentoVisible && esDirectorAjeno) documentoVisible = !(await db('documentos').where({ id: s.documento_id }).first('sensible'))?.sensible;
-    const base = presentar(s);
-    if (esDirectorAjeno && s.datos?.sensible) base.motivo = '(Reservado: dato de salud)';
+    const base = presentar(s, req);
     return {
       ...base,
       documentoVisible,
@@ -433,7 +438,7 @@ export function crearMotor(ctx) {
         if (tipo) q.where('s.tipo', tipo);
         if (estado === 'EN_CURSO') q.whereNotIn('s.estado', FINALES);
         else if (estado) q.where('s.estado', estado);
-      })).map(presentar),
+      })).map((f) => presentar(f)),
     };
   }
 
@@ -450,7 +455,7 @@ export function crearMotor(ctx) {
       const paso = f.flujo?.pasos[f.paso_actual];
       if (!paso || paso.rol !== req.usuario.rol || yaActuo.has(f.id)) return false;
       return paso.rol !== 'DIRECTOR' || sedes.includes(f.sede_id);
-    }).map(presentar);
+    }).map((f) => presentar(f, req));
   }
 
   async function deColaborador(req, colaboradorId, { tipo }) {
@@ -462,7 +467,7 @@ export function crearMotor(ctx) {
     return (await lista((q) => {
       q.where('s.colaborador_id', colaboradorId).whereNot('s.estado', 'BORRADOR');
       if (tipo) q.where('s.tipo', tipo);
-    })).map(presentar);
+    })).map((f) => presentar(f, req));
   }
 
   return {

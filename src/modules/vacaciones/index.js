@@ -71,9 +71,14 @@ export default {
     // Saldo e historial de cortes de un colaborador (expediente)
     router.get('/colaboradores/:id/vacaciones', sesion, async (req, res) => {
       const c = await colaboradorEnAlcance(req, validar(esquemaId, req.params).id);
-      const ver = req.usuario.rol !== ROLES.COLABORADOR;
+
       if (c.cedula !== req.usuario.cedula) await ctx.auditar(req, { accion: 'VER_VACACIONES', entidad: 'colaborador', entidadId: c.id });
-      res.json({ saldo: await svc.saldo(c), cortes: ver ? await svc.cortes(c.id) : [], puedeRegistrar: req.usuario.rol === ROLES.ADMIN });
+      let saldo = await svc.saldo(c);
+      // El director ve solo lo necesario para aprobar: el desglose revelaría suspensiones o licencias no remuneradas
+      if (req.usuario.rol === ROLES.DIRECTOR && c.cedula !== req.usuario.cedula && saldo.registrado) {
+        saldo = { registrado: true, disponibles: saldo.disponibles, enTramite: saldo.enTramite, paraSolicitar: saldo.paraSolicitar, resumido: true };
+      }
+      res.json({ saldo, cortes: req.usuario.rol === ROLES.ADMIN ? await svc.cortes(c.id) : [], puedeRegistrar: req.usuario.rol === ROLES.ADMIN });
     });
 
     router.post('/colaboradores/:id/vacaciones/corte', sesion, rol(ROLES.ADMIN), async (req, res) => {

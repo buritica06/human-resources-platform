@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import request from 'supertest';
+import knexFactory from 'knex';
 import { cargarConfig } from '../../src/core/config.js';
 import { crearContexto, crearApp } from '../../src/core/app.js';
 import { migrar } from '../../src/core/db.js';
@@ -12,14 +13,25 @@ import { sembrarBase, sembrarDemo } from '../../seeds/sembrar.js';
 export const CLAVE_DEMO = 'Demo2026clave';
 export const CED = { admin: '1000000001', director: '1000000002', colab1: '1000000003', colab2: '1000000004' };
 
+// Con TEST_DATABASE_URL (p. ej. postgres://usuario:clave@localhost:5432/th_pruebas) las pruebas
+// corren contra PostgreSQL: cada entorno usa un esquema temporal que se borra al cerrar.
+const PG_URL = process.env.TEST_DATABASE_URL;
+
 export async function crearEntorno({ limites, config = {} } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'th-test-'));
+  let esquema = null;
+  if (PG_URL) {
+    esquema = `th_prueba_${process.pid}_${Math.random().toString(36).slice(2, 10)}`;
+    const k = knexFactory({ client: 'pg', connection: PG_URL });
+    await k.raw('CREATE SCHEMA ??', [esquema]);
+    await k.destroy();
+  }
   const cfg = cargarConfig({
     env: 'test',
     produccion: false,
     appUrl: 'http://localhost:3000',
     claveCifrado: 'a'.repeat(64),
-    db: { client: 'sqlite', filename: path.join(dir, 'prueba.sqlite') },
+    db: PG_URL ? { client: 'pg', url: PG_URL, schema: esquema } : { client: 'sqlite', filename: path.join(dir, 'prueba.sqlite') },
     modulos: ['auth', 'usuarios', 'colaboradores', 'nomina', 'notificaciones', 'solicitudes', 'permisos', 'vacaciones', 'incapacidades', 'licencias', 'certificados', 'admin'],
     almacenamiento: { driver: 'local', dir: path.join(dir, 'uploads') },
     ...config,
@@ -35,6 +47,11 @@ export async function crearEntorno({ limites, config = {} } = {}) {
     app,
     async cerrar() {
       await ctx.db.destroy();
+      if (esquema) {
+        const k = knexFactory({ client: 'pg', connection: PG_URL });
+        await k.raw('DROP SCHEMA ?? CASCADE', [esquema]);
+        await k.destroy();
+      }
       fs.rmSync(dir, { recursive: true, force: true });
     },
   };

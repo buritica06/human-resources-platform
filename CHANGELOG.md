@@ -1,5 +1,61 @@
 # Cambios
 
+## [1.0.0] – 2026-11-22 · Cierre
+
+### Hecho
+- **Pruebas con PostgreSQL:**
+  - La suite completa puede correr contra PostgreSQL con `npm run test:pg` (`TEST_DATABASE_URL`). Cada entorno usa un esquema temporal.
+  - El script se niega si la base se llama "prod".
+- **Docker (opcional):**
+  - `Dockerfile` multietapa, con usuario sin privilegios, módulos nativos y healthcheck.
+  - `docker-compose.yml` con PostgreSQL 17, publicado solo en localhost (detrás de un proxy HTTPS).
+  - `.dockerignore` excluye secretos, datos y archivos de Excel.
+- **Guías de uso:**
+  - [colaborador](docs/guias/colaborador.md)
+  - [director](docs/guias/director.md)
+  - [área contable](docs/guias/admincontable.md)
+- **Checklist de seguridad OWASP ASVS L1:** [docs/seguridad-asvs.md](docs/seguridad-asvs.md).
+- El despliegue quedó documentado: Docker, copias con `pg_dump` y pruebas con PostgreSQL.
+
+### Revisión final independiente (corregido)
+- **ALTA:**
+  - El director veía en la bandeja y en el expediente el **motivo** de licencias de maternidad y de permisos por cita médica.
+  - Ahora se reserva en todos los listados, no solo en el detalle.
+- **Logs:** los errores de base de datos podían escribir valores (datos personales) en los logs. Se activó `compileSqlOnError: false`.
+- **Producción:** ahora no arranca con un `APP_URL` http o localhost, que rechazaría todo y dañaría los enlaces de los correos, ni con SQLite (salvo `PERMITIR_SQLITE_EN_PRODUCCION=si`).
+- **Información disciplinaria del director:**
+  - Al aprobar, el mensaje de cruce ya no dice si hay una suspensión o una incapacidad.
+  - El saldo de vacaciones que ve el director va resumido, sin el desglose de días no laborados.
+- **Documentos:** el director solo descarga soportes de solicitudes que puede ver (no de borradores).
+- **Otras correcciones:**
+  - Las entradas no numéricas daban 500 con PostgreSQL.
+  - Eliminar un borrador de nómina podía violar referencias.
+  - La búsqueda de contratos fijos distinguía mayúsculas.
+  - Cambiar la clave no tenía límite de intentos.
+- `npm test` tiene un tiempo máximo por prueba, para que una falla no se quede colgada.
+
+### Pruebas
+- `npm test`: **276/276** (5 nuevas del cierre).
+- `npm run lint` sin errores.
+- En el navegador: Inicio del colaborador después de las correcciones.
+
+### Antes de producción (tareas de personas)
+1. Correr `npm run test:pg` contra un PostgreSQL real, construir la imagen Docker y hacer una prueba de humo: ingreso, carga de una nómina ficticia y una solicitud completa. **No se pudo hacer aquí**: en este equipo no hay PostgreSQL ni Docker.
+2. Medir Lighthouse (meta ≥ 95 en accesibilidad) y revisar a mano a 375 y 1280 px con teclado y lector de pantalla.
+3. Generar `DATA_ENCRYPTION_KEY`, guardarla en un gestor de secretos y respaldarla aparte de la base. Configurar SMTP, `APP_URL` con https, el proxy con `TRUST_PROXY` exacto y una sola instancia.
+4. Programar copias diarias cifradas, fuera del servidor, de la base y de `uploads/`, y probar una restauración.
+5. Mover el proyecto fuera de OneDrive y verificar que `data/`, `uploads/` y `backups/` no tengan datos reales antes de copiar la carpeta.
+6. Validar con el negocio:
+   - los supuestos P1–P14 (`docs/analisis.md`);
+   - con un asesor, los parámetros marcados VERIFICAR (días de licencias, compensación de vacaciones, topes);
+   - programar el SMMLV y el auxilio de transporte de 2027 y cargar los festivos de 2028.
+7. Con jurídica (Ley 1581):
+   - aviso de privacidad y autorización de tratamiento;
+   - retención de certificados, auditoría y soportes;
+   - qué datos ve el director;
+   - si la verificación pública de certificados debe mostrar datos enmascarados.
+8. Configurar el firmante y la ciudad de los certificados, y crear el primer admincontable con `npm run crear-admin`.
+9. Cargar los datos iniciales reales: expedientes (hoja EMPLEADOS), usuarios, directores por sede y saldos de vacaciones al corte.
 ## [0.9.0] – 2026-11-22 · Fase 10 – M8 Panel del admincontable
 
 ### Hecho

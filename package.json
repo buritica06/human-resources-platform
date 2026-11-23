@@ -1,6 +1,6 @@
 {
   "name": "plataforma-th",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Plataforma de Talento Humano – Masinero Compraventas",
   "type": "module",
@@ -16,7 +16,8 @@
     "crear-admin": "node scripts/crear-admin.js",
     "fixtures": "node scripts/generar-excel-ficticio.js && node scripts/generar-nomina-ficticia.js",
     "backup": "node scripts/backup-db.js",
-    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
+    "test": "node --test --test-concurrency=1 --test-timeout=120000 \"tests/**/*.test.js\"",
+    "test:pg": "node scripts/probar-postgres.js",
     "lint": "eslint src scripts tests seeds"
   },
   "dependencies": {

@@ -88,6 +88,9 @@ export function crearServicioIncapacidades(ctx) {
   // ---------- registrar ----------
   // body: tipo, entidad, fecha_inicio, fecha_fin, numero_certificado?, diagnostico?, prorroga_de?, colaborador_id? (solo admin)
   async function registrar(req, body, archivo) {
+    const entero = (v) => /^\d{1,9}$/.test(String(v ?? '')) ? Number(v) : NaN;
+    if (body.colaborador_id && !(entero(body.colaborador_id) > 0)) throw invalido('Colaborador no válido.');
+    if (body.prorroga_de && !(entero(body.prorroga_de) > 0)) throw invalido('Revise los datos marcados.', { prorroga_de: 'Elija una incapacidad de la lista.' });
     let colaborador;
     if (body.colaborador_id && req.usuario.rol !== 'ADMIN') {
       // Intento de registrar a nombre de otro sin ser admincontable: se rechaza y queda rastro

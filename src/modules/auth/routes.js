@@ -59,7 +59,8 @@ export function montarRutasAuth(router, ctx) {
     });
   });
 
-  router.post('/auth/cambiar-clave', autenticado({ onboarding: true }), async (req, res) => {
+  // Con límite: una sesión robada no puede probar la clave actual sin freno
+  router.post('/auth/cambiar-clave', autenticado({ onboarding: true }), limitar(ctx.limites.recuperar, { soloFallidos: true }), async (req, res) => {
     await svc.cambiarClave(req, validar(v.esquemaCambiarClave, req.body));
     res.json({ ok: true, mensaje: 'Contraseña actualizada.' });
   });

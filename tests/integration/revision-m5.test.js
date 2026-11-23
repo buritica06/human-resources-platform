@@ -61,7 +61,7 @@ test('una solicitud en trámite no se puede aprobar si luego se registró una in
   assert.equal(inc.status, 201, JSON.stringify(inc.body));
   const a = await director.post(`/solicitudes/${s.body.id}/aprobar`, { estadoEsperado: 'PENDIENTE_DIRECTOR' });
   assert.equal(a.status, 400);
-  assert.match(a.body.error.mensaje, /incapacidad/);
+  assert.match(a.body.error.mensaje, /otra ausencia/, 'al director no se le dice qué ausencia es');
 });
 
 test('prórroga: mismo tipo; anulada no cuenta para cruces ni la ve el director', async () => {

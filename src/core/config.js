@@ -76,6 +76,13 @@ export function cargarConfig(overrides = {}) {
     if (cfg.correo.transporte !== 'smtp') {
       throw new Error('En producción MAIL_TRANSPORT debe ser smtp.');
     }
+    // Con http o localhost, la verificación de origen rechazaría todo y los enlaces de los correos fallarían
+    if (!cfg.appUrl.startsWith('https://') || cfg.esLocal || /localhost|127\.0\.0\.1/.test(cfg.appUrl)) {
+      throw new Error('En producción APP_URL debe ser la dirección pública con https (p. ej. https://th.empresa.com).');
+    }
+    if (cfg.db.client !== 'pg' && cfg.env !== 'test' && process.env.PERMITIR_SQLITE_EN_PRODUCCION !== 'si') {
+      throw new Error('En producción use PostgreSQL (DB_CLIENT=pg). Para un piloto con SQLite defina PERMITIR_SQLITE_EN_PRODUCCION=si.');
+    }
   }
   return cfg;
 }
