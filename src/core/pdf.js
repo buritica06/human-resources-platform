@@ -2,7 +2,7 @@
 // La reutilizan los volantes (M2) y los certificados (M7).
 import PDFDocument from 'pdfkit';
 
-export const COLOR = { primario: '#6A1B9A', texto: '#1F2330', suave: '#5A6070', borde: '#D5D9E2', fondo: '#F3E8F8' };
+export const COLOR = { primario: '#8C6B1F', texto: '#1C1C1C', suave: '#525252', borde: '#E6E2CE', fondo: '#FAF4DF' };
 const MARGEN = 48;
 
 export function pesos(n) {
