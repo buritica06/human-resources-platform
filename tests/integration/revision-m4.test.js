@@ -41,7 +41,7 @@ test('saldos con dos decimales que no son exactos en binario (1,15 · 4,35 · 0,
     assert.equal(r.status, 201, `${dias}: ${JSON.stringify(r.body)}`);
   }
   assert.equal(
-    (await env.ctx.db('saldos_vacaciones').where({ colaborador_id: idColab1 }).orderBy('id', 'desc').first()).dias_al_corte,
+    Number((await env.ctx.db('saldos_vacaciones').where({ colaborador_id: idColab1 }).orderBy('id', 'desc').first()).dias_al_corte),
     12.35,
   );
   assert.equal((await corte(idColab1, { fecha_corte: '2026-02-01', dias: 1.155 })).status, 400, 'tres decimales');

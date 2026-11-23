@@ -307,7 +307,7 @@ describe('flujo configurable y notificaciones', () => {
         .first()
     ).id;
     await colab1.post('/notificaciones/leer', { ids: [ajena] });
-    assert.equal((await env.ctx.db('notificaciones').where({ id: ajena }).first()).leida, 0, 'no puede marcar ajenas');
+    assert.equal(Boolean((await env.ctx.db('notificaciones').where({ id: ajena }).first()).leida), false, 'no puede marcar ajenas');
     await colab1.post('/notificaciones/leer', { todas: true });
     assert.equal((await colab1.get('/notificaciones/resumen')).body.noLeidas, 0);
   });
