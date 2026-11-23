@@ -25,7 +25,7 @@
     "lint": "eslint src scripts tests seeds",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"seeds/**/*.js\" \"migrations/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"seeds/**/*.js\" \"migrations/**/*.js\"",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "argon2": "^0.45.2",
