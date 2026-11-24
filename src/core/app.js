@@ -77,7 +77,7 @@ export function crearApp(ctx) {
   });
 
   // Archivos estáticos comunes (CSS, JS, imágenes) y de cada módulo.
-  app.use('/static', express.static(DIR_PUBLICO, { maxAge: cfg.produccion ? '1d' : 0, index: false }));
+  app.use('/static', express.static(DIR_PUBLICO, { maxAge: 0, etag: true, index: false }));
   for (const m of ctx.modulos) {
     app.use(`/m/${m.nombre}`, express.static(path.join(DIR_MODULOS, m.nombre, 'views'), { index: false, extensions: [] }));
   }
