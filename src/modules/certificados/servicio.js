@@ -36,11 +36,46 @@ function tipoContratoTexto(c) {
 export function crearServicioCertificados(ctx) {
   const { db, auditar } = ctx;
 
+  const paramOpcional = async (clave, defecto = null) => {
+    try {
+      const v = await ctx.params.valor(clave);
+      return v ?? defecto;
+    } catch {
+      return defecto;
+    }
+  };
+
   async function parametros() {
+    const firmas = await paramOpcional('CERT_FIRMAS_EMPLEADORES', {});
     return {
-      firmante: String((await ctx.params.valor('CERT_FIRMANTE_NOMBRE')) ?? '').trim(),
-      cargoFirmante: String((await ctx.params.valor('CERT_FIRMANTE_CARGO')) ?? '').trim(),
-      ciudad: String((await ctx.params.valor('CERT_CIUDAD')) ?? '').trim(),
+      firmante: String((await paramOpcional('CERT_FIRMANTE_NOMBRE', '')) ?? '').trim(),
+      cargoFirmante: String((await paramOpcional('CERT_FIRMANTE_CARGO', '')) ?? '').trim(),
+      ciudad: String((await paramOpcional('CERT_CIUDAD', '')) ?? '').trim(),
+      marcaComercial: String((await paramOpcional('CERT_MARCA_COMERCIAL', '')) ?? '').trim(),
+      firmas: firmas && typeof firmas === 'object' ? firmas : {},
+    };
+  }
+
+  function decodificarDataUri(dataUri) {
+    if (typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) return null;
+    const i = dataUri.indexOf(';base64,');
+    if (i < 0) return null;
+    try {
+      return Buffer.from(dataUri.slice(i + 8), 'base64');
+    } catch {
+      return null;
+    }
+  }
+
+  async function recursosPdf(claveEmpleador) {
+    const logoUri = await paramOpcional('CERT_LOGO_BASE64', null);
+    const firmas = await paramOpcional('CERT_FIRMAS_EMPLEADORES', {});
+    const cfgFirma = claveEmpleador && firmas && typeof firmas === 'object' ? firmas[claveEmpleador] : null;
+    return {
+      logoBuffer: decodificarDataUri(logoUri),
+      firmaBuffer: decodificarDataUri(cfgFirma?.imagen),
+      nombreFirma: cfgFirma?.nombreFirma ? String(cfgFirma.nombreFirma).trim() : null,
+      cargoFirma: cfgFirma?.cargoFirma ? String(cfgFirma.cargoFirma).trim() : null,
     };
   }
 
@@ -68,23 +103,29 @@ export function crearServicioCertificados(ctx) {
       );
     }
     const p = await parametros();
+    const cfgFirma = p.firmas?.[emp.clave] ?? null;
     // El salario se imprime en pesos enteros: el número y las letras salen del MISMO valor
     const salario = conSalario ? Math.round(Number(c.salario_base)) : null;
     return {
+      claveEmpleador: emp.clave ?? null,
       empleador: emp.razon_social,
       documentoEmpleador: emp.documento ?? null,
+      marcaComercial: p.marcaComercial || null,
       nombre: c.nombre,
       cedula: c.cedula,
       cargo: c.cargo,
       fechaIngreso: c.fecha_ingreso,
       fechaRetiro: retirado ? c.fecha_retiro : null,
+      motivoRetiro: retirado ? c.motivo_retiro || null : null,
       contrato: tipoContratoTexto(c),
       fechaFinContrato: !retirado && fijo ? c.fecha_fin_contrato : null,
       salario,
       salarioLetras: conSalario ? pesosALetras(salario) : null,
       dirigidoA: dirigidoA || 'A QUIEN INTERESE',
       fechaExpedicion: hoy,
-      ...p,
+      firmante: cfgFirma?.nombreFirma || p.firmante,
+      cargoFirmante: cfgFirma?.cargoFirma || p.cargoFirmante || 'Empleador',
+      ciudad: p.ciudad,
     };
   }
 
@@ -215,5 +256,5 @@ export function crearServicioCertificados(ctx) {
     return { valido: true, tipo: 'Certificado laboral', emitidoEn: fechaBogota(f.emitido_en) };
   }
 
-  return { emitir, cargar, lista, anular, verificar, fechaLarga };
+  return { emitir, cargar, lista, anular, verificar, fechaLarga, recursosPdf };
 }

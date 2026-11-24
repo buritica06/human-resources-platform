@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Plataforma de Talento Humano">
-  <rect width="120" height="120" rx="24" fill="#6A1B9A"/>
-  <circle cx="60" cy="44" r="16" fill="#FFFFFF"/>
-  <path d="M32 92c0-15.5 12.5-26 28-26s28 10.5 28 26" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
-  <circle cx="92" cy="30" r="8" fill="#CE93D8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Plataforma de Talento Humano - Masinero">
+  <defs>
+    <linearGradient id="masineroGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F9E473"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8C6B1F"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="24" fill="#121212"/>
+  <circle cx="60" cy="44" r="16" fill="url(#masineroGold)"/>
+  <path d="M32 92c0-15.5 12.5-26 28-26s28 10.5 28 26" fill="none" stroke="url(#masineroGold)" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="92" cy="30" r="8" fill="#F6D410"/>
 </svg>

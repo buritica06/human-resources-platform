@@ -144,3 +144,18 @@ export const esquemaListar = z.object({
 });
 
 export const esquemaId = z.object({ id: z.coerce.number().int().positive() });
+
+export const CATALOGOS_LABORALES = ['LISTA_CONTRATOS', 'LISTA_EPS', 'LISTA_AFP'];
+
+export const esquemaClaveCatalogo = z.object({
+  clave: z.enum(CATALOGOS_LABORALES),
+});
+
+export const esquemaItemCatalogo = z.object({
+  valor: z.string({ error: 'Escriba el nombre del registro.' }).trim().min(2, 'Mínimo 2 caracteres.').max(60, 'Máximo 60 caracteres.'),
+});
+
+export const esquemaEditarItemCatalogo = z.object({
+  anterior: z.string().trim().min(1).max(60),
+  nuevo: z.string({ error: 'Escriba el nuevo valor.' }).trim().min(2, 'Mínimo 2 caracteres.').max(60, 'Máximo 60 caracteres.'),
+});

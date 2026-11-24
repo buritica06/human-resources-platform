@@ -1,0 +1,45 @@
+:root {
+  --brand-gold: #D4AF37;
+  --brand-gold-hover: #B59024;
+  --brand-gold-accent: #F6D410;
+  --brand-gold-dark: #8C6B1F;
+  --brand-gold-gradient: linear-gradient(135deg, #F9E473 0%, #D4AF37 50%, #8C6B1F 100%);
+  --bg-page: #FFFFF6;
+  --bg-surface: #FFFFFF;
+  --bg-dark: #121212;
+  --bg-dark-elevated: #1E1E1E;
+  --text-primary: #1C1C1C;
+  --text-secondary: #525252;
+  --text-on-dark: #FFFFF6;
+  --text-on-gold: #121212;
+  --border-subtle: #E6E2CE;
+  --status-success: #1E7E34;
+  --status-error: #C82333;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #121212;
+  --md-primary-fg-color--light: #1E1E1E;
+  --md-primary-fg-color--dark: #000000;
+  --md-primary-bg-color: #FFFFF6;
+  --md-accent-fg-color: #8C6B1F;
+  --md-default-bg-color: #FFFFF6;
+  --md-default-fg-color: #1C1C1C;
+  --md-default-fg-color--light: #525252;
+  --md-typeset-a-color: #8C6B1F;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #121212;
+  --md-accent-fg-color: #D4AF37;
+  --md-default-bg-color: #121212;
+  --md-typeset-a-color: #F6D410;
+}
+
+.md-header, .md-tabs {
+  border-bottom: 2px solid var(--brand-gold);
+}
+
+.md-tabs__link--active, .md-tabs__link:hover {
+  color: var(--brand-gold-accent);
+}

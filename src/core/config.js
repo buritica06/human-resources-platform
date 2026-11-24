@@ -22,11 +22,12 @@ export function cargarConfig(overrides = {}) {
     env,
     produccion: env === 'production',
     puerto: Number(leer('PORT', 3000)),
-    appUrl: leer('APP_URL', 'http://localhost:3000').replace(/\/$/, ''),
+    appUrl: leer('APP_URL', leer('RENDER_EXTERNAL_URL', 'http://localhost:3000')).replace(/\/$/, ''),
     db: {
       client: leer('DB_CLIENT', 'sqlite'),
       filename: path.resolve(RAIZ, leer('DB_FILENAME', './data/th.sqlite')),
       url: leer('DATABASE_URL', ''),
+      ssl: leer('DB_SSL', 'false') === 'true',
     },
     // Ver abajo: sin clave, solo en desarrollo/pruebas locales se usa una clave fija.
     claveCifrado: leer('DATA_ENCRYPTION_KEY', ''),

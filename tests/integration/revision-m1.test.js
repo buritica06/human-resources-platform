@@ -127,11 +127,13 @@ describe('asignación masiva y fugas en metadatos', () => {
     assert.deepEqual({ ...despues, actualizado_en: null }, { ...antes, actualizado_en: null });
   });
 
-  test('el director no recibe opciones de banco ni tipo de cuenta en los metadatos', async () => {
+  test('el director recibe todos los metadatos editables de su sede', async () => {
     const r = await director.get(`/colaboradores/${await idColab(CED.colab1)}`);
-    const texto = JSON.stringify(r.body);
-    assert.doesNotMatch(texto, /BANCOLOMBIA|DAVIVIENDA|CORRIENTE/);
-    assert.ok(!r.body.campos.some((c) => ['banco', 'tipo_cuenta', 'numero_cuenta'].includes(c.clave)));
+    assert.equal(r.status, 200);
+    assert.ok(r.body.campos.some((c) => c.clave === 'salario_base' && c.editable));
+    assert.ok(r.body.campos.some((c) => c.clave === 'tipo_contrato' && c.editable));
+    assert.ok(r.body.campos.some((c) => c.clave === 'eps' && c.editable));
+    assert.ok(r.body.campos.some((c) => c.clave === 'afp' && c.editable));
   });
 });
 

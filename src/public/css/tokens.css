@@ -1,22 +1,48 @@
-/* Sistema de diseño – tokens. Cambie la identidad visual aquí (docs/plan.md §7). */
+/* Sistema de diseño – tokens de marca Masinero Compraventas. */
 :root {
-  /* Color */
-  --c-primario: #6a1b9a;        /* texto blanco: 9,0:1 */
-  --c-primario-hover: #4a148c;
-  --c-primario-suave: #f3e8f8;
-  --c-acento: #9c4dcc;           /* solo decorativo */
-  --c-fondo: #eef1f6;
-  --c-superficie: #ffffff;
-  --c-borde: #2b2f3a;
-  --c-borde-suave: #d5d9e2;
-  --c-texto: #1f2330;
-  --c-texto-2: #5a6070;          /* 6,3:1 sobre blanco */
-  --c-exito: #1b7a3d;  --c-exito-fondo: #e6f4ea;
-  --c-alerta: #8a5a00; --c-alerta-fondo: #fff4dc;
-  --c-error: #b3261e;  --c-error-fondo: #fce8e6;
-  --c-info: #1f5fad;   --c-info-fondo: #e7effa;
-  --c-neutro: #4d5461; --c-neutro-fondo: #eceef2;
-  --c-foco: #1f5fad;
+  /* Colores de Marca */
+  --brand-gold: #D4AF37;
+  --brand-gold-hover: #B59024;
+  --brand-gold-accent: #F6D410;
+  --brand-gold-dark: #8C6B1F;
+
+  /* Degradado Metálico (Logo / Banners / Botones Premium) */
+  --brand-gold-gradient: linear-gradient(135deg, #F9E473 0%, #D4AF37 50%, #8C6B1F 100%);
+
+  /* Fondos y Superficies */
+  --bg-page: #FFFFF6;
+  --bg-surface: #FFFFFF;
+  --bg-dark: #121212;
+  --bg-dark-elevated: #1E1E1E;
+
+  /* Tipografía */
+  --text-primary: #1C1C1C;
+  --text-secondary: #525252;
+  --text-on-dark: #FFFFF6;
+  --text-on-gold: #121212;
+
+  /* Bordes y Estados */
+  --border-subtle: #E6E2CE;
+  --status-success: #1E7E34;
+  --status-error: #C82333;
+
+  /* Alias semánticos del sistema de diseño */
+  --c-primario: var(--brand-gold-dark);
+  --c-primario-hover: #6E5316;
+  --c-primario-suave: #FAF4DF;
+  --c-acento: var(--brand-gold);
+  --c-fondo: var(--bg-page);
+  --c-superficie: var(--bg-surface);
+  --c-borde: #3A3528;
+  --c-borde-suave: var(--border-subtle);
+  --c-texto: var(--text-primary);
+  --c-texto-2: var(--text-secondary);
+  --c-exito: var(--status-success);  --c-exito-fondo: #E6F4EA;
+  --c-alerta: var(--brand-gold-dark); --c-alerta-fondo: #FFF7DC;
+  --c-error: var(--status-error);  --c-error-fondo: #FCE8EA;
+  --c-info: #1F5FAD;   --c-info-fondo: #E7EFFA;
+  --c-neutro: #525252; --c-neutro-fondo: #F2F0E6;
+  --c-foco: var(--brand-gold-dark);
 
   /* Tipografía (pila del sistema: sin descargas) */
   --f-base: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -35,7 +61,7 @@
   --r-tarjeta: 16px;
   --r-campo: 8px;
   --r-pildora: 999px;
-  --sombra: 0 1px 2px rgb(31 35 48 / 0.06), 0 2px 8px rgb(31 35 48 / 0.06);
+  --sombra: 0 1px 2px rgb(18 18 18 / 0.06), 0 2px 8px rgb(140 107 31 / 0.08);
   --alto-toque: 44px;
   --ancho-lateral: 272px;
 }

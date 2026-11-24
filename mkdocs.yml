@@ -9,14 +9,14 @@ theme:
   language: es
   palette:
     - scheme: default
-      primary: deep purple
-      accent: purple
+      primary: black
+      accent: amber
       toggle:
         icon: material/brightness-7
         name: Cambiar a modo oscuro
     - scheme: slate
-      primary: deep purple
-      accent: purple
+      primary: black
+      accent: amber
       toggle:
         icon: material/brightness-4
         name: Cambiar a modo claro
@@ -27,6 +27,9 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -59,6 +62,7 @@ nav:
       - Manual del Desarrollador: development/manual-desarrollador.md
   - Despliegue:
       - Producción, Docker y PostgreSQL: deployment/despliegue.md
+      - Render, Railway y Fly.io (PaaS): deployment/paas-render-railway-fly.md
   - Seguridad:
       - OWASP ASVS Nivel 1: security/owasp-asvs.md
       - Revisión OWASP Top 10: security/owasp-top-10.md

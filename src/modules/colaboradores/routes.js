@@ -23,7 +23,36 @@ export function montarRutasColaboradores(router, ctx) {
   router.get('/me/expediente/historial', sesion, async (req, res) => res.json(await svc.miHistorial(req)));
 
   router.get('/colaboradores', ...gestion, async (req, res) => res.json(await svc.listar(req, validar(v.esquemaListar, req.query))));
+  router.post('/colaboradores', ...gestion, async (req, res) =>
+    res.status(201).json(await svc.crear(req, validar(v.esquemaCuerpo, req.body))),
+  );
   router.get('/colaboradores/opciones', ...gestion, async (req, res) => res.json(await svc.opciones(req)));
+  router.get('/colaboradores/catalogos', ...gestion, async (_req, res) => res.json(await svc.listarCatalogos()));
+  router.post('/colaboradores/catalogos/:clave/items', ...gestion, async (req, res) =>
+    res
+      .status(201)
+      .json(
+        await svc.agregarCatalogoItem(
+          req,
+          validar(v.esquemaClaveCatalogo, req.params).clave,
+          validar(v.esquemaItemCatalogo, req.body).valor,
+        ),
+      ),
+  );
+  router.patch('/colaboradores/catalogos/:clave/items', ...gestion, async (req, res) => {
+    const { clave } = validar(v.esquemaClaveCatalogo, req.params);
+    const { anterior, nuevo } = validar(v.esquemaEditarItemCatalogo, req.body);
+    res.json(await svc.editarCatalogoItem(req, clave, anterior, nuevo));
+  });
+  router.delete('/colaboradores/catalogos/:clave/items', ...gestion, async (req, res) =>
+    res.json(
+      await svc.eliminarCatalogoItem(
+        req,
+        validar(v.esquemaClaveCatalogo, req.params).clave,
+        validar(v.esquemaItemCatalogo, req.body).valor,
+      ),
+    ),
+  );
 
   router.post('/colaboradores/importar', ...soloAdmin, subirExcel, async (req, res) => {
     if (!req.file) throw invalido('Adjunte el libro de nómina (.xlsx o .xlsm).', { archivo: 'Adjunte el archivo.' });
@@ -37,13 +66,16 @@ export function montarRutasColaboradores(router, ctx) {
   });
 
   router.get('/colaboradores/:id', ...gestion, async (req, res) => res.json(await svc.detalle(req, validar(v.esquemaId, req.params).id)));
-  router.patch('/colaboradores/:id', ...soloAdmin, async (req, res) =>
+  router.patch('/colaboradores/:id', ...gestion, async (req, res) =>
     res.json(await svc.actualizar(req, validar(v.esquemaId, req.params).id, validar(v.esquemaCuerpo, req.body))),
+  );
+  router.delete('/colaboradores/:id', ...gestion, async (req, res) =>
+    res.json(await svc.eliminar(req, validar(v.esquemaId, req.params).id)),
   );
   router.get('/colaboradores/:id/historial', ...gestion, async (req, res) =>
     res.json(await svc.historial(req, validar(v.esquemaId, req.params).id)),
   );
-  router.get('/colaboradores/:id/cuenta', ...soloAdmin, async (req, res) =>
+  router.get('/colaboradores/:id/cuenta', ...gestion, async (req, res) =>
     res.json(await svc.revelarCuenta(req, validar(v.esquemaId, req.params).id)),
   );
 }

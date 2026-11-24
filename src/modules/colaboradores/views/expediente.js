@@ -24,7 +24,7 @@ const titulo = document.getElementById('titulo');
 const propio = location.pathname === '/expediente';
 const id = Number(new URLSearchParams(location.search).get('id'));
 const base = propio ? '/me/expediente' : `/colaboradores/${id}`;
-const esAdmin = me.usuario.rol === 'ADMIN' && !propio;
+const esGestor = ['ADMIN', 'DIRECTOR'].includes(me.usuario.rol) && !propio;
 
 let datos; // respuesta de la API
 let editando = false;
@@ -153,7 +153,10 @@ function pintarDatos() {
   const panel = document.getElementById('panel-datos');
   const editables = datos.campos.filter((c) => c.editable);
   const acciones = editables.length
-    ? `<div class="formulario-acciones"><button type="button" class="btn" id="editar">${icono('editar')} ${propio ? 'Actualizar mis datos' : 'Editar expediente'}</button></div>`
+    ? `<div class="formulario-acciones">
+        <button type="button" class="btn" id="editar">${icono('editar')} ${propio ? 'Actualizar mis datos' : 'Editar expediente'}</button>
+        ${esGestor ? `<button type="button" class="btn btn--peligro" id="eliminar-colab">${icono('cerrar')} Eliminar colaborador</button>` : ''}
+      </div>`
     : '';
   const ayuda = propio
     ? `<p class="ayuda">Puede actualizar: ${editables.map((c) => escapar(c.etiqueta.toLowerCase())).join(', ')}. Para cambiar otros datos comuníquese con el área contable.</p>`
@@ -176,10 +179,29 @@ function pintarDatos() {
     </form>
     <section class="grupo-datos" aria-labelledby="t-hist"><h3 id="t-hist">Historial de cambios</h3><div id="historial"></div></section>`;
   panel.querySelector('#editar')?.addEventListener('click', () => alternarEdicion(true));
+  panel.querySelector('#eliminar-colab')?.addEventListener('click', eliminarColaborador);
   panel.querySelector('#cancelar').addEventListener('click', () => alternarEdicion(false));
   panel.querySelector('#form-exp').addEventListener('submit', guardar);
   panel.querySelector('#ver-cuenta')?.addEventListener('click', verCuenta);
   cargarHistorial();
+}
+
+async function eliminarColaborador() {
+  const c = datos.colaborador;
+  const ok = await confirmar({
+    titulo: 'Eliminar colaborador',
+    mensaje: `¿Seguro que desea eliminar el expediente de ${c.nombre} (C.C. ${c.cedula})? Esta acción no se puede deshacer.`,
+    aceptar: 'Sí, eliminar',
+    peligro: true,
+  });
+  if (!ok) return;
+  try {
+    await api(`/colaboradores/${id}`, { method: 'DELETE' });
+    toast('Colaborador eliminado.', 'exito');
+    location.href = '/colaboradores';
+  } catch (err) {
+    toast(err.message, 'error');
+  }
 }
 
 function celdaCampo(c) {
@@ -188,7 +210,7 @@ function celdaCampo(c) {
   if (editando && c.editable) dd = entradaCampo(c, valor);
   else {
     dd = mostrarValor(c, valor);
-    if (c.clave === 'numero_cuenta' && esAdmin && valor) {
+    if (c.clave === 'numero_cuenta' && esGestor && valor) {
       dd += ` <button type="button" class="btn btn--chico btn--fantasma" id="ver-cuenta">${icono('ojo')} Mostrar</button>`;
     }
   }

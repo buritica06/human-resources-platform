@@ -147,24 +147,79 @@ describe('alcance: nadie ve datos fuera de su alcance', () => {
     assert.equal(filtroFuera.body.total, 0, 'filtrar por una sede ajena no la expone');
   });
 
-  test('director: ve el expediente de su sede SIN datos de pago y no puede editar', async () => {
+  test('director: gestiona expedientes de su sede (editar cualquier campo, revelar cuenta, crear y eliminar)', async () => {
     const id = await idColab(CED.colab1);
     const r = await director.get(`/colaboradores/${id}`);
     assert.equal(r.status, 200);
-    for (const k of ['banco', 'tipo_cuenta', 'numero_cuenta']) assert.ok(!(k in r.body.colaborador.datos), k);
-    assert.ok(r.body.campos.every((c) => !c.editable));
-    assert.ok(!r.body.campos.some((c) => c.clave === 'numero_cuenta'));
-    assert.equal((await director.patch(`/colaboradores/${id}`, { cargo: 'X' })).status, 403);
-    assert.equal((await director.get(`/colaboradores/${id}/cuenta`)).status, 403);
+    for (const k of ['banco', 'tipo_cuenta', 'numero_cuenta', 'salario_base']) assert.ok(k in r.body.colaborador.datos, k);
+    assert.ok(r.body.campos.some((c) => c.clave === 'salario_base' && c.editable));
+    const ed = await director.patch(`/colaboradores/${id}`, { cargo: 'AUXILIAR SENIOR', salario_base: 2100000 });
+    assert.equal(ed.status, 200);
+    assert.equal(ed.body.colaborador.datos.salario_base, 2100000);
+    // Eliminar salario (null)
+    const sinSal = await director.patch(`/colaboradores/${id}`, { salario_base: null });
+    assert.equal(sinSal.status, 200);
+    assert.equal(sinSal.body.colaborador.datos.salario_base, null);
+    await director.patch(`/colaboradores/${id}`, { cargo: 'AUXILIAR', salario_base: 1750905 });
+    assert.equal((await director.get(`/colaboradores/${id}/cuenta`)).status, 200);
     const opciones = await director.get('/colaboradores/opciones');
     assert.deepEqual(opciones.body.sedes.map((s) => s.nombre).sort(), ['SEDE NORTE', 'SEDE SUR']);
+
+    // Crear y eliminar colaborador en su sede
+    const sedeNorte = opciones.body.sedes.find((s) => s.nombre === 'SEDE NORTE');
+    const creado = await director.post('/colaboradores', {
+      cedula: '999888777',
+      nombre: 'PRUEBA DIRECTOR CREAR',
+      empleador_id: sedeNorte.empleadorId,
+      sede_id: sedeNorte.id,
+      cargo: 'VENDEDOR',
+      salario_base: 1800000,
+      tipo_contrato: 'INDEFINIDO',
+      eps: 'Sura',
+      afp: 'Porvenir',
+    });
+    assert.equal(creado.status, 201);
+    const tCsrf = (await director.get('/auth/csrf')).body.csrf;
+    const elim = await director.agente.delete(`/api/v1/colaboradores/${creado.body.id}`).set('X-CSRF-Token', tCsrf);
+    assert.equal(elim.status, 200);
+    assert.equal((await director.get(`/colaboradores/${creado.body.id}`)).status, 404);
   });
 
-  test('director: el historial no muestra cambios de datos de pago', async () => {
+  test('director y admin: gestionan catálogos laborales (contratos, EPS y AFP)', async () => {
+    const tCsrf = (await director.get('/auth/csrf')).body.csrf;
+    const cat = await director.get('/colaboradores/catalogos');
+    assert.equal(cat.status, 200);
+    assert.ok(Array.isArray(cat.body.catalogos.LISTA_CONTRATOS));
+    assert.ok(Array.isArray(cat.body.catalogos.LISTA_EPS));
+    assert.ok(Array.isArray(cat.body.catalogos.LISTA_AFP));
+
+    // Crear, editar y eliminar en LISTA_EPS
+    const add = await director.post('/colaboradores/catalogos/LISTA_EPS/items', { valor: 'EPS DEMO NUEVA' });
+    assert.equal(add.status, 201);
+    assert.ok(add.body.items.includes('EPS DEMO NUEVA'));
+    const edit = await director.patch('/colaboradores/catalogos/LISTA_EPS/items', {
+      anterior: 'EPS DEMO NUEVA',
+      nuevo: 'EPS DEMO EDITADA',
+    });
+    assert.equal(edit.status, 200);
+    assert.ok(edit.body.items.includes('EPS DEMO EDITADA'));
+    const del = await director.agente
+      .delete('/api/v1/colaboradores/catalogos/LISTA_EPS/items')
+      .set('X-CSRF-Token', tCsrf)
+      .send({ valor: 'EPS DEMO EDITADA' });
+    assert.equal(del.status, 200);
+    assert.ok(!del.body.items.includes('EPS DEMO EDITADA'));
+
+    // Colaborador común no puede gestionar catálogos ni crear/eliminar empleados
+    assert.equal((await colab1.post('/colaboradores/catalogos/LISTA_CONTRATOS/items', { valor: 'X' })).status, 403);
+    assert.equal((await colab1.post('/colaboradores', { cedula: '1234567', nombre: 'NO PERMITIDO' })).status, 403);
+  });
+
+  test('director y admin: el historial registra cambios en datos de pago', async () => {
     const id = await idColab(CED.colab1);
     await admin.patch(`/colaboradores/${id}`, { numero_cuenta: '55556666777' });
     const h = await director.get(`/colaboradores/${id}/historial`);
-    assert.ok(!h.body.cambios.some((c) => c.campo === 'numero_cuenta'));
+    assert.ok(h.body.cambios.some((c) => c.campo === 'numero_cuenta'));
     const hAdmin = await admin.get(`/colaboradores/${id}/historial`);
     assert.ok(hAdmin.body.cambios.some((c) => c.campo === 'numero_cuenta'));
   });

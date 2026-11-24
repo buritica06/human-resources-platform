@@ -2,10 +2,11 @@
 import { api } from '/static/js/api.js';
 import { montarShell } from '/static/js/shell.js';
 import { icono, pintarIconos } from '/static/js/iconos.js';
-import { conCarga, escapar, htmlAviso, limpiarErrores, mostrarAviso, mostrarErrores } from '/static/js/ui.js';
+import { conCarga, escapar, htmlAviso, limpiarErrores, mostrarAviso, mostrarErrores, toast } from '/static/js/ui.js';
 
 const me = await montarShell();
 const esAdmin = me.usuario.rol === 'ADMIN';
+const esGestor = ['ADMIN', 'DIRECTOR'].includes(me.usuario.rol);
 pintarIconos();
 
 const lista = document.getElementById('lista');
@@ -13,18 +14,26 @@ const conteo = document.getElementById('conteo');
 const paginacion = document.getElementById('paginacion');
 const filtros = document.getElementById('filtros');
 let pagina = 1;
+let opcionesCache = { sedes: [], empleadores: [], catalogos: {} };
 
+if (esGestor) {
+  document.getElementById('btn-nuevo').hidden = false;
+  document.getElementById('btn-catalogos').hidden = false;
+}
 if (esAdmin) document.getElementById('btn-importar').hidden = false;
 else document.getElementById('nota-director').hidden = false;
 
-try {
-  const op = await api('/colaboradores/opciones');
-  document
-    .getElementById('f-sede')
-    .insertAdjacentHTML('beforeend', op.sedes.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join(''));
-} catch {
-  /* el filtro de sede es opcional */
+async function cargarOpciones() {
+  try {
+    opcionesCache = await api('/colaboradores/opciones');
+    const sel = document.getElementById('f-sede');
+    sel.innerHTML =
+      '<option value="">Todas</option>' + opcionesCache.sedes.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('');
+  } catch {
+    /* el filtro de sede es opcional */
+  }
 }
+await cargarOpciones();
 
 async function cargar() {
   const q = new URLSearchParams();
@@ -83,6 +92,169 @@ paginacion.addEventListener('click', (e) => {
     pagina = Number(b.dataset.pag);
     cargar();
   }
+});
+
+// ---------- Nuevo colaborador ----------
+document.getElementById('btn-nuevo').addEventListener('click', async () => {
+  await cargarOpciones();
+  const d = document.createElement('dialog');
+  d.className = 'modal modal--ancho';
+  d.setAttribute('aria-labelledby', 'nuevo-titulo');
+  const opts = (arr) =>
+    `<option value="">— Seleccione —</option>${(arr ?? []).map((x) => `<option value="${escapar(x)}">${escapar(x)}</option>`).join('')}`;
+  d.innerHTML = `<h2 id="nuevo-titulo">Nuevo colaborador</h2>
+    <div id="nuevo-msg" tabindex="-1" hidden></div>
+    <form novalidate>
+      <div class="rejilla rejilla--2">
+        <div class="campo"><label for="n-cedula">Cédula *</label><input class="entrada" id="n-cedula" name="cedula" inputmode="numeric" required maxlength="15"><span class="error-campo" id="n-cedula-error"></span></div>
+        <div class="campo"><label for="n-nombre">Nombre completo *</label><input class="entrada" id="n-nombre" name="nombre" required maxlength="150"><span class="error-campo" id="n-nombre-error"></span></div>
+        <div class="campo"><label for="n-empleador">Empleador</label><select class="entrada" id="n-empleador" name="empleador_id"><option value="">— Seleccione —</option>${opcionesCache.empleadores.map((e) => `<option value="${e.id}">${escapar(e.nombre)}</option>`).join('')}</select><span class="error-campo" id="n-empleador_id-error"></span></div>
+        <div class="campo"><label for="n-sede">Sede</label><select class="entrada" id="n-sede" name="sede_id"><option value="">— Seleccione —</option>${opcionesCache.sedes.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('')}</select><span class="error-campo" id="n-sede_id-error"></span></div>
+        <div class="campo"><label for="n-cargo">Cargo</label><input class="entrada" id="n-cargo" name="cargo" maxlength="80"><span class="error-campo" id="n-cargo-error"></span></div>
+        <div class="campo"><label for="n-salario">Salario básico</label><input class="entrada" id="n-salario" name="salario_base" inputmode="numeric" placeholder="Ej.: 1750905"><span class="error-campo" id="n-salario_base-error"></span></div>
+        <div class="campo"><label for="n-contrato">Tipo de contrato</label><select class="entrada" id="n-contrato" name="tipo_contrato">${opts(opcionesCache.catalogos.LISTA_CONTRATOS)}</select><span class="error-campo" id="n-tipo_contrato-error"></span></div>
+        <div class="campo"><label for="n-ingreso">Fecha de ingreso</label><input class="entrada" id="n-ingreso" name="fecha_ingreso" type="date"><span class="error-campo" id="n-fecha_ingreso-error"></span></div>
+        <div class="campo"><label for="n-fin">Fecha fin de contrato</label><input class="entrada" id="n-fin" name="fecha_fin_contrato" type="date"><span class="error-campo" id="n-fecha_fin_contrato-error"></span></div>
+        <div class="campo"><label for="n-eps">EPS</label><select class="entrada" id="n-eps" name="eps">${opts(opcionesCache.catalogos.LISTA_EPS)}</select><span class="error-campo" id="n-eps-error"></span></div>
+        <div class="campo"><label for="n-afp">Fondo de pensión (AFP)</label><select class="entrada" id="n-afp" name="afp">${opts(opcionesCache.catalogos.LISTA_AFP)}</select><span class="error-campo" id="n-afp-error"></span></div>
+      </div>
+      <div class="formulario-acciones">
+        <button type="submit" class="btn">Crear colaborador</button>
+        <button type="button" class="btn btn--secundario" data-cerrar>Cancelar</button>
+      </div>
+    </form>`;
+  document.body.append(d);
+  d.showModal();
+  const selEmp = d.querySelector('#n-empleador');
+  const selSede = d.querySelector('#n-sede');
+  selEmp.addEventListener('change', () => {
+    const eid = Number(selEmp.value);
+    const filtradas = eid ? opcionesCache.sedes.filter((s) => s.empleadorId === eid) : opcionesCache.sedes;
+    selSede.innerHTML =
+      '<option value="">— Seleccione —</option>' + filtradas.map((s) => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('');
+  });
+  d.querySelector('[data-cerrar]').addEventListener('click', () => d.close());
+  d.addEventListener('close', () => d.remove());
+  const form = d.querySelector('form');
+  const msg = d.querySelector('#nuevo-msg');
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    limpiarErrores(form);
+    msg.hidden = true;
+    const cuerpo = {};
+    for (const [k, v] of new FormData(form)) if (String(v).trim() !== '') cuerpo[k] = String(v).trim();
+    if (cuerpo.empleador_id) cuerpo.empleador_id = Number(cuerpo.empleador_id);
+    if (cuerpo.sede_id) cuerpo.sede_id = Number(cuerpo.sede_id);
+    await conCarga(form.querySelector('button[type=submit]'), async () => {
+      try {
+        await api('/colaboradores', { method: 'POST', body: cuerpo });
+        toast('Colaborador creado correctamente.', 'exito');
+        d.close();
+        cargar();
+      } catch (err) {
+        if (err.campos) {
+          const prefijados = Object.fromEntries(Object.entries(err.campos).map(([k, v]) => [`n-${k}`, v]));
+          mostrarErrores(form, prefijados);
+        }
+        mostrarAviso(msg, 'error', err.message);
+      }
+    });
+  });
+});
+
+// ---------- Catálogos laborales (Contratos, EPS, AFP) ----------
+document.getElementById('btn-catalogos').addEventListener('click', async () => {
+  const NOMBRES = { LISTA_CONTRATOS: 'Tipos de contrato', LISTA_EPS: 'EPS', LISTA_AFP: 'Fondos de pensión (AFP)' };
+  const d = document.createElement('dialog');
+  d.className = 'modal modal--ancho';
+  d.setAttribute('aria-labelledby', 'cat-titulo');
+  d.innerHTML = `<h2 id="cat-titulo">Catálogos laborales</h2>
+    <p class="ayuda">Cree, edite o elimine tipos de contrato, EPS y AFP disponibles en los expedientes.</p>
+    <div id="cat-msg" tabindex="-1" hidden></div>
+    <div id="cat-cuerpo"></div>
+    <div class="formulario-acciones"><button type="button" class="btn btn--secundario" data-cerrar>Cerrar</button></div>`;
+  document.body.append(d);
+  d.showModal();
+  d.querySelector('[data-cerrar]').addEventListener('click', () => d.close());
+  d.addEventListener('close', () => d.remove());
+
+  const msg = d.querySelector('#cat-msg');
+  const cuerpo = d.querySelector('#cat-cuerpo');
+
+  async function pintarCatalogos() {
+    const { catalogos } = await api('/colaboradores/catalogos');
+    cuerpo.innerHTML = Object.entries(NOMBRES)
+      .map(
+        ([clave, titulo]) => `<section class="tarjeta-interna">
+        <h3>${escapar(titulo)}</h3>
+        <ul class="lista-compacta">
+          ${(catalogos[clave] ?? [])
+            .map(
+              (item) => `<li>
+            <span>${escapar(item)}</span>
+            <button type="button" class="btn btn--chico btn--secundario" data-editar="${clave}" data-valor="${escapar(item)}">Editar</button>
+            <button type="button" class="btn btn--chico btn--peligro" data-eliminar="${clave}" data-valor="${escapar(item)}">Eliminar</button>
+          </li>`,
+            )
+            .join('')}
+        </ul>
+        <form class="filtros-linea" data-agregar="${clave}">
+          <input class="entrada" name="valor" placeholder="Nuevo registro..." required maxlength="60">
+          <button type="submit" class="btn btn--chico">Agregar</button>
+        </form>
+      </section>`,
+      )
+      .join('');
+  }
+
+  cuerpo.addEventListener('submit', async (ev) => {
+    const f = ev.target.closest('form[data-agregar]');
+    if (!f) return;
+    ev.preventDefault();
+    msg.hidden = true;
+    const valor = new FormData(f).get('valor')?.toString().trim();
+    if (!valor) return;
+    try {
+      await api(`/colaboradores/catalogos/${f.dataset.agregar}/items`, { method: 'POST', body: { valor } });
+      toast('Registro agregado al catálogo.', 'exito');
+      await pintarCatalogos();
+    } catch (err) {
+      mostrarAviso(msg, 'error', err.message);
+    }
+  });
+
+  cuerpo.addEventListener('click', async (ev) => {
+    const bEd = ev.target.closest('[data-editar]');
+    if (bEd) {
+      msg.hidden = true;
+      const anterior = bEd.dataset.valor;
+      const nuevo = window.prompt(`Editar "${anterior}":`, anterior)?.trim();
+      if (!nuevo || nuevo === anterior) return;
+      try {
+        await api(`/colaboradores/catalogos/${bEd.dataset.editar}/items`, { method: 'PATCH', body: { anterior, nuevo } });
+        toast('Registro actualizado.', 'exito');
+        await pintarCatalogos();
+      } catch (err) {
+        mostrarAviso(msg, 'error', err.message);
+      }
+      return;
+    }
+    const bEl = ev.target.closest('[data-eliminar]');
+    if (bEl) {
+      msg.hidden = true;
+      const valor = bEl.dataset.valor;
+      if (!window.confirm(`¿Eliminar "${valor}" del catálogo?`)) return;
+      try {
+        await api(`/colaboradores/catalogos/${bEl.dataset.eliminar}/items`, { method: 'DELETE', body: { valor } });
+        toast('Registro eliminado del catálogo.', 'exito');
+        await pintarCatalogos();
+      } catch (err) {
+        mostrarAviso(msg, 'error', err.message);
+      }
+    }
+  });
+
+  await pintarCatalogos();
 });
 
 // ---------- Importación ----------
