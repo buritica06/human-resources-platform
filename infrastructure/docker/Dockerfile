@@ -1,14 +1,14 @@
 # Imagen de producción de la plataforma de Talento Humano (opcional: también corre sin Docker).
 # Construir:  docker build -t talento-humano .
 # Requiere las variables de .env (ver .env.example y docs/despliegue.md).
-FROM node:24-bookworm-slim AS dependencias
+FROM node:26-bookworm-slim AS dependencias
 WORKDIR /app
 # Herramientas para compilar módulos nativos (argon2, better-sqlite3) si no hay binario precompilado
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-bookworm-slim
+FROM node:26-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=dependencias /app/node_modules ./node_modules
