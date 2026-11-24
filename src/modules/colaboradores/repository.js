@@ -56,6 +56,24 @@ export function crearRepositorioColaboradores(db) {
         .where({ id })
         .update({ ...cambios, actualizado_en: ahora() }),
 
+    async eliminar(trx, id) {
+      for (const tabla of [
+        'volantes',
+        'incapacidades',
+        'solicitudes',
+        'certificados',
+        'saldos_vacaciones',
+        'suspensiones',
+        'documentos',
+        'expediente_cambios',
+      ]) {
+        if (await trx.schema.hasTable(tabla)) {
+          await trx(tabla).where({ colaborador_id: id }).del();
+        }
+      }
+      return trx('colaboradores').where({ id }).del();
+    },
+
     registrarCambios: (trx, filas) => (filas.length ? trx('expediente_cambios').insert(filas) : null),
 
     historial: (colaboradorId, excluirCampos = []) =>

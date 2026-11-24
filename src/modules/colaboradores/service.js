@@ -1,9 +1,9 @@
 // Expediente del colaborador: consulta por alcance, edición por permisos, historial
 // de cambios y número de cuenta cifrado.
-import { ErrorApp, invalido, noEncontrado } from '../../core/errors.js';
+import { ErrorApp, conflicto, invalido, noEncontrado } from '../../core/errors.js';
 import { ahora } from '../../core/db.js';
 import { CAMPOS, GRUPOS, POR_CLAVE, ESTADOS } from './campos.js';
-import { normalizarCambios, reglasCruzadas } from './validators.js';
+import { CATALOGOS_LABORALES, normalizarCambios, reglasCruzadas } from './validators.js';
 import { crearRepositorioColaboradores, POR_PAGINA } from './repository.js';
 import { log } from '../../core/logger.js';
 
@@ -15,7 +15,6 @@ const CAMPOS_REGLA = {
   fecha_retiro: ['fecha_retiro', 'estado', 'fecha_ingreso'],
 };
 
-const CAMPOS_PAGO = CAMPOS.filter((c) => c.director === false).map((c) => c.clave);
 const LISTAS = [...new Set(CAMPOS.filter((c) => c.lista && !c.lista.startsWith('_')).map((c) => c.lista))];
 
 export const mascaraCuenta = (n) => (!n ? null : /^\d+$/.test(n) ? `•••• ${String(n).slice(-4)}` : n);
@@ -266,23 +265,86 @@ export function crearServicioColaboradores(ctx) {
 
   async function detalle(req, id) {
     const c = await cargarConAlcance(req, id);
-    const vista = req.usuario.rol === 'ADMIN' ? 'ADMIN' : 'DIRECTOR';
+    const vista = ['ADMIN', 'DIRECTOR'].includes(req.usuario.rol) ? 'ADMIN' : 'DIRECTOR';
     await auditar(req, { accion: 'VER', entidad: 'colaborador', entidadId: id });
     const editables = vista === 'ADMIN' ? new Set(CAMPOS.map((c2) => c2.clave)) : new Set();
     return { colaborador: presentar(c, vista), ...(await metadatos(vista, editables)), pestanas: pestanas() };
   }
 
+  async function crear(req, cuerpo) {
+    const cedula = String(cuerpo.cedula ?? '')
+      .replace(/[.\s]/g, '')
+      .trim();
+    if (!/^\d{5,12}$/.test(cedula)) {
+      throw invalido('Revise los datos marcados.', { cedula: 'La cédula debe tener entre 5 y 12 dígitos.' });
+    }
+    if (await repo.porCedula(cedula)) {
+      throw conflicto('Ya existe un colaborador con esa cédula.');
+    }
+    const sinCedula = { ...cuerpo };
+    delete sinCedula.cedula;
+    if (!sinCedula.nombre) {
+      throw invalido('Revise los datos marcados.', { nombre: 'Este dato es obligatorio.' });
+    }
+    const v = await contextoValidacion();
+    const { limpios, errores } = normalizarCambios(sinCedula, v);
+    if (Object.keys(errores).length) throw invalido('Revise los datos marcados.', errores);
+    const a = await alcance(req);
+    if (a && limpios.sede_id && !a.includes(limpios.sede_id)) {
+      throw invalido('Revise los datos marcados.', { sede_id: 'La sede elegida no está dentro de su alcance.' });
+    }
+    const resultante = { estado: 'ACTIVO', ...limpios };
+    const cruzados = reglasCruzadas(resultante, v);
+    if (Object.keys(cruzados).length) throw invalido('Revise los datos marcados.', cruzados);
+
+    const datosInsert = { cedula, estado: resultante.estado ?? 'ACTIVO' };
+    for (const [k, val] of Object.entries(limpios)) {
+      if (k === 'numero_cuenta') {
+        if (val) datosInsert.numero_cuenta_cifrado = cifrador.cifrar(val);
+      } else {
+        datosInsert[k] = val;
+      }
+    }
+    const origen = req.usuario.rol === 'DIRECTOR' ? 'DIRECTOR' : 'ADMIN';
+    const id = await db.transaction(async (trx) => {
+      const nuevoId = await repo.insertar(trx, datosInsert);
+      await repo.registrarCambios(trx, [
+        {
+          colaborador_id: nuevoId,
+          campo: '_alta',
+          valor_anterior: null,
+          valor_nuevo: 'Alta manual',
+          origen,
+          actor_id: req.usuario.id,
+          creado_en: ahora(),
+        },
+      ]);
+      return nuevoId;
+    });
+    await auditar(req, { accion: 'CREAR', entidad: 'colaborador', entidadId: id, detalle: { origen } });
+    return { id, colaborador: presentar(await repo.porId(id), 'ADMIN') };
+  }
+
   async function actualizar(req, id, cuerpo) {
     const c = await cargarConAlcance(req, id);
-    const cambiados = await validarYAplicar(req, c, cuerpo, 'ADMIN');
+    const origen = req.usuario.rol === 'DIRECTOR' ? 'DIRECTOR' : 'ADMIN';
+    const cambiados = await validarYAplicar(req, c, cuerpo, origen);
     return { cambiados, colaborador: presentar(await repo.porId(id), 'ADMIN') };
+  }
+
+  async function eliminar(req, id) {
+    const c = await cargarConAlcance(req, id);
+    await db.transaction(async (trx) => {
+      await repo.eliminar(trx, c.id);
+    });
+    await auditar(req, { accion: 'ELIMINAR', entidad: 'colaborador', entidadId: c.id, detalle: { origen: req.usuario.rol } });
+    return { ok: true, id: c.id };
   }
 
   async function historial(req, id) {
     await cargarConAlcance(req, id);
     await auditar(req, { accion: 'VER_HISTORIAL', entidad: 'colaborador', entidadId: id });
-    const excluir = req.usuario.rol === 'DIRECTOR' ? CAMPOS_PAGO : [];
-    return { cambios: presentarHistorial(await repo.historial(id, excluir)) };
+    return { cambios: presentarHistorial(await repo.historial(id, [])) };
   }
 
   async function revelarCuenta(req, id) {
@@ -294,7 +356,89 @@ export function crearServicioColaboradores(ctx) {
   async function opciones(req) {
     const a = await alcance(req);
     const sedes = (await repo.sedes()).filter((s) => !a || a.includes(s.id));
-    return { sedes: sedes.map((s) => ({ id: s.id, nombre: s.nombre, empleador: s.empleador })), estados: ESTADOS };
+    const empleadores = await repo.empleadores();
+    const catalogos = {};
+    for (const k of CATALOGOS_LABORALES) catalogos[k] = await params.valor(k);
+    return {
+      sedes: sedes.map((s) => ({ id: s.id, nombre: s.nombre, empleador: s.empleador, empleadorId: s.empleador_id })),
+      empleadores: empleadores.map((e) => ({ id: e.id, nombre: e.razon_social })),
+      estados: ESTADOS,
+      catalogos,
+    };
+  }
+
+  async function listarCatalogos() {
+    const catalogos = {};
+    for (const k of CATALOGOS_LABORALES) catalogos[k] = await params.valor(k);
+    return { catalogos };
+  }
+
+  async function actualizarListaCatalogo(req, clave, nuevaLista, detalleAudit) {
+    const t = ahora();
+    await db.transaction(async (trx) => {
+      const fila = await trx('parametros').where({ clave }).orderBy('vigente_desde', 'desc').first();
+      if (!fila) throw noEncontrado(`Catálogo no configurado: ${clave}`);
+      await trx('parametros')
+        .where({ id: fila.id })
+        .update({ valor: JSON.stringify(nuevaLista), actualizado_por: req.usuario.id, actualizado_en: t });
+    });
+    params.invalidar();
+    await auditar(req, { accion: 'EDITAR_CATALOGO', entidad: 'parametro', detalle: { clave, ...detalleAudit } });
+    return { clave, items: nuevaLista };
+  }
+
+  async function agregarCatalogoItem(req, clave, valor) {
+    const actual = [...(await params.valor(clave))];
+    const limpio = valor.trim();
+    if (actual.some((x) => String(x).toUpperCase() === limpio.toUpperCase())) {
+      throw conflicto(`"${limpio}" ya existe en el catálogo.`);
+    }
+    actual.push(limpio);
+    return actualizarListaCatalogo(req, clave, actual, { operacion: 'AGREGAR', valor: limpio });
+  }
+
+  const CAMPO_POR_CATALOGO = { LISTA_CONTRATOS: 'tipo_contrato', LISTA_EPS: 'eps', LISTA_AFP: 'afp' };
+
+  async function editarCatalogoItem(req, clave, anterior, nuevo) {
+    const actual = [...(await params.valor(clave))];
+    const idx = actual.findIndex((x) => String(x).toUpperCase() === anterior.trim().toUpperCase());
+    if (idx < 0) throw noEncontrado(`No se encontró "${anterior}" en el catálogo.`);
+    const limpio = nuevo.trim();
+    if (actual.some((x, i) => i !== idx && String(x).toUpperCase() === limpio.toUpperCase())) {
+      throw conflicto(`"${limpio}" ya existe en el catálogo.`);
+    }
+    const valorPrevio = actual[idx];
+    actual[idx] = limpio;
+    const campo = CAMPO_POR_CATALOGO[clave];
+    const t = ahora();
+    await db.transaction(async (trx) => {
+      const fila = await trx('parametros').where({ clave }).orderBy('vigente_desde', 'desc').first();
+      if (!fila) throw noEncontrado(`Catálogo no configurado: ${clave}`);
+      await trx('parametros')
+        .where({ id: fila.id })
+        .update({ valor: JSON.stringify(actual), actualizado_por: req.usuario.id, actualizado_en: t });
+      if (campo) {
+        await trx('colaboradores')
+          .where({ [campo]: valorPrevio })
+          .update({ [campo]: limpio, actualizado_en: t });
+      }
+    });
+    params.invalidar();
+    await auditar(req, {
+      accion: 'EDITAR_CATALOGO',
+      entidad: 'parametro',
+      detalle: { clave, operacion: 'EDITAR', anterior: valorPrevio, nuevo: limpio },
+    });
+    return { clave, items: actual };
+  }
+
+  async function eliminarCatalogoItem(req, clave, valor) {
+    const actual = [...(await params.valor(clave))];
+    const idx = actual.findIndex((x) => String(x).toUpperCase() === valor.trim().toUpperCase());
+    if (idx < 0) throw noEncontrado(`No se encontró "${valor}" en el catálogo.`);
+    if (actual.length <= 1) throw invalido('El catálogo debe conservar al menos una opción.');
+    const eliminado = actual.splice(idx, 1)[0];
+    return actualizarListaCatalogo(req, clave, actual, { operacion: 'ELIMINAR', valor: eliminado });
   }
 
   function presentarHistorial(filas) {
@@ -320,10 +464,16 @@ export function crearServicioColaboradores(ctx) {
     actualizarMio,
     miHistorial,
     listar,
+    crear,
     detalle,
     actualizar,
+    eliminar,
     historial,
     revelarCuenta,
     opciones,
+    listarCatalogos,
+    agregarCatalogoItem,
+    editarCatalogoItem,
+    eliminarCatalogoItem,
   };
 }
